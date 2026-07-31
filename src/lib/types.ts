@@ -69,3 +69,10 @@ export interface MonthlyTrendPoint {
   overallScore: number;
   categoryScores: Record<SurveyType, number>;
 }
+
+/** セミナー資料PDFを生成した記録。1日1テーマの生成ローテーションに使う。 */
+export interface SeminarGeneratedLog {
+  date: string; // "YYYY-MM-DD" 形式(生成した日)
+  topicId: string;
+  generatedAt: string; // ISO日時
+}

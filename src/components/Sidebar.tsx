@@ -10,13 +10,17 @@ const mainNavItems = [
   { href: "/", label: "ホーム", icon: "🏠" },
   { href: "/dashboard", label: "健康経営ダッシュボード", icon: "📊" },
   { href: "/chat", label: "企業課題チャット", icon: "💬" },
+  { href: "/seminar", label: "セミナー資料ジェネレーター", icon: "📋" },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
+    <aside
+      id="app-sidebar"
+      className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white"
+    >
       <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-5">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600 text-lg font-bold text-white">
           U
