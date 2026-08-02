@@ -1,7 +1,7 @@
-import { categoryAggregates, departmentAggregates } from "./aggregate";
+import { categoryAggregates, departmentAggregates, overallScore } from "./aggregate";
 import { RISK_LEVEL_JA } from "./scoring";
 import { surveyDefs } from "./surveyDefs";
-import { SurveySubmission, SurveyType } from "./types";
+import { RiskLevel, SurveySubmission, SurveyType } from "./types";
 
 export interface ChatMessage {
   id: string;
@@ -17,76 +17,64 @@ export const SUGGESTED_PROMPTS = [
   "全体的な健康経営の課題をまとめて",
 ];
 
-/**
- * 現時点ではルールベースの簡易応答(プレースホルダー)。
- * 将来的にAIとの対話ロジックに置き換える想定のUIのみの実装。
- */
-export function generateCannedReply(userText: string, submissions: SurveySubmission[]): string {
-  const categories = categoryAggregates(submissions);
-  const departments = departmentAggregates(submissions);
-  const byType = (type: SurveyType) => categories.find((c) => c.type === type)!;
+export interface ChatDataSummary {
+  overallScore: number;
+  categories: {
+    type: SurveyType;
+    label: string;
+    averageScore: number;
+    level: RiskLevel;
+    levelLabel: string;
+    responseCount: number;
+    highRiskCount: number;
+  }[];
+  departments: {
+    department: string;
+    overallScore: number;
+    responseCount: number;
+    categoryScores: Partial<Record<SurveyType, number | null>>;
+  }[];
+}
 
-  const includesAny = (keywords: string[]) => keywords.some((k) => userText.includes(k));
+/** チャットAPIに渡す、ダッシュボード集計データの要約を作成する。 */
+export function buildDataSummary(submissions: SurveySubmission[]): ChatDataSummary {
+  return {
+    overallScore: overallScore(submissions),
+    categories: categoryAggregates(submissions).map((c) => ({
+      type: c.type,
+      label: surveyDefs[c.type].shortTitle,
+      averageScore: c.averageScore,
+      level: c.level,
+      levelLabel: RISK_LEVEL_JA[c.level],
+      responseCount: c.responseCount,
+      highRiskCount: c.highRiskCount,
+    })),
+    departments: departmentAggregates(submissions).map((d) => ({
+      department: d.department,
+      overallScore: d.overallScore,
+      responseCount: d.responseCount,
+      categoryScores: d.categoryScores,
+    })),
+  };
+}
 
-  if (includesAny(["ストレス", "メンタル"])) {
-    const stress = byType("stressCheck");
-    const worst = [...departments].sort(
-      (a, b) => (a.categoryScores.stressCheck ?? 100) - (b.categoryScores.stressCheck ?? 100)
-    )[0];
-    return (
-      `ミニストレスチェックの全社平均は ${stress.averageScore}点(${RISK_LEVEL_JA[stress.level]}相当)で、` +
-      `高ストレスと判定された回答は ${stress.highRiskCount}件あります。\n` +
-      `部署別では「${worst.department}」のスコアが最も低く(${worst.categoryScores.stressCheck}点)、` +
-      `直近で悪化傾向が見られます。管理職向けの1on1強化や業務量の見直しをご検討ください。`
-    );
-  }
+/** チャットAPIのシステムプロンプトを、ダッシュボードの集計データ要約から組み立てる。 */
+export function buildSystemPrompt(summary: ChatDataSummary): string {
+  return `あなたはUCHICAREの「健康経営アシスタント」です。保健師・療法士・ケアマネジャーが監修する企業向け健康経営ツールの一部として、企業担当者からの質問に日本語で回答します。
 
-  if (includesAny(["腰痛", "身体", "腰"])) {
-    const backPain = byType("backPain");
-    const worst = [...departments].sort(
-      (a, b) => (a.categoryScores.backPain ?? 100) - (b.categoryScores.backPain ?? 100)
-    )[0];
-    return (
-      `腰痛リスク調査の全社平均は ${backPain.averageScore}点(${RISK_LEVEL_JA[backPain.level]}相当)です。\n` +
-      `特に「${worst.department}」でリスクが高く(${worst.categoryScores.backPain}点)、` +
-      `移乗介助や重量物の取り扱いが多いことが要因と考えられます。福祉用具の追加導入や療法士による動作指導を提案できます。`
-    );
-  }
+以下は現在のダッシュボードの集計データ(JSON形式)です。回答は必ずこのデータの範囲内で行い、データにない数値や事実を創作しないでください。データが不足している場合は、その旨を正直に伝えてください。
 
-  if (includesAny(["介護", "ケアラー", "両立"])) {
-    const caregiving = byType("caregiving");
-    const worst = [...departments].sort(
-      (a, b) => (a.categoryScores.caregiving ?? 100) - (b.categoryScores.caregiving ?? 100)
-    )[0];
-    return (
-      `介護リスク調査の全社平均は ${caregiving.averageScore}点(${RISK_LEVEL_JA[caregiving.level]}相当)です。\n` +
-      `「${worst.department}」で仕事と介護の両立に不安を抱える回答が目立ちます(${worst.categoryScores.caregiving}点)。` +
-      `介護休業制度の周知や、ケアマネジャーによる個別相談会の実施が有効です。`
-    );
-  }
+\`\`\`json
+${JSON.stringify(summary, null, 2)}
+\`\`\`
 
-  if (includesAny(["労働環境", "エルゴノミクス", "姿勢", "作業環境"])) {
-    const ergonomics = byType("ergonomics");
-    return (
-      `エルゴノミクス評価の全社平均は ${ergonomics.averageScore}点(${RISK_LEVEL_JA[ergonomics.level]}相当)です。\n` +
-      `回答 ${ergonomics.responseCount}件のうち ${ergonomics.highRiskCount}件が要注意レベルでした。` +
-      `作業台の高さ調整や補助具の導入など、療法士による現場評価をおすすめします。`
-    );
-  }
+補足:
+- スコアは0〜100点で、100点が最も良好(低リスク)です。70点以上が低リスク、40〜69点が中リスク、40点未満が高リスクの目安です。
+- 4つの指標: ergonomics(労働環境/エルゴノミクス評価)、stressCheck(ミニストレスチェック)、backPain(腰痛リスク調査)、caregiving(介護リスク調査/ビジネスケアラー)。
 
-  if (includesAny(["まとめ", "課題", "サマリー", "全体"])) {
-    const lines = categories
-      .map((c) => `・${surveyDefs[c.type].shortTitle}: ${c.averageScore}点(${RISK_LEVEL_JA[c.level]}相当)`)
-      .join("\n");
-    return `現在の4指標の状況は以下の通りです。\n${lines}\n\n特にスコアの低い指標から優先的に対策をご提案できます。気になる指標名を送ってみてください。`;
-  }
-
-  if (includesAny(["こんにちは", "はじめまして", "よろしく"])) {
-    return "こんにちは。UCHICAREの健康経営アシスタントです。ストレス・腰痛・介護・労働環境について、気になるテーマを教えてください。";
-  }
-
-  return (
-    "ご質問ありがとうございます。現時点は簡易応答のプレースホルダーのため詳細な自由回答はできませんが、" +
-    "「ストレス」「腰痛」「介護」「労働環境」「まとめ」などのキーワードを含めて質問いただくと、ダッシュボードのデータをもとにお答えします。"
-  );
+回答方針:
+- 簡潔に、具体的な数値を交えて答えてください。
+- 可能であれば、保健師・療法士・ケアマネジャーの視点から現実的な改善提案を添えてください。
+- 個人が特定されるような踏み込んだ質問には答えず、部署・組織単位の傾向として回答してください。
+- 日本語のビジネス文書として自然な、丁寧な文体で回答してください。`;
 }

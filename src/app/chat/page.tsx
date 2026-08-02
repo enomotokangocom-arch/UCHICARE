@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useHealthDataStore } from "@/lib/store";
-import { ChatMessage, generateCannedReply, SUGGESTED_PROMPTS } from "@/lib/chatBot";
+import { buildDataSummary, ChatMessage, SUGGESTED_PROMPTS } from "@/lib/chatBot";
+import { streamChatReply } from "@/lib/chatClient";
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: "welcome",
@@ -17,28 +18,55 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const assistantStartedRef = useRef(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  function sendMessage(text: string) {
+  async function sendMessage(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isTyping) return;
 
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", text: trimmed };
-    setMessages((prev) => [...prev, userMessage]);
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
     setInput("");
     setIsTyping(true);
 
-    const replyText = generateCannedReply(trimmed, submissions);
-    window.setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", text: replyText },
-      ]);
+    const assistantId = crypto.randomUUID();
+    assistantStartedRef.current = false;
+
+    try {
+      const received = await streamChatReply({
+        messages: nextMessages.map((m) => ({ role: m.role, text: m.text })),
+        summary: buildDataSummary(submissions),
+        onChunk: (accumulatedText) => {
+          if (!assistantStartedRef.current) {
+            assistantStartedRef.current = true;
+            setMessages((prev) => [...prev, { id: assistantId, role: "assistant", text: accumulatedText }]);
+          } else {
+            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: accumulatedText } : m)));
+          }
+        },
+      });
+
+      if (!received) {
+        setMessages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), role: "assistant", text: "応答を取得できませんでした。時間をおいて再度お試しください。" },
+        ]);
+      }
+    } catch {
+      const errorText = "すみません、応答の取得中にエラーが発生しました。時間をおいて再度お試しください。";
+      setMessages((prev) =>
+        assistantStartedRef.current
+          ? prev.map((m) => (m.id === assistantId ? { ...m, text: errorText } : m))
+          : [...prev, { id: crypto.randomUUID(), role: "assistant", text: errorText }]
+      );
+    } finally {
       setIsTyping(false);
-    }, 700);
+    }
   }
 
   function handleSubmit(e: FormEvent) {
@@ -51,7 +79,7 @@ export default function ChatPage() {
       <div className="mb-4">
         <h1 className="text-xl font-bold text-slate-900">企業課題チャット</h1>
         <p className="mt-1 text-sm text-slate-500">
-          健康経営データをもとに企業課題をキャッチアップします(現在は簡易応答のプロトタイプです)
+          健康経営データをもとに、AIアシスタントが企業課題のキャッチアップをお手伝いします
         </p>
       </div>
 

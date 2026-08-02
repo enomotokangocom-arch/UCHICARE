@@ -8,7 +8,7 @@
 
 - **健康経営ダッシュボード** (`/dashboard`): 総合スコア、4指標のレーダーチャート、部署別スコア、6ヶ月のトレンド推移、要注意ポイントの一覧を表示します。
 - **調査票** (`/survey/*`): エルゴノミクス評価・ミニストレスチェック・腰痛リスク調査・介護リスク調査の4種類。回答すると自動でスコア化され、ダッシュボードに反映されます。
-- **企業課題チャット** (`/chat`): ダッシュボードのデータに基づいたキーワード応答形式のプロトタイプUI(会話ロジックは今後AI連携を想定した仮実装です)。
+- **企業課題チャット** (`/chat`): ダッシュボードの集計データをもとに、Claude API (Claude Opus 5) が企業課題への質問にリアルタイムで回答します。
 
 ## データについて
 
@@ -23,9 +23,21 @@ npm run dev
 
 [http://localhost:3000](http://localhost:3000) を開いてください。
 
+### 企業課題チャットを使う場合
+
+`/chat` のAI応答にはClaude APIを使用します。`.env.local.example` を `.env.local` にコピーし、`ANTHROPIC_API_KEY` に [Anthropic Console](https://console.anthropic.com/) で発行したAPIキーを設定してください。
+
+```bash
+cp .env.local.example .env.local
+# .env.local を編集して ANTHROPIC_API_KEY を設定
+```
+
+キーが未設定の場合、チャット画面はエラーメッセージを表示します(他の機能には影響しません)。
+
 ## 技術スタック
 
 - Next.js (App Router) + TypeScript
 - Tailwind CSS
 - Zustand (状態管理 / localStorage永続化)
 - Recharts (グラフ描画)
+- Claude API (`@anthropic-ai/sdk`) — 企業課題チャットのAI応答
