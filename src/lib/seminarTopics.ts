@@ -5,15 +5,44 @@ export type SeminarCategory = "physical" | "mental" | "caregiving" | "lifestyle"
 export interface SeminarCategoryDef {
   id: SeminarCategory;
   label: string;
+  /** シリーズ内のコース名(社員・経営者向けの案内で使う呼称) */
+  courseName: string;
   icon: string;
   accentColor: string;
 }
 
+/** シリーズ全体のブランド名。4カテゴリをコースとしてまとめた呼称。 */
+export const SEMINAR_SERIES_NAME = "Uchi care 働く健康アカデミー";
+
 export const seminarCategories: Record<SeminarCategory, SeminarCategoryDef> = {
-  physical: { id: "physical", label: "フィジカルサポート", icon: "🏃", accentColor: "#2563eb" },
-  mental: { id: "mental", label: "メンタルヘルス", icon: "🧠", accentColor: "#7c3aed" },
-  caregiving: { id: "caregiving", label: "介護離職予防", icon: "🤝", accentColor: "#0d9488" },
-  lifestyle: { id: "lifestyle", label: "生活習慣病予防", icon: "🥗", accentColor: "#16a34a" },
+  physical: {
+    id: "physical",
+    label: "フィジカルサポート",
+    courseName: "からだケアコース",
+    icon: "🏃",
+    accentColor: "#2563eb",
+  },
+  mental: {
+    id: "mental",
+    label: "メンタルヘルス",
+    courseName: "こころケアコース",
+    icon: "🧠",
+    accentColor: "#7c3aed",
+  },
+  caregiving: {
+    id: "caregiving",
+    label: "介護離職予防",
+    courseName: "仕事と介護の両立コース",
+    icon: "🤝",
+    accentColor: "#0d9488",
+  },
+  lifestyle: {
+    id: "lifestyle",
+    label: "生活習慣病予防",
+    courseName: "生活習慣改善コース",
+    icon: "🥗",
+    accentColor: "#16a34a",
+  },
 };
 
 export const seminarCategoryList: SeminarCategoryDef[] = Object.values(seminarCategories);
@@ -22,8 +51,10 @@ export const seminarCategoryList: SeminarCategoryDef[] = Object.values(seminarCa
 export interface SeminarTopic {
   id: string;
   category: SeminarCategory;
-  /** 元の企業向けメニュー表に掲載されているテーマ名 */
+  /** 元の企業向けメニュー表に掲載されているテーマ名(分類・検索用の短い呼称) */
   title: string;
+  /** 社員が参加したくなる、行動変容につながる正式なセミナータイトル */
+  headline: string;
   /** 案内・訴求用のキャッチコピー */
   catchCopy: string;
   targetAudience: string;
@@ -43,6 +74,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "lower-back-pain",
     category: "physical",
     title: "腰痛",
+    headline: "腰痛ゼロ職場へ!今日からできる腰のセルフケア",
     catchCopy: "『ぎっくり腰』は突然ではなく、蓄積で起きる",
     targetAudience: "介護・製造・物流など身体を使う業務の従業員",
     objective: "腰痛の発生メカニズムを理解し、日々の作業の中でできる予防動作を身につける",
@@ -67,6 +99,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "shoulder-stiffness",
     category: "physical",
     title: "肩こり",
+    headline: "その肩こり、仕事の姿勢が原因かも?3分リセット習慣",
     catchCopy: "肩こりは『デスクワーク病』ではなく姿勢と血流の問題",
     targetAudience: "デスクワーク・PC作業が多い従業員",
     objective: "肩こりの原因を理解し、作業の合間にできるセルフケアを習慣化する",
@@ -91,6 +124,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "fall-prevention",
     category: "physical",
     title: "転倒(労災NO1)",
+    headline: "職場の転倒災害を防ぐ!つまずかない身体と環境づくり",
     catchCopy: "転倒は『不注意』ではなく『環境と加齢変化』の掛け算で起きる",
     targetAudience: "現場作業員・介護職・全世代の従業員",
     objective: "職場における転倒災害の実態を知り、危険予知と環境改善の視点を持つ",
@@ -115,6 +149,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "telework-exercise",
     category: "physical",
     title: "テレワーク中にできる運動",
+    headline: "座りっぱなしをリセット!仕事の合間の“ながら運動”",
     catchCopy: "座りっぱなし70分で寿命が縮む? 在宅勤務の落とし穴",
     targetAudience: "在宅勤務・リモートワーク中心の従業員",
     objective: "座位時間の健康リスクを理解し、隙間時間でできる運動習慣を身につける",
@@ -139,6 +174,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "posture-improvement",
     category: "physical",
     title: "姿勢改善",
+    headline: "疲れにくい身体をつくる「働く姿勢」改善講座",
     catchCopy: "『姿勢が悪い』は気合いでは治らない、仕組みで変える",
     targetAudience: "全従業員(特にデスクワーク中心の部署)",
     objective: "不良姿勢が身体に与える影響を理解し、正しい姿勢を保つための身体の使い方を学ぶ",
@@ -163,6 +199,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "frailty-prevention",
     category: "physical",
     title: "フレイル予防",
+    headline: "いつまでも元気に働くためのフレイル予防",
     catchCopy: "フレイルは『高齢者だけの話』ではない、40代からの備えが差になる",
     targetAudience: "40代以上の従業員・管理職",
     objective: "フレイル(虚弱)の概念と早期兆候を理解し、健康寿命を延ばす生活習慣を学ぶ",
@@ -187,6 +224,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "core-balance",
     category: "physical",
     title: "体幹機能向上でバランス能力向上",
+    headline: "体幹から整える!転ばない身体づくり",
     catchCopy: "体幹は『割れた腹筋』ではなく、身体を守る土台",
     targetAudience: "現場作業員・立ち仕事中心の従業員",
     objective: "体幹の役割を理解し、簡単な体幹トレーニングでバランス能力とケガの予防力を高める",
@@ -211,6 +249,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "heatstroke-prevention",
     category: "physical",
     title: "熱中症予防",
+    headline: "職場で防ぐ熱中症―気づく・休む・声をかける",
     catchCopy: "熱中症は『真夏日』だけでなく、屋内・梅雨時期にも起きる",
     targetAudience: "屋外作業・高温環境下で働く従業員",
     objective: "熱中症のメカニズムと初期症状を理解し、職場でできる予防策・応急対応を身につける",
@@ -235,6 +274,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "health-checkup",
     category: "physical",
     title: "健康管理全般(健診)",
+    headline: "健診結果を“見て終わり”にしない健康管理術",
     catchCopy: "健診結果、『去年と同じ』で放置していませんか",
     targetAudience: "全従業員",
     objective: "健康診断結果の正しい見方を理解し、指摘事項を放置しないための行動につなげる",
@@ -261,6 +301,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "cbt-basics",
     category: "mental",
     title: "認知行動療法",
+    headline: "考え方のクセを整える―仕事のストレス対処法",
     catchCopy: "『考え方のクセ』に気づくだけで、ストレスは軽くなる",
     targetAudience: "全従業員・管理職",
     objective: "認知行動療法(CBT)の基本的な考え方を理解し、ストレスを感じた時の思考の整理法を身につける",
@@ -285,6 +326,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "sleep-routine",
     category: "mental",
     title: "快眠ナイトルーティン",
+    headline: "明日のパフォーマンスを変える快眠ナイトルーティン",
     catchCopy: "『寝る時間』より『寝る前の1時間』が眠りの質を決める",
     targetAudience: "全従業員",
     objective: "睡眠の質を高める夜の過ごし方(ナイトルーティン)を理解し、実践できるようになる",
@@ -309,6 +351,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "assertive-communication",
     category: "mental",
     title: "アサーティブ会話術",
+    headline: "言いにくいことを上手に伝えるアサーティブ会話術",
     catchCopy: "我慢か攻撃か、その間にある『第三の伝え方』",
     targetAudience: "全従業員・管理職(対人ストレスを抱えやすい部署)",
     objective: "アサーティブ(自他尊重)なコミュニケーションの考え方を理解し、職場での伝え方を実践できるようになる",
@@ -333,6 +376,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "silent-sos",
     category: "mental",
     title: "サイレントSOSキャッチ＆声かけ法",
+    headline: "部下の“サイレントSOS”を見逃さない気づきと声かけ",
     catchCopy: "『大丈夫です』の裏にあるサインに気づけますか",
     targetAudience: "管理職・チームリーダー",
     objective: "不調を言葉にできない部下・同僚の『サイレントSOS』に気づき、適切に声をかけるスキルを身につける",
@@ -357,6 +401,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "depression-diet",
     category: "mental",
     title: "うつ予防の食事",
+    headline: "心の調子を整える食事と生活習慣",
     catchCopy: "腸は『第二の脳』、食事がメンタルを左右する",
     targetAudience: "全従業員",
     objective: "食事とメンタルヘルスの関係を理解し、気分の安定につながる食習慣を身につける",
@@ -381,6 +426,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "early-consultation",
     category: "mental",
     title: "早めの受診",
+    headline: "「まだ大丈夫」が危険かも―心の不調と早めの相談",
     catchCopy: "『そのうち治る』が症状を長引かせる最大の原因",
     targetAudience: "全従業員",
     objective: "不調のサインに早めに気づき、我慢せず相談・受診する行動につなげる",
@@ -405,6 +451,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "self-care",
     category: "mental",
     title: "セルフケア",
+    headline: "ストレスと上手につきあうセルフケア入門",
     catchCopy: "『頑張り方』は教わるのに『休み方』は教わらない",
     targetAudience: "全従業員",
     objective: "ストレスへの気づきと、自分に合ったセルフケアの方法を身につける",
@@ -429,6 +476,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "relaxation",
     category: "mental",
     title: "リラクセーション",
+    headline: "仕事の緊張をほどく3分間リラクセーション",
     catchCopy: "『頑張って休む』をやめる、力を抜く技術",
     targetAudience: "全従業員",
     objective: "呼吸法・筋弛緩法などのリラクセーション技法を体験し、緊張状態を意識的に緩める方法を身につける",
@@ -455,6 +503,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "care-insurance",
     category: "caregiving",
     title: "介護保険",
+    headline: "知らないと困る!仕事と介護を支える介護保険入門",
     catchCopy: "『まだ関係ない』と思っている40代が一番知っておくべき制度",
     targetAudience: "40代以上の従業員",
     objective: "介護保険制度の基本的な仕組みと利用の流れを理解し、いざという時に慌てず動けるようにする",
@@ -479,6 +528,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "care-cost-guardianship",
     category: "caregiving",
     title: "介護費用や後見人制度",
+    headline: "親の介護にいくらかかる?費用と後見人制度の基本",
     catchCopy: "介護のお金と判断能力、『準備なし』が一番のリスク",
     targetAudience: "40代以上の従業員",
     objective: "介護にかかる費用の目安と、判断能力が低下した際の後見人制度の基礎を理解する",
@@ -503,6 +553,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "care-service-types",
     category: "caregiving",
     title: "介護サービスの種類",
+    headline: "何を、どこまで頼める?介護サービス早わかり講座",
     catchCopy: "『とりあえずデイサービス』で本当に合っていますか",
     targetAudience: "介護をしている・今後する可能性がある従業員",
     objective: "在宅・施設それぞれの介護サービスの種類と特徴を理解し、状況に合った選択肢を検討できるようにする",
@@ -527,6 +578,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "acp",
     category: "caregiving",
     title: "ACP",
+    headline: "親が元気なうちに始める「これから」の話―人生会議入門",
     catchCopy: "『まだ早い』と思っている時こそ話すタイミング",
     targetAudience: "全従業員(特に家族に高齢者がいる従業員)",
     objective: "ACP(アドバンス・ケア・プランニング/人生会議)の考え方を理解し、本人・家族の意思を事前に話し合う重要性を学ぶ",
@@ -551,6 +603,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "consultation-contacts",
     category: "caregiving",
     title: "相談先",
+    headline: "突然の介護、まずどこに相談する?相談窓口と初動対応",
     catchCopy: "『誰に相談すればいいか分からない』が一番の壁",
     targetAudience: "介護をしている・不安を感じている従業員",
     objective: "介護に関する多様な相談窓口を知り、状況に応じて適切な相談先を選べるようになる",
@@ -575,6 +628,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "dementia",
     category: "caregiving",
     title: "認知症",
+    headline: "親の「あれ?」に気づく認知症の基礎知識",
     catchCopy: "認知症は『何もわからなくなる病気』ではない",
     targetAudience: "全従業員",
     objective: "認知症の基礎知識と正しい接し方を理解し、家族や職場での適切な対応につなげる",
@@ -599,6 +653,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "care-prevention",
     category: "caregiving",
     title: "介護予防",
+    headline: "親も自分も元気でいるための介護予防",
     catchCopy: "自分の親のフレイル、気づいていますか",
     targetAudience: "40代以上の従業員(親世代の介護予防を考える層)",
     objective: "介護予防の考え方を理解し、家族の要介護状態を遠ざけるための具体的な関わり方を学ぶ",
@@ -623,6 +678,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "work-care-balance",
     category: "caregiving",
     title: "介護と仕事両立",
+    headline: "介護が始まっても仕事を辞めないための両立支援",
     catchCopy: "介護は『いつか終わる』ものではなく、先が見えないから苦しい",
     targetAudience: "介護をしている従業員・管理職",
     objective: "介護と仕事を両立するための制度・工夫を理解し、無理なく続けられる働き方を考える",
@@ -649,6 +705,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "infection-control",
     category: "lifestyle",
     title: "感染対策",
+    headline: "職場で広げない!今日からできる感染症対策",
     catchCopy: "『うつさない・うつらない』は日々の小さな習慣で決まる",
     targetAudience: "全従業員",
     objective: "職場における感染対策の基本を理解し、日常的に実践できる予防行動を身につける",
@@ -672,6 +729,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "obesity-metabolic",
     category: "lifestyle",
     title: "肥満メタボ",
+    headline: "脱メタボ!無理なく続ける体重管理のコツ",
     catchCopy: "『まだ大丈夫』のお腹周りが将来の大きなリスクに",
     targetAudience: "健診でメタボ該当・予備群と判定された従業員",
     objective: "内臓脂肪型肥満(メタボリックシンドローム)のリスクを理解し、生活習慣改善の第一歩を踏み出す",
@@ -695,6 +753,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "nutrition",
     category: "lifestyle",
     title: "食事",
+    headline: "コンビニ・外食でもできる働く人の食事改善",
     catchCopy: "『何を食べるか』より『どう食べるか』が体を変える",
     targetAudience: "全従業員",
     objective: "生活習慣病予防につながる食事の基本原則を理解し、実践できる工夫を身につける",
@@ -717,6 +776,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "hypertension",
     category: "lifestyle",
     title: "高血圧",
+    headline: "放置しない高血圧―血圧を整える生活習慣",
     catchCopy: "『痛くも痒くもない』高血圧が血管を静かに壊していく",
     targetAudience: "健診で血圧を指摘された従業員",
     objective: "高血圧のリスクと合併症を理解し、日常生活でできる血圧管理の方法を学ぶ",
@@ -739,6 +799,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "sleep-health",
     category: "lifestyle",
     title: "睡眠",
+    headline: "睡眠から整える健康と仕事のパフォーマンス",
     catchCopy: "睡眠不足は『甘え』ではなく、生活習慣病のリスク因子",
     targetAudience: "全従業員",
     objective: "睡眠不足が心身に与える影響を理解し、生活習慣病予防の観点から睡眠の質を高める方法を学ぶ",
@@ -762,6 +823,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "diabetes",
     category: "lifestyle",
     title: "糖尿病",
+    headline: "血糖値が気になる人のための糖尿病予防講座",
     catchCopy: "血糖値のジェットコースター、あなたの体に起きていませんか",
     targetAudience: "健診で血糖値を指摘された従業員",
     objective: "糖尿病の病態と合併症を理解し、血糖コントロールにつながる生活習慣を学ぶ",
@@ -785,6 +847,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "cancer-screening",
     category: "lifestyle",
     title: "がん",
+    headline: "働く世代が知っておきたい「がん予防と検診」",
     catchCopy: "『がん検診、去年も受けなかった』を今年こそ変える",
     targetAudience: "全従業員",
     objective: "がん検診の重要性を理解し、検診受診への心理的ハードルを下げて行動につなげる",
@@ -808,6 +871,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "easy-exercise",
     category: "lifestyle",
     title: "気軽な運動",
+    headline: "運動が苦手でも続く!1日10分の健康習慣",
     catchCopy: "『運動しなきゃ』が一番のハードル、まずは『動く』から",
     targetAudience: "運動習慣のない従業員",
     objective: "運動の健康効果を理解し、無理なく続けられる『気軽な運動』の始め方を学ぶ",
@@ -831,6 +895,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "dyslipidemia",
     category: "lifestyle",
     title: "高脂血症",
+    headline: "コレステロール・中性脂肪を改善する生活術",
     catchCopy: "コレステロールも中性脂肪も『高いだけ』では痛くない、だから怖い",
     targetAudience: "健診で脂質異常を指摘された従業員",
     objective: "脂質異常症(高脂血症)のリスクを理解し、食事・運動による改善方法を学ぶ",
@@ -854,6 +919,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "liver-kidney-heart",
     category: "lifestyle",
     title: "肝腎心機能",
+    headline: "健診の「肝機能・腎機能・心臓」異常を放置しないために",
     catchCopy: "沈黙の臓器からのサイン、健診の数値で気づけますか",
     targetAudience: "健診で肝機能・腎機能・心機能の項目を指摘された従業員",
     objective: "肝臓・腎臓・心臓の役割と健診数値の意味を理解し、機能低下を防ぐ生活習慣を学ぶ",
@@ -877,6 +943,7 @@ export const seminarTopics: SeminarTopic[] = [
     id: "alcohol-tobacco",
     category: "lifestyle",
     title: "酒タバコ",
+    headline: "お酒とタバコ、上手につきあう・やめるための実践講座",
     catchCopy: "『分かってはいるけど、やめられない』を一緒に考える",
     targetAudience: "喫煙習慣・多量飲酒がある従業員",
     objective: "喫煙・飲酒が健康に与える影響を正しく理解し、減酒・禁煙に向けた具体的な一歩を考える",

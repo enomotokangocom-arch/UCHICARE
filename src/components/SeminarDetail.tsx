@@ -8,7 +8,7 @@ import { categoryAggregates, overallScore } from "@/lib/aggregate";
 import { surveyDefs } from "@/lib/surveyDefs";
 import { scoreToLevel } from "@/lib/scoring";
 import { formatDateStr } from "@/lib/seminarPriority";
-import { seminarCategoryList, SeminarTopic } from "@/lib/seminarTopics";
+import { SEMINAR_SERIES_NAME, seminarCategoryList, SeminarTopic } from "@/lib/seminarTopics";
 import { RiskBadge } from "@/components/RiskBadge";
 
 export function SeminarDetail({ topic }: { topic: SeminarTopic }) {
@@ -71,7 +71,7 @@ export function SeminarDetail({ topic }: { topic: SeminarTopic }) {
             </div>
             <div>
               <p className="text-xs font-bold leading-tight text-slate-900">UCHICARE</p>
-              <p className="text-[10px] leading-tight text-slate-500">企業向け健康経営セミナー資料</p>
+              <p className="text-[10px] leading-tight text-slate-500">{SEMINAR_SERIES_NAME}</p>
             </div>
           </div>
           <div className="text-right">
@@ -79,14 +79,15 @@ export function SeminarDetail({ topic }: { topic: SeminarTopic }) {
               className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
               style={{ backgroundColor: `${category.accentColor}1a`, color: category.accentColor }}
             >
-              {category.icon} {category.label}
+              {category.icon} {category.label}({category.courseName})
             </span>
             <p className="mt-1 text-[11px] text-slate-400">作成日 {todayStr}</p>
           </div>
         </header>
 
         <div className="mt-6">
-          <h1 className="text-2xl font-bold text-slate-900">{topic.title}</h1>
+          <p className="text-xs font-semibold text-slate-400">テーマ:{topic.title}</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">{topic.headline}</h1>
           <p className="mt-1.5 text-base font-medium text-teal-700">{topic.catchCopy}</p>
         </div>
 

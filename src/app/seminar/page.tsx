@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useHealthDataStore } from "@/lib/store";
 import { useSeminarLogStore } from "@/lib/seminarStore";
 import {
+  SEMINAR_SERIES_NAME,
   seminarCategoryList,
   seminarTopics,
   seminarTopicsByCategory,
@@ -42,7 +43,8 @@ export default function SeminarGeneratorPage() {
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900">セミナー資料ジェネレーター</h1>
+        <p className="text-xs font-semibold uppercase tracking-wide text-teal-600">{SEMINAR_SERIES_NAME}</p>
+        <h1 className="mt-1 text-xl font-bold text-slate-900">セミナー資料ジェネレーター</h1>
         <p className="mt-1 text-sm text-slate-500">
           労働環境・ストレスチェック・腰痛リスク・介護リスクの調査データから、御社にとって今もっとも刺さるセミナーテーマを提案し、1日1テーマ・PDF資料を作成します。
         </p>
@@ -63,9 +65,9 @@ export default function SeminarGeneratorPage() {
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-medium text-slate-500">
-              {seminarCategoryList.find((c) => c.id === todaysTopic.category)?.label}
+              {seminarCategoryList.find((c) => c.id === todaysTopic.category)?.label} ・ {todaysTopic.title}
             </p>
-            <h2 className="mt-0.5 text-lg font-bold text-slate-900">{todaysTopic.title}</h2>
+            <h2 className="mt-0.5 text-lg font-bold text-slate-900">{todaysTopic.headline}</h2>
             <p className="mt-1 text-sm text-slate-600">{todaysTopic.catchCopy}</p>
             {todaysNeed && <p className="mt-2 text-xs text-slate-500">{todaysNeed.reason}</p>}
           </div>
@@ -100,7 +102,9 @@ export default function SeminarGeneratorPage() {
                   {category.icon}
                 </span>
                 <h2 className="text-sm font-bold text-slate-800">{category.label}</h2>
-                <span className="text-xs text-slate-400">{topics.length}テーマ</span>
+                <span className="text-xs text-slate-400">
+                  {category.courseName} ・ {topics.length}テーマ
+                </span>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {topics.map((topic) => {
@@ -115,9 +119,7 @@ export default function SeminarGeneratorPage() {
                     >
                       <div>
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-sm font-semibold text-slate-900 group-hover:text-teal-700">
-                            {topic.title}
-                          </h3>
+                          <p className="text-[11px] font-medium text-slate-400">{topic.title}</p>
                           {need && (
                             <RiskBadge
                               level={needScoreToLevel(need.needScore)}
@@ -125,6 +127,9 @@ export default function SeminarGeneratorPage() {
                             />
                           )}
                         </div>
+                        <h3 className="mt-0.5 text-sm font-semibold text-slate-900 group-hover:text-teal-700">
+                          {topic.headline}
+                        </h3>
                         <p className="mt-1 text-xs text-slate-500">{topic.catchCopy}</p>
                       </div>
                       <div className="mt-3 flex items-center gap-1.5">
@@ -166,9 +171,9 @@ export default function SeminarGeneratorPage() {
                     className="flex items-center justify-between gap-3 py-2.5"
                   >
                     <div>
-                      <p className="text-sm font-medium text-slate-800">{topic.title}</p>
+                      <p className="text-sm font-medium text-slate-800">{topic.headline}</p>
                       <p className="text-xs text-slate-500">
-                        {entry.date} ・ {seminarCategoryList.find((c) => c.id === topic.category)?.label}
+                        {entry.date} ・ {seminarCategoryList.find((c) => c.id === topic.category)?.label}({topic.title})
                       </p>
                     </div>
                     <Link
