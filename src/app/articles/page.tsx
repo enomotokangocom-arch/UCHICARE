@@ -1,12 +1,14 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useArticleStore } from "@/lib/articleStore";
 import { generateArticle } from "@/lib/articleClient";
+import { estimateQueuePosition, todayDateString } from "@/lib/publishScheduler";
+import { computeSeoScore, SEO_APPROVAL_THRESHOLD } from "@/lib/seoScore";
 import {
+  ARTICLE_STATUS_LABELS,
   Article,
   ArticleGenerationInput,
-  ArticleStatus,
   ArticleTopicCategory,
   ARTICLE_TOPIC_CATEGORY_DEFS,
   LENGTH_HINT_DEFS,
@@ -29,14 +31,33 @@ const EMPTY_FORM: ArticleGenerationInput = {
 
 export default function ArticlesPage() {
   const articles = useArticleStore((s) => s.articles);
+  const lastAutoPublishDate = useArticleStore((s) => s.lastAutoPublishDate);
+  const lastAutoPublishedArticleId = useArticleStore((s) => s.lastAutoPublishedArticleId);
   const addArticle = useArticleStore((s) => s.addArticle);
   const updateArticle = useArticleStore((s) => s.updateArticle);
   const removeArticle = useArticleStore((s) => s.removeArticle);
+  const runAutoPublishIfNeeded = useArticleStore((s) => s.runAutoPublishIfNeeded);
 
   const [form, setForm] = useState<ArticleGenerationInput>(EMPTY_FORM);
   const [subKeywordsText, setSubKeywordsText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // アプリを開いたタイミングで、前回公開日から1日以上経過していれば
+  // 承認済みキューの先頭(SEOスコア90点以上)を1件だけ自動公開する。
+  useEffect(() => {
+    runAutoPublishIfNeeded();
+  }, [runAutoPublishIfNeeded]);
+
+  const autoPublishedArticle = useMemo(
+    () => articles.find((a) => a.id === lastAutoPublishedArticleId) ?? null,
+    [articles, lastAutoPublishedArticleId]
+  );
+
+  const approvedQueueCount = useMemo(
+    () => articles.filter((a) => a.status === "approved").length,
+    [articles]
+  );
 
   function toggleAudience(audience: TargetAudience) {
     setForm((prev) => ({
@@ -68,6 +89,8 @@ export default function ArticlesPage() {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         status: "draft",
+        approvedAt: null,
+        publishedAt: null,
         mainKeyword: input.mainKeyword,
         subKeywords: input.subKeywords,
         targetAudiences: input.targetAudiences,
@@ -88,6 +111,19 @@ export default function ArticlesPage() {
         <p className="mt-1 text-sm text-slate-500">
           キーワードを指定してSEO記事を自動生成します。地域の方・ケアマネジャー・医師からの利用相談につながる記事作成を支援します。
         </p>
+      </div>
+
+      {autoPublishedArticle && (
+        <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
+          本日、承認済みキューから「{autoPublishedArticle.title}」を自動公開しました。
+        </div>
+      )}
+
+      <div className="mb-6 rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
+        承認済み記事はSEOスコア{SEO_APPROVAL_THRESHOLD}点以上のものに限り、公開待ちキューに入り、1日1件ずつ自動で公開されます(承認日時が古い順)。
+        現在、公開待ちキューに{approvedQueueCount}件あります。
+        <br />
+        ※ このプロトタイプはバックエンドを持たないため、アプリを開いたタイミングで「前回公開から1日以上経過したか」を判定して実行します(本番運用ではサーバー側の日次スケジューラでの実行を想定)。
       </div>
 
       <form
@@ -206,6 +242,8 @@ export default function ArticlesPage() {
               <ArticleCard
                 key={article.id}
                 article={article}
+                articles={articles}
+                lastAutoPublishDate={lastAutoPublishDate}
                 onUpdate={(patch) => updateArticle(article.id, patch)}
                 onRemove={() => removeArticle(article.id)}
               />
@@ -219,19 +257,49 @@ export default function ArticlesPage() {
 
 function ArticleCard({
   article,
+  articles,
+  lastAutoPublishDate,
   onUpdate,
   onRemove,
 }: {
   article: Article;
+  articles: Article[];
+  lastAutoPublishDate: string | null;
   onUpdate: (patch: Partial<Article>) => void;
   onRemove: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  function toggleStatus() {
-    const next: ArticleStatus = article.status === "draft" ? "published" : "draft";
-    onUpdate({ status: next });
+  const { score, checks } = useMemo(() => computeSeoScore(article), [article]);
+  const meetsThreshold = score >= SEO_APPROVAL_THRESHOLD;
+
+  // 承認後に本文を編集してスコアが基準を下回った場合は、承認を取り消して下書きに戻す。
+  useEffect(() => {
+    if (article.status === "approved" && !meetsThreshold) {
+      onUpdate({ status: "draft", approvedAt: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [article.status, meetsThreshold]);
+
+  const queueInfo = useMemo(
+    () =>
+      article.status === "approved"
+        ? estimateQueuePosition(articles, article.id, lastAutoPublishDate, todayDateString())
+        : null,
+    [articles, article.id, article.status, lastAutoPublishDate]
+  );
+
+  function handleApprove() {
+    onUpdate({ status: "approved", approvedAt: new Date().toISOString() });
+  }
+
+  function handleRevoke() {
+    onUpdate({ status: "draft", approvedAt: null });
+  }
+
+  function handlePublishNow() {
+    onUpdate({ status: "published", publishedAt: todayDateString() });
   }
 
   async function handleCopy() {
@@ -245,19 +313,24 @@ function ArticleCard({
     }
   }
 
+  const scoreColor = score >= 90 ? "bg-teal-50 text-teal-700" : score >= 70 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
+  const statusColor =
+    article.status === "published"
+      ? "bg-teal-50 text-teal-700"
+      : article.status === "approved"
+        ? "bg-blue-50 text-blue-700"
+        : "bg-slate-100 text-slate-500";
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-start justify-between gap-3 px-5 py-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                article.status === "published"
-                  ? "bg-teal-50 text-teal-700"
-                  : "bg-slate-100 text-slate-500"
-              }`}
-            >
-              {article.status === "published" ? "公開" : "下書き"}
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusColor}`}>
+              {ARTICLE_STATUS_LABELS[article.status]}
+            </span>
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${scoreColor}`}>
+              SEOスコア {score}点
             </span>
             <span className="text-[11px] text-slate-400">
               {new Date(article.createdAt).toLocaleString("ja-JP")}
@@ -276,26 +349,76 @@ function ArticleCard({
               </span>
             ))}
           </div>
+
+          {article.status === "draft" && !meetsThreshold && (
+            <p className="mt-2 text-[11px] text-red-600">
+              SEOスコアが{SEO_APPROVAL_THRESHOLD}点未満のため承認できません。下の内訳を確認して本文を調整してください。
+            </p>
+          )}
+          {article.status === "approved" && queueInfo && (
+            <p className="mt-2 text-[11px] text-blue-700">
+              公開待ちキュー {queueInfo.position}番目・公開予定日の目安 {queueInfo.estimatedDate}
+            </p>
+          )}
+          {article.status === "published" && article.publishedAt && (
+            <p className="mt-2 text-[11px] text-teal-700">公開日: {article.publishedAt}</p>
+          )}
         </div>
         <div className="flex shrink-0 flex-col gap-1.5">
           <button
             onClick={() => setExpanded((v) => !v)}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
           >
-            {expanded ? "閉じる" : "本文を見る"}
+            {expanded ? "閉じる" : "詳細を見る"}
           </button>
-          <button
-            onClick={toggleStatus}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-          >
-            {article.status === "draft" ? "公開にする" : "下書きに戻す"}
-          </button>
+          {article.status === "draft" && (
+            <button
+              onClick={handleApprove}
+              disabled={!meetsThreshold}
+              className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              承認する
+            </button>
+          )}
+          {article.status === "approved" && (
+            <>
+              <button
+                onClick={handlePublishNow}
+                className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700"
+              >
+                今すぐ公開する
+              </button>
+              <button
+                onClick={handleRevoke}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              >
+                承認を取り消す
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {expanded && (
         <div className="border-t border-slate-200 px-5 py-4">
-          <label className="text-xs font-semibold text-slate-600">本文(Markdown)</label>
+          <div>
+            <label className="text-xs font-semibold text-slate-600">SEOチェック内訳</label>
+            <ul className="mt-1.5 grid grid-cols-1 gap-1 sm:grid-cols-2">
+              {checks.map((check) => (
+                <li
+                  key={check.key}
+                  className={`flex items-center gap-1.5 text-xs ${check.passed ? "text-slate-600" : "text-red-600"}`}
+                >
+                  <span>{check.passed ? "✓" : "✗"}</span>
+                  <span>
+                    {check.label}({check.weight}点)
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <label className="mt-4 block text-xs font-semibold text-slate-600">本文(Markdown)</label>
           <textarea
             value={article.body}
             onChange={(e) => onUpdate({ body: e.target.value })}

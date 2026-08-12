@@ -62,12 +62,20 @@ export interface GeneratedArticleContent {
   callToAction: string;
 }
 
-export type ArticleStatus = "draft" | "published";
+export type ArticleStatus = "draft" | "approved" | "published";
+
+export const ARTICLE_STATUS_LABELS: Record<ArticleStatus, string> = {
+  draft: "下書き",
+  approved: "承認済み・公開待ち",
+  published: "公開済み",
+};
 
 export interface Article extends GeneratedArticleContent {
   id: string;
   createdAt: string;
   status: ArticleStatus;
+  approvedAt: string | null;
+  publishedAt: string | null;
   mainKeyword: string;
   subKeywords: string[];
   targetAudiences: TargetAudience[];
