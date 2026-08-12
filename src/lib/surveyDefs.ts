@@ -129,6 +129,36 @@ export const surveyDefs: Record<SurveyType, SurveyDef> = {
       high: "介護離職につながる高いリスクがあります。個別面談やケアマネジャーとの連携を早急にご検討ください。",
     },
   },
+  lifestyle: {
+    type: "lifestyle",
+    title: "生活習慣病リスク調査",
+    shortTitle: "生活習慣リスク調査",
+    description:
+      "食事・運動・睡眠・飲酒喫煙など、生活習慣病につながる日常の行動リスクを保健師監修の視点でチェックします。",
+    icon: "🥗",
+    accentColor: "#16a34a",
+    scaleLabels,
+    questions: [
+      { id: "ls1", text: "揚げ物や脂っこい食事を週に3回以上とることが多い", polarity: "negative" },
+      { id: "ls2", text: "野菜を毎食とるように意識している", polarity: "positive" },
+      { id: "ls3", text: "朝食を抜くことが多い", polarity: "negative" },
+      { id: "ls4", text: "定期的な運動(1回30分以上)を週に2回未満しか行っていない", polarity: "negative" },
+      { id: "ls5", text: "睡眠時間が6時間未満の日が多い", polarity: "negative" },
+      { id: "ls6", text: "お酒を飲む頻度が週4日以上、または喫煙している", polarity: "negative" },
+      { id: "ls7", text: "健診で指摘された項目について、再検査や生活改善に取り組んでいる", polarity: "positive" },
+      { id: "ls8", text: "自分の体重や体調の変化を定期的に確認している", polarity: "positive" },
+    ],
+    resultLabels: {
+      low: "低リスク",
+      medium: "中リスク",
+      high: "高リスク",
+    },
+    resultAdvice: {
+      low: "生活習慣病リスクは低い水準です。良い習慣を維持しましょう。",
+      medium: "生活習慣にリスクの兆候が見られます。食事・運動・睡眠のいずれかから改善を始めることをおすすめします。",
+      high: "生活習慣病リスクが高い状態です。保健師による個別指導や健診結果の再確認を早めにご検討ください。",
+    },
+  },
 };
 
 export const surveyList = Object.values(surveyDefs);

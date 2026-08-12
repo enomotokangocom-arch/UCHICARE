@@ -14,6 +14,7 @@ export const SUGGESTED_PROMPTS = [
   "腰痛リスクが高い部署はどこ?",
   "介護と仕事の両立で困っている人はいる?",
   "労働環境で改善すべき点は?",
+  "生活習慣病のリスクが高い部署はどこ?",
   "全体的な健康経営の課題をまとめて",
 ];
 
@@ -74,19 +75,31 @@ export function generateCannedReply(userText: string, submissions: SurveySubmiss
     );
   }
 
+  if (includesAny(["生活習慣", "食事", "運動", "睡眠", "飲酒", "喫煙"])) {
+    const lifestyle = byType("lifestyle");
+    const worst = [...departments].sort(
+      (a, b) => (a.categoryScores.lifestyle ?? 100) - (b.categoryScores.lifestyle ?? 100)
+    )[0];
+    return (
+      `生活習慣病リスク調査の全社平均は ${lifestyle.averageScore}点(${RISK_LEVEL_JA[lifestyle.level]}相当)です。\n` +
+      `「${worst.department}」で食事・運動・睡眠などの生活習慣リスクが高めです(${worst.categoryScores.lifestyle}点)。` +
+      `保健師による個別指導や、生活習慣改善コースのセミナー実施をおすすめします。`
+    );
+  }
+
   if (includesAny(["まとめ", "課題", "サマリー", "全体"])) {
     const lines = categories
       .map((c) => `・${surveyDefs[c.type].shortTitle}: ${c.averageScore}点(${RISK_LEVEL_JA[c.level]}相当)`)
       .join("\n");
-    return `現在の4指標の状況は以下の通りです。\n${lines}\n\n特にスコアの低い指標から優先的に対策をご提案できます。気になる指標名を送ってみてください。`;
+    return `現在の5指標の状況は以下の通りです。\n${lines}\n\n特にスコアの低い指標から優先的に対策をご提案できます。気になる指標名を送ってみてください。`;
   }
 
   if (includesAny(["こんにちは", "はじめまして", "よろしく"])) {
-    return "こんにちは。UCHICAREの健康経営アシスタントです。ストレス・腰痛・介護・労働環境について、気になるテーマを教えてください。";
+    return "こんにちは。UCHICAREの健康経営アシスタントです。ストレス・腰痛・介護・労働環境・生活習慣について、気になるテーマを教えてください。";
   }
 
   return (
     "ご質問ありがとうございます。現時点は簡易応答のプレースホルダーのため詳細な自由回答はできませんが、" +
-    "「ストレス」「腰痛」「介護」「労働環境」「まとめ」などのキーワードを含めて質問いただくと、ダッシュボードのデータをもとにお答えします。"
+    "「ストレス」「腰痛」「介護」「労働環境」「生活習慣」「まとめ」などのキーワードを含めて質問いただくと、ダッシュボードのデータをもとにお答えします。"
   );
 }

@@ -23,6 +23,11 @@ const PILLARS = [
     role: "ケアマネジャー監修",
     description: "従業員の家族介護と仕事の両立状況を把握し、介護離職リスクを早期に発見します。",
   },
+  {
+    title: "生活習慣病リスク調査",
+    role: "保健師監修",
+    description: "食事・運動・睡眠・飲酒喫煙などの日常習慣を評価し、生活習慣病リスクを早期に発見します。",
+  },
 ];
 
 export default function Home() {
@@ -38,7 +43,7 @@ export default function Home() {
           企業の健康経営指標を、ひとつのダッシュボードに。
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-teal-50">
-          労働環境・ストレスチェック・腰痛リスク・介護リスクの4つの視点を統合し、
+          労働環境・ストレスチェック・腰痛リスク・介護リスク・生活習慣病リスクの5つの視点を統合し、
           企業の健康経営の課題をデータで捉え、チャットで手軽に相談できます。
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
@@ -58,7 +63,7 @@ export default function Home() {
       </div>
 
       <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-slate-400">
-        4つの評価軸
+        5つの評価軸
       </h2>
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {PILLARS.map((pillar, index) => {
@@ -94,7 +99,7 @@ export default function Home() {
         <ol className="mt-4 grid grid-cols-1 gap-4 text-sm text-slate-600 sm:grid-cols-4">
           <li>
             <p className="text-xs font-semibold text-teal-700">STEP 1</p>
-            <p className="mt-1">従業員が4つの調査票に回答</p>
+            <p className="mt-1">従業員が5つの調査票に回答</p>
           </li>
           <li>
             <p className="text-xs font-semibold text-teal-700">STEP 2</p>

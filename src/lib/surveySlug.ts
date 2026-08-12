@@ -5,6 +5,7 @@ const SLUG_MAP: Record<SurveyType, string> = {
   stressCheck: "stress-check",
   backPain: "back-pain",
   caregiving: "caregiving",
+  lifestyle: "lifestyle",
 };
 
 export function surveyTypeToSlug(type: SurveyType): string {

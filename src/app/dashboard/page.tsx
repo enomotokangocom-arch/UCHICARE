@@ -55,13 +55,13 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard
           title="総合健康経営スコア"
           value={overall}
           unit="点"
           accentColor="#0f172a"
-          subtext="4指標の平均(100点満点)"
+          subtext="5指標の平均(100点満点)"
           badge={<RiskBadge level={scoreToLevel(overall)} />}
         />
         {categories.map((cat) => (
@@ -79,9 +79,9 @@ export default function DashboardPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
-          <h2 className="text-sm font-semibold text-slate-800">4指標バランス</h2>
+          <h2 className="text-sm font-semibold text-slate-800">5指標バランス</h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            労働環境・ストレス・腰痛・介護の各リスクを100点満点で比較
+            労働環境・ストレス・腰痛・介護・生活習慣の各リスクを100点満点で比較
           </p>
           <CategoryRadarChart data={categories} />
         </div>
@@ -97,7 +97,7 @@ export default function DashboardPage() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3">
           <h2 className="text-sm font-semibold text-slate-800">部署別 総合スコア</h2>
-          <p className="mt-0.5 text-xs text-slate-500">部署ごとの健康経営スコア(4指標平均)</p>
+          <p className="mt-0.5 text-xs text-slate-500">部署ごとの健康経営スコア(5指標平均)</p>
           <DepartmentBarChart data={departments} />
         </div>
 

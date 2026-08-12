@@ -1,4 +1,4 @@
-export type SurveyType = "ergonomics" | "stressCheck" | "backPain" | "caregiving";
+export type SurveyType = "ergonomics" | "stressCheck" | "backPain" | "caregiving" | "lifestyle";
 
 export type RiskLevel = "low" | "medium" | "high";
 

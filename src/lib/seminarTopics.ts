@@ -1462,6 +1462,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "infection-control",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "感染対策",
     headline: "職場で広げない!今日からできる感染症対策",
     catchCopy: "『うつさない・うつらない』は日々の小さな習慣で決まる",
@@ -1486,6 +1487,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "obesity-metabolic",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "肥満メタボ",
     headline: "脱メタボ!無理なく続ける体重管理のコツ",
     catchCopy: "『まだ大丈夫』のお腹周りが将来の大きなリスクに",
@@ -1510,6 +1512,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "nutrition",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "食事",
     headline: "コンビニ・外食でもできる働く人の食事改善",
     catchCopy: "『何を食べるか』より『どう食べるか』が体を変える",
@@ -1533,6 +1536,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "hypertension",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "高血圧",
     headline: "放置しない高血圧―血圧を整える生活習慣",
     catchCopy: "『痛くも痒くもない』高血圧が血管を静かに壊していく",
@@ -1556,6 +1560,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "sleep-health",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "睡眠",
     headline: "睡眠から整える健康と仕事のパフォーマンス",
     catchCopy: "睡眠不足は『甘え』ではなく、生活習慣病のリスク因子",
@@ -1580,6 +1585,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "diabetes",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "糖尿病",
     headline: "血糖値が気になる人のための糖尿病予防講座",
     catchCopy: "血糖値のジェットコースター、あなたの体に起きていませんか",
@@ -1604,6 +1610,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "cancer-screening",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "がん",
     headline: "働く世代が知っておきたい「がん予防と検診」",
     catchCopy: "『がん検診、去年も受けなかった』を今年こそ変える",
@@ -1628,6 +1635,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "easy-exercise",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "気軽な運動",
     headline: "運動が苦手でも続く!1日10分の健康習慣",
     catchCopy: "『運動しなきゃ』が一番のハードル、まずは『動く』から",
@@ -1652,6 +1660,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "dyslipidemia",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "高脂血症",
     headline: "コレステロール・中性脂肪を改善する生活術",
     catchCopy: "コレステロールも中性脂肪も『高いだけ』では痛くない、だから怖い",
@@ -1676,6 +1685,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "liver-kidney-heart",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "肝腎心機能",
     headline: "健診の「肝機能・腎機能・心臓」異常を放置しないために",
     catchCopy: "沈黙の臓器からのサイン、健診の数値で気づけますか",
@@ -1700,6 +1710,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "alcohol-tobacco",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "酒タバコ",
     headline: "お酒とタバコ、上手につきあう・やめるための実践講座",
     catchCopy: "『分かってはいるけど、やめられない』を一緒に考える",
@@ -1724,6 +1735,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "oral-health",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "歯周病・口腔ケア",
     headline: "歯周病は万病のもと?見過ごせない口腔ケアの重要性",
     catchCopy: "歯ぐきからの出血、『いつものこと』で済ませていませんか",
@@ -1748,6 +1760,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "osteoporosis",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "骨粗鬆症予防",
     headline: "その骨折、防げたかもしれない―骨粗鬆症予防講座",
     catchCopy: "骨の強さは、痛みが出る前が勝負",
@@ -1772,6 +1785,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "gout-uric-acid",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "痛風・高尿酸血症",
     headline: "その激痛、痛風かも―尿酸値と上手につきあう生活習慣",
     catchCopy: "『風が吹いても痛い』は都市伝説ではない",
@@ -1796,6 +1810,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "sarcopenia",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "サルコペニア対策",
     headline: "筋肉は資産―加齢に負けないサルコペニア対策",
     catchCopy: "何もしなければ、筋肉は年に1%ずつ減っていく",
@@ -1820,6 +1835,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "gut-health",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "腸内環境を整える生活習慣",
     headline: "『腸活』で整える、生活習慣病に負けない体づくり",
     catchCopy: "腸内環境の乱れは、肌にも体重にも表れる",
@@ -1844,6 +1860,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "menopause-lifestyle",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "更年期と生活習慣病リスク",
     headline: "更年期をきっかけに増える生活習慣病リスクに備える",
     catchCopy: "更年期は『通過するもの』ではなく『備えるもの』",
@@ -1868,6 +1885,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "muscle-training-metabolism",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "筋トレで基礎代謝を上げる",
     headline: "太りにくい体をつくる、筋トレで基礎代謝アップ講座",
     catchCopy: "食べる量を減らすより、燃える体をつくる",
@@ -1892,6 +1910,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "seasonal-immunity",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "季節の変わり目の体調管理",
     headline: "季節の変わり目になぜ不調?免疫力を整える生活術",
     catchCopy: "『気候のせい』で片付けず、できる備えがある",
@@ -1916,6 +1935,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "hydration-habit",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "こまめな水分補給習慣",
     headline: "水分不足が招くリスク、こまめな水分補給の習慣づくり",
     catchCopy: "喉が渇いた時には、もう水分不足が始まっている",
@@ -1940,6 +1960,7 @@ export const seminarTopics: SeminarTopic[] = [
   {
     id: "stress-eating",
     category: "lifestyle",
+    relatedSurveyType: "lifestyle",
     title: "ストレスと食べすぎ・間食のコントロール",
     headline: "ストレスで食べすぎてしまう人のための食行動コントロール術",
     catchCopy: "お腹が空いていないのに食べたくなる、それは心のサイン",

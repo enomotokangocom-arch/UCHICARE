@@ -10,7 +10,7 @@ import {
   SurveyType,
 } from "./types";
 
-const SURVEY_TYPES: SurveyType[] = ["ergonomics", "stressCheck", "backPain", "caregiving"];
+const SURVEY_TYPES: SurveyType[] = ["ergonomics", "stressCheck", "backPain", "caregiving", "lifestyle"];
 
 function average(values: number[]): number {
   if (values.length === 0) return 0;

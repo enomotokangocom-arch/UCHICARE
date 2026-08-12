@@ -5,7 +5,7 @@ import { scoreToLevel } from "./scoring";
 /** レポート上の「本日」。サーバー/クライアントの時刻ずれによる Hydration Mismatch を避けるため固定値を使う */
 export const TODAY = new Date("2026-07-30T00:00:00");
 
-const SURVEY_TYPES: SurveyType[] = ["ergonomics", "stressCheck", "backPain", "caregiving"];
+const SURVEY_TYPES: SurveyType[] = ["ergonomics", "stressCheck", "backPain", "caregiving", "lifestyle"];
 
 /** 決定的な疑似乱数生成器(mulberry32)。SSR/CSRで同じ値を出すために Math.random は使わない */
 function mulberry32(seed: number) {
@@ -21,11 +21,11 @@ function mulberry32(seed: number) {
 
 /** 部署ごとの各指標のベース値(0-100, 高いほど健康的) */
 const DEPT_BASELINE: Record<Department, Record<SurveyType, number>> = {
-  "介護・福祉サービス部": { ergonomics: 62, stressCheck: 60, backPain: 46, caregiving: 50 },
-  製造部: { ergonomics: 54, stressCheck: 64, backPain: 52, caregiving: 66 },
-  物流部: { ergonomics: 58, stressCheck: 66, backPain: 42, caregiving: 70 },
-  営業部: { ergonomics: 72, stressCheck: 58, backPain: 78, caregiving: 62 },
-  管理部門: { ergonomics: 75, stressCheck: 62, backPain: 82, caregiving: 68 },
+  "介護・福祉サービス部": { ergonomics: 62, stressCheck: 60, backPain: 46, caregiving: 50, lifestyle: 58 },
+  製造部: { ergonomics: 54, stressCheck: 64, backPain: 52, caregiving: 66, lifestyle: 60 },
+  物流部: { ergonomics: 58, stressCheck: 66, backPain: 42, caregiving: 70, lifestyle: 52 },
+  営業部: { ergonomics: 72, stressCheck: 58, backPain: 78, caregiving: 62, lifestyle: 55 },
+  管理部門: { ergonomics: 75, stressCheck: 62, backPain: 82, caregiving: 68, lifestyle: 68 },
 };
 
 /** 1ヶ月あたりのスコア変化(悪化トレンドの演出用。マイナス=悪化) */

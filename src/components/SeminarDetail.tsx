@@ -37,7 +37,7 @@ export function SeminarDetail({ topic }: { topic: SeminarTopic }) {
       label: "総合健康経営スコア",
       score: overall,
       level: scoreToLevel(overall),
-      note: "労働環境・ストレス・腰痛・介護の4指標平均",
+      note: "労働環境・ストレス・腰痛・介護・生活習慣の5指標平均",
     };
   }, [submissions, topic.relatedSurveyType]);
 
