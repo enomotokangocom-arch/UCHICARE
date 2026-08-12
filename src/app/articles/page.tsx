@@ -33,18 +33,20 @@ export default function ArticlesPage() {
   const articles = useArticleStore((s) => s.articles);
   const lastAutoPublishDate = useArticleStore((s) => s.lastAutoPublishDate);
   const lastAutoPublishedArticleId = useArticleStore((s) => s.lastAutoPublishedArticleId);
+  const lastAutoPublishError = useArticleStore((s) => s.lastAutoPublishError);
   const addArticle = useArticleStore((s) => s.addArticle);
   const updateArticle = useArticleStore((s) => s.updateArticle);
   const removeArticle = useArticleStore((s) => s.removeArticle);
   const runAutoPublishIfNeeded = useArticleStore((s) => s.runAutoPublishIfNeeded);
+  const publishArticleNow = useArticleStore((s) => s.publishArticleNow);
 
   const [form, setForm] = useState<ArticleGenerationInput>(EMPTY_FORM);
   const [subKeywordsText, setSubKeywordsText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // アプリを開いたタイミングで、前回公開日から1日以上経過していれば
-  // 承認済みキューの先頭(SEOスコア90点以上)を1件だけ自動公開する。
+  // アプリを開いたタイミングで、前回送信日から1日以上経過していれば
+  // 承認済みキューの先頭(SEOスコア90点以上)を1件だけWordPressに下書き送信する。
   useEffect(() => {
     runAutoPublishIfNeeded();
   }, [runAutoPublishIfNeeded]);
@@ -91,6 +93,8 @@ export default function ArticlesPage() {
         status: "draft",
         approvedAt: null,
         publishedAt: null,
+        wordpressPostId: null,
+        wordpressEditUrl: null,
         mainKeyword: input.mainKeyword,
         subKeywords: input.subKeywords,
         targetAudiences: input.targetAudiences,
@@ -115,15 +119,36 @@ export default function ArticlesPage() {
 
       {autoPublishedArticle && (
         <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
-          本日、承認済みキューから「{autoPublishedArticle.title}」を自動公開しました。
+          本日、承認済みキューから「{autoPublishedArticle.title}」をWordPressに下書きとして送信しました。
+          WordPress管理画面で内容を確認し、問題なければ公開ボタンを押してください。
+          {autoPublishedArticle.wordpressEditUrl && (
+            <>
+              {" "}
+              <a
+                href={autoPublishedArticle.wordpressEditUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold underline"
+              >
+                WordPress編集画面を開く
+              </a>
+            </>
+          )}
+        </div>
+      )}
+
+      {lastAutoPublishError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          本日の自動送信でエラーが発生しました: {lastAutoPublishError}
         </div>
       )}
 
       <div className="mb-6 rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
-        承認済み記事はSEOスコア{SEO_APPROVAL_THRESHOLD}点以上のものに限り、公開待ちキューに入り、1日1件ずつ自動で公開されます(承認日時が古い順)。
+        承認済み記事はSEOスコア{SEO_APPROVAL_THRESHOLD}点以上のものに限り、公開待ちキューに入り、1日1件ずつ自動でWordPressに<strong>下書き</strong>として送信されます(承認日時が古い順)。
+        実際にサイトへ公開するかどうかは、WordPress管理画面で人が最終確認して判断します。
         現在、公開待ちキューに{approvedQueueCount}件あります。
         <br />
-        ※ このプロトタイプはバックエンドを持たないため、アプリを開いたタイミングで「前回公開から1日以上経過したか」を判定して実行します(本番運用ではサーバー側の日次スケジューラでの実行を想定)。
+        ※ このプロトタイプはバックエンドを持たないため、アプリを開いたタイミングで「前回送信から1日以上経過したか」を判定して実行します(本番運用ではサーバー側の日次スケジューラでの実行を想定)。WordPress連携が未設定の場合、送信は失敗します。
       </div>
 
       <form
@@ -246,6 +271,7 @@ export default function ArticlesPage() {
                 lastAutoPublishDate={lastAutoPublishDate}
                 onUpdate={(patch) => updateArticle(article.id, patch)}
                 onRemove={() => removeArticle(article.id)}
+                onPublishNow={() => publishArticleNow(article.id)}
               />
             ))}
           </div>
@@ -261,15 +287,19 @@ function ArticleCard({
   lastAutoPublishDate,
   onUpdate,
   onRemove,
+  onPublishNow,
 }: {
   article: Article;
   articles: Article[];
   lastAutoPublishDate: string | null;
   onUpdate: (patch: Partial<Article>) => void;
   onRemove: () => void;
+  onPublishNow: () => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const { score, checks } = useMemo(() => computeSeoScore(article), [article]);
   const meetsThreshold = score >= SEO_APPROVAL_THRESHOLD;
@@ -298,8 +328,16 @@ function ArticleCard({
     onUpdate({ status: "draft", approvedAt: null });
   }
 
-  function handlePublishNow() {
-    onUpdate({ status: "published", publishedAt: todayDateString() });
+  async function handlePublishNow() {
+    setSendError(null);
+    setIsSending(true);
+    try {
+      await onPublishNow();
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "WordPressへの送信に失敗しました。");
+    } finally {
+      setIsSending(false);
+    }
   }
 
   async function handleCopy() {
@@ -361,8 +399,24 @@ function ArticleCard({
             </p>
           )}
           {article.status === "published" && article.publishedAt && (
-            <p className="mt-2 text-[11px] text-teal-700">公開日: {article.publishedAt}</p>
+            <p className="mt-2 text-[11px] text-teal-700">
+              WordPress送信日: {article.publishedAt}
+              {article.wordpressEditUrl && (
+                <>
+                  {" ・ "}
+                  <a
+                    href={article.wordpressEditUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline"
+                  >
+                    WordPress編集画面を開く
+                  </a>
+                </>
+              )}
+            </p>
           )}
+          {sendError && <p className="mt-2 text-[11px] text-red-600">{sendError}</p>}
         </div>
         <div className="flex shrink-0 flex-col gap-1.5">
           <button
@@ -384,13 +438,15 @@ function ArticleCard({
             <>
               <button
                 onClick={handlePublishNow}
-                className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700"
+                disabled={isSending}
+                className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
               >
-                今すぐ公開する
+                {isSending ? "送信中..." : "今すぐWordPressへ送信する"}
               </button>
               <button
                 onClick={handleRevoke}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                disabled={isSending}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
               >
                 承認を取り消す
               </button>

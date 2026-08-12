@@ -67,7 +67,7 @@ export type ArticleStatus = "draft" | "approved" | "published";
 export const ARTICLE_STATUS_LABELS: Record<ArticleStatus, string> = {
   draft: "下書き",
   approved: "承認済み・公開待ち",
-  published: "公開済み",
+  published: "WordPress下書き送信済み",
 };
 
 export interface Article extends GeneratedArticleContent {
@@ -76,6 +76,10 @@ export interface Article extends GeneratedArticleContent {
   status: ArticleStatus;
   approvedAt: string | null;
   publishedAt: string | null;
+  /** WordPressに下書きとして送信された投稿のID(送信済みの場合のみ)。 */
+  wordpressPostId: number | null;
+  /** WordPress管理画面の編集URL(送信済みの場合のみ)。人が最終確認・公開ボタンを押すために使う。 */
+  wordpressEditUrl: string | null;
   mainKeyword: string;
   subKeywords: string[];
   targetAudiences: TargetAudience[];
