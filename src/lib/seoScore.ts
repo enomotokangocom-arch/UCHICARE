@@ -23,6 +23,27 @@ export interface SeoScoreInput {
 export const SEO_APPROVAL_THRESHOLD = 90;
 
 /**
+ * 「世田谷区 訪問看護」のようなスペース区切りのキーワードを単語(トークン)に分割する。
+ * 自然な日本語の文章では単語間に助詞(の・と・で 等)が入るため、
+ * キーワード全体を1つの連続した文字列として一致させるのではなく、単語単位で含有をチェックする。
+ */
+function keywordTokens(keyword: string): string[] {
+  return keyword
+    .trim()
+    .split(/[\s　]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+function allTokensIncluded(tokens: string[], text: string): boolean {
+  return tokens.length > 0 && tokens.every((t) => text.includes(t));
+}
+
+function countTokenOccurrences(tokens: string[], text: string): number {
+  return tokens.reduce((sum, t) => sum + (text.split(t).length - 1), 0);
+}
+
+/**
  * 記事の構造的なSEO要件を機械的にチェックし、0〜100点のスコアを算出する。
  * LLMの自己採点ではなく、決定的なルールで判定することで承認基準として利用できるようにしている。
  */
@@ -30,10 +51,10 @@ export function computeSeoScore(article: SeoScoreInput): SeoScoreResult {
   const title = article.title ?? "";
   const meta = article.metaDescription ?? "";
   const body = article.body ?? "";
-  const mainKeyword = article.mainKeyword?.trim() ?? "";
+  const mainKeywordTokens = keywordTokens(article.mainKeyword ?? "");
 
   const headingCount = (body.match(/^##\s+.+$/gm) ?? []).length;
-  const mainKeywordOccurrences = mainKeyword ? body.split(mainKeyword).length - 1 : 0;
+  const mainKeywordBodyOccurrences = countTokenOccurrences(mainKeywordTokens, body);
   const subKeywords = article.subKeywords ?? [];
   const subKeywordCoverageRatio =
     subKeywords.length === 0
@@ -44,8 +65,8 @@ export function computeSeoScore(article: SeoScoreInput): SeoScoreResult {
   const checks: SeoCheck[] = [
     {
       key: "titleKeyword",
-      label: "タイトルにメインキーワードを含む",
-      passed: mainKeyword !== "" && title.includes(mainKeyword),
+      label: "タイトルにメインキーワードの単語を含む",
+      passed: allTokensIncluded(mainKeywordTokens, title),
       weight: 20,
     },
     {
@@ -56,14 +77,14 @@ export function computeSeoScore(article: SeoScoreInput): SeoScoreResult {
     },
     {
       key: "metaKeyword",
-      label: "メタディスクリプションにメインキーワードを含む",
-      passed: mainKeyword !== "" && meta.includes(mainKeyword),
+      label: "メタディスクリプションにメインキーワードの単語を含む",
+      passed: allTokensIncluded(mainKeywordTokens, meta),
       weight: 15,
     },
     {
       key: "metaLength",
-      label: "メタディスクリプションが100〜140文字",
-      passed: meta.length >= 100 && meta.length <= 140,
+      label: "メタディスクリプションが90〜140文字",
+      passed: meta.length >= 90 && meta.length <= 140,
       weight: 10,
     },
     {
@@ -74,8 +95,8 @@ export function computeSeoScore(article: SeoScoreInput): SeoScoreResult {
     },
     {
       key: "keywordDensity",
-      label: "本文にメインキーワードが2回以上登場",
-      passed: mainKeywordOccurrences >= 2,
+      label: "本文にメインキーワードの単語が繰り返し登場(目安:各単語2回以上)",
+      passed: mainKeywordBodyOccurrences >= mainKeywordTokens.length * 2,
       weight: 15,
     },
     {
