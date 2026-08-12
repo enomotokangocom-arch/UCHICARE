@@ -10,6 +10,7 @@ const mainNavItems = [
   { href: "/", label: "ホーム", icon: "🏠" },
   { href: "/dashboard", label: "健康経営ダッシュボード", icon: "📊" },
   { href: "/chat", label: "企業課題チャット", icon: "💬" },
+  { href: "/articles", label: "記事自動作成", icon: "📝" },
 ];
 
 export function Sidebar() {
