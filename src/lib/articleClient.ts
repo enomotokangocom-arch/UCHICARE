@@ -1,5 +1,30 @@
 import { Article, ArticleGenerationInput, GeneratedArticleContent } from "./articleTypes";
 
+/**
+ * レスポンスをJSONとしてパースする。JSONでない場合(Vercelのタイムアウト/クラッシュ時の
+ * プレーンテキストのエラーページなど)は、ステータスコードと本文の一部を含む
+ * わかりやすいエラーメッセージとして投げる。
+ */
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  const rawText = await response.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(
+      `サーバーから予期しない応答がありました(HTTP ${response.status})。時間をおいて再度お試しください。` +
+        (rawText ? ` 詳細: ${rawText.slice(0, 200)}` : "")
+    );
+  }
+
+  if (!response.ok) {
+    const message = (data as { error?: string })?.error ?? `処理に失敗しました(HTTP ${response.status})。`;
+    throw new Error(message);
+  }
+
+  return data as T;
+}
+
 /** /api/articles/generate にリクエストし、生成された記事コンテンツを取得する。 */
 export async function generateArticle(input: ArticleGenerationInput): Promise<GeneratedArticleContent> {
   const response = await fetch("/api/articles/generate", {
@@ -8,13 +33,7 @@ export async function generateArticle(input: ArticleGenerationInput): Promise<Ge
     body: JSON.stringify(input),
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data?.error ?? "記事の生成に失敗しました。");
-  }
-
-  return data as GeneratedArticleContent;
+  return parseJsonResponse<GeneratedArticleContent>(response);
 }
 
 export interface WordPressPublishResult {
@@ -36,11 +55,5 @@ export async function publishArticleToWordPress(article: Article): Promise<WordP
     }),
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data?.error ?? "WordPressへの送信に失敗しました。");
-  }
-
-  return data as WordPressPublishResult;
+  return parseJsonResponse<WordPressPublishResult>(response);
 }
