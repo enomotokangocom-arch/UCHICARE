@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
   try {
     const message = await client.messages.create({
       model: "claude-opus-5",
-      max_tokens: 4096,
+      // JSON構造(タイトル・見出し・本文・キーワード等)を含めると、特に長めの記事カテゴリで
+      // 4096トークンでは出力が途中で切れてJSONが壊れることがあったため、余裕を持たせている。
+      max_tokens: 8192,
       output_config: { effort: "low" },
       system: buildArticleSystemPrompt(),
       messages: [{ role: "user", content: buildArticleUserPrompt(input) }],
@@ -36,6 +38,13 @@ export async function POST(request: NextRequest) {
     const textBlock = message.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {
       return Response.json({ error: "記事の生成に失敗しました。もう一度お試しください。" }, { status: 502 });
+    }
+
+    if (message.stop_reason === "max_tokens") {
+      return Response.json(
+        { error: "生成された記事が長すぎたため途中で切れてしまいました。文字数の目安を短くして、もう一度お試しください。" },
+        { status: 502 }
+      );
     }
 
     const article = parseGeneratedArticle(textBlock.text);
