@@ -4,6 +4,9 @@ import { buildArticleSystemPrompt, buildArticleUserPrompt, parseGeneratedArticle
 import { ArticleGenerationInput } from "@/lib/articleTypes";
 
 export const runtime = "nodejs";
+// Claude Opusでの記事生成は数十秒かかることがあり、Vercelのデフォルトのタイムアウト(短い場合10秒)
+// では打ち切られてしまうため、明示的に上限を延長する(Hobbyプランでの上限は60秒)。
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -25,7 +28,7 @@ export async function POST(request: NextRequest) {
     const message = await client.messages.create({
       model: "claude-opus-5",
       max_tokens: 4096,
-      output_config: { effort: "medium" },
+      output_config: { effort: "low" },
       system: buildArticleSystemPrompt(),
       messages: [{ role: "user", content: buildArticleUserPrompt(input) }],
     });
