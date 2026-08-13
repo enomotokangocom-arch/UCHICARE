@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { createWordPressDraft, WordPressPublishInput } from "@/lib/wordpressClient";
 
 export const runtime = "nodejs";
+// タグの検索・作成を複数回呼ぶため、Vercelのデフォルトタイムアウトより長めに確保する。
+export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   const input = (await request.json()) as WordPressPublishInput;
