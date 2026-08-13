@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const message = await client.messages.create({
-      model: "claude-opus-5",
+      // Claude Opusは高品質だが生成に時間がかかり、Vercel(Hobbyプラン)の
+      // 60秒タイムアウト上限を超えて FUNCTION_INVOCATION_TIMEOUT になるケースがあったため、
+      // より高速なSonnetに切り替えて信頼性を優先する。
+      model: "claude-sonnet-5",
       // JSON構造(タイトル・見出し・本文・キーワード等)を含めると、特に長めの記事カテゴリで
       // 4096トークンでは出力が途中で切れてJSONが壊れることがあったため、余裕を持たせている。
       max_tokens: 8192,
