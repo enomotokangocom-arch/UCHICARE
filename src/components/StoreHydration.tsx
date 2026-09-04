@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useHealthDataStore } from "@/lib/store";
 import { useArticleStore } from "@/lib/articleStore";
+import { useCeoStore } from "@/lib/ceo/store";
 
 /**
  * zustand persist は skipHydration:true のため、マウント後に手動で
@@ -15,6 +16,7 @@ export function StoreHydration({ children }: { children: React.ReactNode }) {
     Promise.all([
       useHealthDataStore.persist.rehydrate(),
       useArticleStore.persist.rehydrate(),
+      useCeoStore.persist.rehydrate(),
     ]).then(() => {
       setHydrated(true);
     });

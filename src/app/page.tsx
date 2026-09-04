@@ -57,6 +57,25 @@ export default function Home() {
         </div>
       </div>
 
+      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">新機能</p>
+            <h2 className="mt-1 text-sm font-bold text-slate-900">Uchi AI CEO — 訪問看護事業のAI経営OS(Phase 0)</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              売上・利益予測、生産性、必要新規利用者数・営業量・採用人数をAIが常時監視し、
+              「今日CEOが判断すべきこと」だけを提示します。
+            </p>
+          </div>
+          <Link
+            href="/ceo"
+            className="whitespace-nowrap rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+          >
+            Uchi AI CEOを開く →
+          </Link>
+        </div>
+      </div>
+
       <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-slate-400">
         4つの評価軸
       </h2>

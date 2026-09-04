@@ -9,6 +9,7 @@ import { surveyTypeToSlug } from "@/lib/surveySlug";
 const mainNavItems = [
   { href: "/", label: "ホーム", icon: "🏠" },
   { href: "/dashboard", label: "健康経営ダッシュボード", icon: "📊" },
+  { href: "/ceo", label: "Uchi AI CEO", icon: "🧭" },
   { href: "/chat", label: "企業課題チャット", icon: "💬" },
   { href: "/articles", label: "記事自動作成", icon: "📝" },
 ];
