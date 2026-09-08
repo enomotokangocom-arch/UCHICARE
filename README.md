@@ -56,6 +56,38 @@ WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx xxxx xxxx
 
 WordPress連携が未設定の場合、承認・自動送信キューの表示自体は使えますが、実際の送信(自動送信・「今すぐWordPressへ送信する」)はエラーになります。
 
+## Uchi OS（訪問看護経営AI、Phase1）
+
+`/uchi-os` 以下は、本リポジトリに追加された別プロダクト「Uchi OS」(訪問看護経営者の意思決定をAI化する経営OS)
+のPhase1実装です。設計ドキュメントは [`docs/uchi-os/`](./docs/uchi-os/00-README.md) を参照してください。
+既存のUCHICARE（健康経営ダッシュボード）とはデータベース・認証・画面が完全に分離されています。
+
+### セットアップ
+
+```bash
+# 1. PostgreSQLを用意し、.env.local (または.env) に DATABASE_URL と AUTH_SECRET を設定
+cp .env.local.example .env.local
+
+# 2. スキーマをDBに反映
+npx prisma migrate dev
+
+# 3. サンプルデータ(3拠点訪問看護法人、12ヶ月分、仙台東に異常データを注入)を投入
+npm run seed:uchi-os
+
+# 4. 開発サーバーを起動し、 http://localhost:3000/uchi-os/login からログイン
+npm run dev
+```
+
+`npm run seed:uchi-os` の実行後、コンソールにOwnerアカウントのログイン情報が出力されます
+(`owner@uchi-os-demo.jp` / シード時に表示されるパスワード)。
+
+### テスト
+
+```bash
+npm test        # Calculation Engine 等のユニットテスト (Vitest)
+npm run test:e2e  # CEO Morningの主要フローのE2E (Playwright、要: サンプルデータ投入済み & npm run dev 起動中)
+```
+
 ## 技術スタック
 
 - Next.js (App Router) + TypeScript

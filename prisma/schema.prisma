@@ -1,0 +1,575 @@
+// Uchi OS — Prisma schema
+// Design reference: docs/uchi-os/05-database-schema.md
+// Phase 1 implements the full data model (docs/uchi-os/15-phase1-plan.md, T1),
+// even though only a subset of write paths are exercised by Phase 1 features.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================= Tenant / Identity =================
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  planTier  String   @default("starter")
+  timezone  String   @default("Asia/Tokyo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stations           Station[]
+  users              User[]
+  employees          Employee[]
+  patients           Patient[]
+  patientEvents      PatientEvent[]
+  visits             Visit[]
+  financialRecords   FinancialRecord[]
+  salesActivities    SalesActivity[]
+  referralSources    ReferralSource[]
+  recruitmentRecords RecruitmentRecord[]
+  kpiSnapshots       KPISnapshot[]
+  thresholds         AnomalyThreshold[]
+  alerts             Alert[]
+  aiInsights         AIInsight[]
+  decisions          Decision[]
+  actions            Action[]
+  scenarios          Scenario[]
+  auditLogs          AuditLog[]
+  importBatches      DataImportBatch[]
+}
+
+enum StationStatus {
+  ACTIVE
+  INACTIVE
+  PLANNED
+  CLOSED
+}
+
+model Station {
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  address        String?
+  openedAt       DateTime?
+  closedAt       DateTime?
+  status         StationStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization       Organization         @relation(fields: [organizationId], references: [id])
+  employees           Employee[]
+  patients             Patient[]
+  visits               Visit[]
+  financialRecords     FinancialRecord[]
+  salesActivities      SalesActivity[]
+  recruitmentRecords   RecruitmentRecord[]
+  kpiSnapshots         KPISnapshot[]
+  thresholds           AnomalyThreshold[]
+  alerts               Alert[]
+  decisions            Decision[]
+
+  @@index([organizationId])
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  STATION_MANAGER
+  SALES
+  HR
+  FINANCE
+  VIEWER
+}
+
+model User {
+  id             String    @id @default(cuid())
+  organizationId String
+  email          String    @unique
+  name           String
+  passwordHash   String
+  role           UserRole
+  stationId      String? // STATION_MANAGER 等の拠点スコープに使用
+  isActive       Boolean   @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  approvedActions Action[]     @relation("ActionApprover")
+  ownedActions    Action[]     @relation("ActionOwner")
+  auditLogs       AuditLog[]
+
+  @@index([organizationId])
+}
+
+// ================= Workforce =================
+
+enum EmployeeType {
+  NURSE
+  THERAPIST
+  OFFICE
+  MANAGER
+  OTHER
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+model Employee {
+  id                String         @id @default(cuid())
+  organizationId    String
+  stationId         String
+  name              String
+  employeeType      EmployeeType
+  employmentType    EmploymentType
+  fte               Float
+  monthlySalaryCost Decimal
+  hiredAt           DateTime
+  resignedAt        DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  organization      Organization        @relation(fields: [organizationId], references: [id])
+  station            Station             @relation(fields: [stationId], references: [id])
+  visits             Visit[]
+  recruitmentRecord  RecruitmentRecord?
+
+  @@index([organizationId, stationId])
+}
+
+enum RecruitmentStatus {
+  OPEN
+  INTERVIEWING
+  OFFERED
+  FILLED
+  CANCELLED
+}
+
+model RecruitmentRecord {
+  id                 String            @id @default(cuid())
+  organizationId     String
+  stationId          String
+  targetEmployeeType EmployeeType
+  status             RecruitmentStatus
+  postedAt           DateTime?
+  filledAt           DateTime?
+  employeeId         String?           @unique
+  costOfHire         Decimal?
+  createdAt          DateTime          @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  station      Station      @relation(fields: [stationId], references: [id])
+  employee     Employee?    @relation(fields: [employeeId], references: [id])
+
+  @@index([organizationId, stationId])
+}
+
+// ================= Patients / Visits (匿名化) =================
+
+enum PatientEndReason {
+  HOSPITALIZED
+  DECEASED
+  IMPROVED
+  TRANSFERRED
+  FAMILY_REQUEST
+  OTHER
+}
+
+model Patient {
+  id                       String            @id @default(cuid())
+  organizationId           String
+  stationId                String
+  pseudoId                 String            @unique
+  ageBand                  String?
+  careLevel                String?
+  primaryDiagnosisCategory String?
+  startedAt                DateTime
+  endedAt                  DateTime?
+  endReason                PatientEndReason?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id])
+  station      Station        @relation(fields: [stationId], references: [id])
+  visits       Visit[]
+  events       PatientEvent[]
+
+  @@index([organizationId, stationId])
+}
+
+// 氏名・住所等の直接識別情報は分離。Uchi OS の分析・AI機能はこのテーブルを参照しない (09章)。
+model PatientIdentity {
+  id                String   @id @default(cuid())
+  patientId         String   @unique
+  encryptedName     Bytes
+  encryptedAddress  Bytes?
+  insurerNumberHash String?
+  createdAt         DateTime @default(now())
+}
+
+enum PatientEventType {
+  ADMISSION
+  DISCHARGE
+  HOSPITALIZATION
+  CARE_LEVEL_CHANGE
+  COMPLAINT
+  INCIDENT
+  OTHER
+}
+
+model PatientEvent {
+  id             String           @id @default(cuid())
+  organizationId String
+  patientId      String
+  type           PatientEventType
+  occurredAt     DateTime
+  note           String?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  patient      Patient      @relation(fields: [patientId], references: [id])
+
+  @@index([organizationId, patientId])
+}
+
+model Visit {
+  id              String   @id @default(cuid())
+  organizationId  String
+  stationId       String
+  patientId       String
+  employeeId      String
+  visitedAt       DateTime
+  durationMinutes Int
+  visitType       String?
+  createdAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  station      Station      @relation(fields: [stationId], references: [id])
+  patient      Patient      @relation(fields: [patientId], references: [id])
+  employee     Employee     @relation(fields: [employeeId], references: [id])
+
+  @@index([organizationId, stationId, visitedAt])
+  @@index([employeeId, visitedAt])
+}
+
+// ================= Financial =================
+
+model FinancialRecord {
+  id                String   @id @default(cuid())
+  organizationId    String
+  stationId         String? // null = 法人全体（本部費用等）
+  yearMonth         String // "2026-08"
+  revenue           Decimal
+  laborCost         Decimal
+  otherFixedCost    Decimal  @default(0)
+  otherVariableCost Decimal  @default(0)
+  cashBalance       Decimal?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  station      Station?     @relation(fields: [stationId], references: [id])
+
+  @@unique([organizationId, stationId, yearMonth])
+  @@index([organizationId, yearMonth])
+}
+
+// ================= Sales / Referral =================
+
+model ReferralSource {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  type           String?
+  isDormant      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization    Organization    @relation(fields: [organizationId], references: [id])
+  salesActivities SalesActivity[]
+
+  @@index([organizationId])
+}
+
+enum SalesActivityType {
+  VISIT
+  CALL
+  EVENT
+  MATERIAL_SENT
+  OTHER
+}
+
+model SalesActivity {
+  id                   String            @id @default(cuid())
+  organizationId       String
+  stationId            String
+  referralSourceId     String?
+  salesRepUserId       String?
+  activityType         SalesActivityType
+  occurredAt           DateTime
+  resultedInReferral   Boolean           @default(false)
+  referredPatientCount Int               @default(0)
+  createdAt            DateTime          @default(now())
+
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  station        Station         @relation(fields: [stationId], references: [id])
+  referralSource ReferralSource? @relation(fields: [referralSourceId], references: [id])
+
+  @@index([organizationId, stationId, occurredAt])
+  @@index([referralSourceId])
+}
+
+// ================= KPI / Alert / AI / Decision / Action =================
+
+enum KPIValueType {
+  FACT
+  CALCULATED
+  AI_ESTIMATE
+}
+
+model KPISnapshot {
+  id             String       @id @default(cuid())
+  organizationId String
+  stationId      String? // null = 法人全体集計
+  yearMonth      String
+  kpiCode        String
+  value          Decimal?
+  insufficientData Boolean    @default(false)
+  valueType      KPIValueType @default(CALCULATED)
+  computedAt     DateTime     @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  station      Station?     @relation(fields: [stationId], references: [id])
+
+  @@unique([organizationId, stationId, yearMonth, kpiCode])
+  @@index([organizationId, yearMonth, kpiCode])
+}
+
+model AnomalyThreshold {
+  id              String   @id @default(cuid())
+  organizationId  String
+  stationId       String? // null = 組織全体デフォルト
+  ruleCode        String
+  paramKey        String
+  paramValue      Decimal
+  updatedByUserId String?
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  station      Station?     @relation(fields: [stationId], references: [id])
+
+  @@unique([organizationId, stationId, ruleCode, paramKey])
+}
+
+enum Severity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+model Alert {
+  id                   String      @id @default(cuid())
+  organizationId       String
+  stationId            String?
+  ruleCode             String
+  severity             Severity
+  title                String
+  detectedAt           DateTime    @default(now())
+  yearMonth            String
+  status               AlertStatus @default(OPEN)
+  sourceKpiSnapshotIds String[]
+  createdAt            DateTime    @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  station      Station?     @relation(fields: [stationId], references: [id])
+  decisions    Decision[]
+
+  @@index([organizationId, status, severity])
+}
+
+enum AIInsightKind {
+  CAUSE_EXPLANATION
+  HYPOTHESIS
+  CHAT_ANSWER
+  ACTION_SUGGESTION
+  FORECAST_NARRATIVE
+}
+
+model AIInsight {
+  id             String        @id @default(cuid())
+  organizationId String
+  decisionId     String?
+  kind           AIInsightKind
+  inputSummary   Json
+  outputText     String
+  model          String
+  confidence     Float?
+  createdAt      DateTime      @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  decision     Decision?    @relation(fields: [decisionId], references: [id])
+
+  @@index([organizationId, decisionId])
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum DecisionStatus {
+  DRAFT
+  AI_RECOMMENDED
+  HUMAN_REVIEWED
+  DISMISSED
+}
+
+model Decision {
+  id              String         @id @default(cuid())
+  organizationId  String
+  stationId       String?
+  alertId         String?
+  ruleCode        String
+  priority        Priority
+  problemSummary  String
+  rootCause       Json
+  predictedImpact Decimal?
+  confidence      Float
+  status          DecisionStatus @default(DRAFT)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  station      Station?     @relation(fields: [stationId], references: [id])
+  alert        Alert?       @relation(fields: [alertId], references: [id])
+  aiInsights   AIInsight[]
+  actions      Action[]
+
+  @@index([organizationId, status, priority])
+}
+
+enum ActionStatus {
+  DRAFT
+  AI_RECOMMENDED
+  HUMAN_APPROVED
+  IN_PROGRESS
+  COMPLETED
+  RESULT_VERIFIED
+  REJECTED
+  HELD
+}
+
+enum ApprovalCategory {
+  HIRING
+  TERMINATION
+  SALARY
+  PERFORMANCE_REVIEW
+  INVESTMENT
+  LOAN
+  CONTRACT
+  NEW_STATION
+  WITHDRAWAL
+}
+
+model Action {
+  id                       String            @id @default(cuid())
+  organizationId           String
+  decisionId               String
+  title                    String
+  description              String
+  ownerUserId              String?
+  requiresApprovalCategory ApprovalCategory?
+  deadline                 DateTime?
+  expectedImpact           Json?
+  actualImpact             Json?
+  status                   ActionStatus      @default(DRAFT)
+  holdReason               String?
+  approvedByUserId         String?
+  approvedAt               DateTime?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  decision     Decision     @relation(fields: [decisionId], references: [id])
+  owner        User?        @relation("ActionOwner", fields: [ownerUserId], references: [id])
+  approver     User?        @relation("ActionApprover", fields: [approvedByUserId], references: [id])
+
+  @@index([organizationId, status])
+}
+
+model Scenario {
+  id              String   @id @default(cuid())
+  organizationId  String
+  createdByUserId String
+  name            String
+  inputParams     Json
+  resultSummary   Json?
+  createdAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+// ================= Platform / Audit =================
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  PARTIAL
+}
+
+model DataImportBatch {
+  id               String       @id @default(cuid())
+  organizationId   String
+  uploadedByUserId String
+  targetEntity     String
+  fileName         String
+  status           ImportStatus @default(PENDING)
+  rowCount         Int?
+  errorCount       Int?
+  errorDetail      Json?
+  createdAt        DateTime     @default(now())
+  completedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         String
+  targetType     String
+  targetId       String
+  metadata       Json?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([targetType, targetId])
+}
