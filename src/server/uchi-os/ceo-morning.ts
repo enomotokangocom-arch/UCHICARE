@@ -40,7 +40,12 @@ export async function getCeoMorningData(organizationId: string, yearMonth: strin
   const [healthScore, decisions] = await Promise.all([
     computeHealthScore(organizationId, yearMonth),
     prisma.decision.findMany({
-      where: { organizationId, status: { in: ["AI_RECOMMENDED", "HUMAN_REVIEWED"] } },
+      where: {
+        organizationId,
+        status: { in: ["AI_RECOMMENDED", "HUMAN_REVIEWED"] },
+        // 根拠となったAlertが自動解消(RESOLVED)・却下(DISMISSED)された場合はTODAYに出さない。
+        alert: { status: { in: ["OPEN", "ACKNOWLEDGED"] } },
+      },
       include: { station: { select: { id: true, name: true } }, actions: { orderBy: { createdAt: "asc" } } },
       orderBy: [{ createdAt: "desc" }],
     }),

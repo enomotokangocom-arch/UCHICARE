@@ -56,11 +56,17 @@ WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx xxxx xxxx
 
 WordPress連携が未設定の場合、承認・自動送信キューの表示自体は使えますが、実際の送信(自動送信・「今すぐWordPressへ送信する」)はエラーになります。
 
-## Uchi OS（訪問看護経営AI、Phase1）
+## Uchi OS（訪問看護経営AI、Phase1〜2）
 
 `/uchi-os` 以下は、本リポジトリに追加された別プロダクト「Uchi OS」(訪問看護経営者の意思決定をAI化する経営OS)
-のPhase1実装です。設計ドキュメントは [`docs/uchi-os/`](./docs/uchi-os/00-README.md) を参照してください。
+の実装です。設計ドキュメントは [`docs/uchi-os/`](./docs/uchi-os/00-README.md) を参照してください。
 既存のUCHICARE（健康経営ダッシュボード）とはデータベース・認証・画面が完全に分離されています。
+
+- **Phase1**: データモデル・KPI Engine・CEO Morning・各種Dashboard・Data Import
+- **Phase2**: Alert Engine本実装(20 Decision Rules全評価、条件解消時の自動RESOLVED遷移、
+  Acknowledge/Resolve/Dismiss)、Decision Engine(全ルールからのAlert→Decision→Action生成)、
+  Action Centerの全状態遷移(承認/修正/保留/却下/着手/完了/実績記録)、拠点別に上書き可能な
+  閾値編集UI(Settings)
 
 ### セットアップ
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSession } from "@/server/uchi-os/auth/rbac";
 import { handleApiError, apiError } from "@/server/uchi-os/http";
 import { prisma } from "@/server/uchi-os/db/client";
+import { markDecisionReviewed } from "@/server/uchi-os/decision-engine/decision-status";
 
 const statusSchema = z.object({ status: z.enum(["IN_PROGRESS", "COMPLETED"]) });
 
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const updated = await prisma.action.update({ where: { id }, data: { status: body.status } });
+    await markDecisionReviewed(action.decisionId);
 
     await prisma.auditLog.create({
       data: {

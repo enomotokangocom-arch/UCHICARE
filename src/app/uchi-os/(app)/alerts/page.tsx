@@ -1,21 +1,28 @@
+import Link from "next/link";
+import clsx from "clsx";
 import { getSession } from "@/server/uchi-os/auth/session";
 import { prisma } from "@/server/uchi-os/db/client";
 import { formatYearMonth } from "@/server/uchi-os/kpi-engine/dates";
 import { PageHeader } from "@/components/uchi-os/PageHeader";
-import clsx from "clsx";
+import { AlertRow } from "@/components/uchi-os/alerts/AlertRow";
+import type { AlertStatus } from "@prisma/client";
 
-const SEVERITY_STYLE: Record<string, string> = {
-  CRITICAL: "bg-red-50 text-red-700",
-  WARNING: "bg-amber-50 text-amber-700",
-  INFO: "bg-blue-50 text-blue-700",
-};
+const STATUS_TABS: { value: AlertStatus | "ALL"; label: string }[] = [
+  { value: "ALL", label: "すべて" },
+  { value: "OPEN", label: "未対応" },
+  { value: "ACKNOWLEDGED", label: "確認済み" },
+  { value: "RESOLVED", label: "解消" },
+  { value: "DISMISSED", label: "却下" },
+];
 
-export default async function AlertsPage() {
+export default async function AlertsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const session = await getSession();
   if (!session) return null;
+  const { status } = await searchParams;
+  const activeStatus = (status as AlertStatus | undefined) ?? undefined;
 
   const alerts = await prisma.alert.findMany({
-    where: { organizationId: session.organizationId },
+    where: { organizationId: session.organizationId, ...(activeStatus ? { status: activeStatus } : {}) },
     include: { station: { select: { name: true } } },
     orderBy: [{ detectedAt: "desc" }],
     take: 100,
@@ -25,29 +32,43 @@ export default async function AlertsPage() {
     <div className="mx-auto max-w-4xl px-4 py-6 md:px-8 md:py-10">
       <PageHeader title="Alerts" yearMonth={formatYearMonth(new Date())} />
 
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        {STATUS_TABS.map((tab) => {
+          const isActive = tab.value === "ALL" ? !activeStatus : activeStatus === tab.value;
+          return (
+            <Link
+              key={tab.value}
+              href={tab.value === "ALL" ? "/uchi-os/alerts" : `/uchi-os/alerts?status=${tab.value}`}
+              className={clsx(
+                "rounded-full px-3 py-1 text-xs font-medium",
+                isActive ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200",
+              )}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </div>
+
       {alerts.length === 0 ? (
         <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500">
-          現在Alertはありません。
+          該当するAlertはありません。
         </div>
       ) : (
         <div className="space-y-2">
           {alerts.map((alert) => (
-            <div key={alert.id} className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 py-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className={clsx("rounded px-1.5 py-0.5 text-[11px] font-medium", SEVERITY_STYLE[alert.severity])}>
-                    {alert.severity}
-                  </span>
-                  <span className="text-xs text-neutral-400">{alert.ruleCode}</span>
-                  <span className="text-xs text-neutral-400">{alert.station?.name ?? "法人全体"}</span>
-                </div>
-                <p className="mt-1 text-sm font-medium text-neutral-900">{alert.title}</p>
-              </div>
-              <div className="text-right text-xs text-neutral-400">
-                <p>{alert.detectedAt.toLocaleDateString("ja-JP")}</p>
-                <p>{alert.status}</p>
-              </div>
-            </div>
+            <AlertRow
+              key={alert.id}
+              alert={{
+                id: alert.id,
+                ruleCode: alert.ruleCode,
+                severity: alert.severity,
+                title: alert.title,
+                stationName: alert.station?.name ?? "法人全体",
+                status: alert.status,
+                detectedAt: alert.detectedAt.toISOString(),
+              }}
+            />
           ))}
         </div>
       )}

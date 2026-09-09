@@ -103,8 +103,8 @@ export function TodayDecisionCard({ decision, onChanged }: { decision: CeoMornin
         <div className="mt-3">
           <p className="text-xs font-medium text-neutral-500">主な原因</p>
           <ul className="mt-1 space-y-0.5 text-sm text-neutral-700">
-            {factors.map((f) => (
-              <li key={f.kpiCode} className="flex items-center gap-1.5">
+            {factors.map((f, i) => (
+              <li key={`${f.kpiCode}-${i}`} className="flex items-center gap-1.5">
                 <span>・{f.label}</span>
                 <DataSourceBadge kind="FACT" />
                 <span className="text-neutral-500">

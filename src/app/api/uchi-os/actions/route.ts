@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
         holdReason: a.holdReason,
         stationName: a.decision.station?.name ?? "法人全体",
         ruleCode: a.decision.ruleCode,
+        actualImpact: a.actualImpact,
         createdAt: a.createdAt,
       })),
     });

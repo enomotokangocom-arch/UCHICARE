@@ -2,7 +2,7 @@ import { getSession } from "@/server/uchi-os/auth/session";
 import { prisma } from "@/server/uchi-os/db/client";
 import { formatYearMonth } from "@/server/uchi-os/kpi-engine/dates";
 import { PageHeader } from "@/components/uchi-os/PageHeader";
-import { DEFAULT_THRESHOLDS } from "@/server/uchi-os/decision-engine/rules";
+import { ThresholdEditor } from "@/components/uchi-os/settings/ThresholdEditor";
 
 export default async function SettingsPage() {
   const session = await getSession();
@@ -52,37 +52,13 @@ export default async function SettingsPage() {
       </section>
 
       <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5">
-        <h2 className="text-sm font-semibold text-neutral-700">Decision Rule 閾値（既定値）</h2>
+        <h2 className="text-sm font-semibold text-neutral-700">Decision Rule 閾値</h2>
         <p className="mt-1 text-xs text-neutral-400">
-          Phase1では拠点別の閾値編集UIは未実装です（07章冒頭の方針どおり、内部的には組織/拠点別に上書き可能な
-          設計になっています。編集UIはPhase2で追加予定）。
+          07章冒頭の方針どおり、組織全体の既定値・拠点別の上書きのどちらも編集できます(拠点別が優先されます)。
         </p>
-        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
-          <div>
-            <dt className="text-xs text-neutral-500">売上低下 WARNING</dt>
-            <dd className="font-medium">{DEFAULT_THRESHOLDS.revenueDropWarnPct}%</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-500">売上低下 CRITICAL</dt>
-            <dd className="font-medium">{DEFAULT_THRESHOLDS.revenueDropCriticalPct}%</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-500">稼働率 WARNING</dt>
-            <dd className="font-medium">{DEFAULT_THRESHOLDS.utilizationWarnPct}%未満</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-500">稼働率 CRITICAL</dt>
-            <dd className="font-medium">{DEFAULT_THRESHOLDS.utilizationCriticalPct}%未満</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-500">Cash Runway WARNING</dt>
-            <dd className="font-medium">{DEFAULT_THRESHOLDS.cashRunwayWarnMonths}ヶ月未満</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-500">Cash Runway CRITICAL</dt>
-            <dd className="font-medium">{DEFAULT_THRESHOLDS.cashRunwayCriticalMonths}ヶ月未満</dd>
-          </div>
-        </dl>
+        <div className="mt-3">
+          <ThresholdEditor stations={stations.map((s) => ({ id: s.id, name: s.name }))} />
+        </div>
       </section>
     </div>
   );

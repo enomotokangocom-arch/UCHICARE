@@ -5,30 +5,24 @@ import { handleApiError, apiError } from "@/server/uchi-os/http";
 import { prisma } from "@/server/uchi-os/db/client";
 import { markDecisionReviewed } from "@/server/uchi-os/decision-engine/decision-status";
 
-const modifySchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().min(1).max(2000).optional(),
-  ownerUserId: z.string().nullable().optional(),
-  deadline: z.string().datetime().nullable().optional(),
-});
+const rejectSchema = z.object({ reason: z.string().min(1).max(500).optional() });
+const REJECTABLE_FROM = ["DRAFT", "AI_RECOMMENDED", "HELD"];
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireSession();
     const { id } = await params;
-    const body = modifySchema.parse(await request.json());
+    const body = rejectSchema.parse(await request.json().catch(() => ({})));
 
     const action = await prisma.action.findFirst({ where: { id, organizationId: session.organizationId } });
     if (!action) return apiError("NOT_FOUND", "Actionが見つかりません", 404);
+    if (!REJECTABLE_FROM.includes(action.status)) {
+      return apiError("INVALID_STATE", `現在のステータス(${action.status})は却下できません`, 409);
+    }
 
     const updated = await prisma.action.update({
       where: { id },
-      data: {
-        ...(body.title !== undefined ? { title: body.title } : {}),
-        ...(body.description !== undefined ? { description: body.description } : {}),
-        ...(body.ownerUserId !== undefined ? { ownerUserId: body.ownerUserId } : {}),
-        ...(body.deadline !== undefined ? { deadline: body.deadline ? new Date(body.deadline) : null } : {}),
-      },
+      data: { status: "REJECTED", holdReason: body.reason ?? null },
     });
     await markDecisionReviewed(action.decisionId);
 
@@ -36,10 +30,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       data: {
         organizationId: session.organizationId,
         userId: session.userId,
-        action: "action.modify",
+        action: "action.reject",
         targetType: "Action",
         targetId: id,
-        metadata: body,
+        metadata: { reason: body.reason ?? null },
       },
     });
 
