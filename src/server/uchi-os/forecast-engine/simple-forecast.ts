@@ -38,3 +38,49 @@ export function forecastLinear(values: (number | null)[], monthsAhead: number): 
   const nextX = values.length - 1 + monthsAhead;
   return trend.slope * nextX + trend.intercept;
 }
+
+export interface ForecastInterval {
+  value: number;
+  low: number;
+  high: number;
+}
+
+const Z_SCORE: Record<number, number> = { 0.8: 1.28, 0.9: 1.645, 0.95: 1.96 };
+
+/**
+ * forecastLinear() に予測区間(prediction interval)を付与した版。
+ * 回帰残差から標準誤差を求め、外挿点までの距離に応じて区間を広げる標準的な手法。
+ * 有効な実測点が3点未満の場合は区間を計算できないため null を返す。
+ */
+export function forecastLinearWithInterval(
+  values: (number | null)[],
+  monthsAhead: number,
+  confidenceLevel: 0.8 | 0.9 | 0.95 = 0.8,
+): ForecastInterval | null {
+  const points = values
+    .map((y, x) => ({ x, y }))
+    .filter((p): p is { x: number; y: number } => p.y != null && Number.isFinite(p.y));
+  if (points.length < 3) return null;
+
+  const trend = fitLinearTrend(values);
+  if (!trend) return null;
+
+  const n = points.length;
+  const xMean = points.reduce((s, p) => s + p.x, 0) / n;
+  const sumSquaredX = points.reduce((s, p) => s + (p.x - xMean) ** 2, 0);
+  const residualSumSquares = points.reduce((s, p) => {
+    const predicted = trend.slope * p.x + trend.intercept;
+    return s + (p.y - predicted) ** 2;
+  }, 0);
+  const standardError = Math.sqrt(residualSumSquares / (n - 2));
+
+  const nextX = values.length - 1 + monthsAhead;
+  const value = trend.slope * nextX + trend.intercept;
+  const z = Z_SCORE[confidenceLevel];
+  const margin =
+    sumSquaredX > 0
+      ? z * standardError * Math.sqrt(1 + 1 / n + (nextX - xMean) ** 2 / sumSquaredX)
+      : z * standardError;
+
+  return { value, low: value - margin, high: value + margin };
+}

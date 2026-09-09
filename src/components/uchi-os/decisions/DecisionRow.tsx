@@ -30,9 +30,17 @@ const PRIORITY_STYLE: Record<string, string> = {
   LOW: "bg-neutral-100 text-neutral-600",
 };
 
+interface ExplanationState {
+  status: "idle" | "loading" | "available" | "unavailable";
+  text?: string;
+  confidence?: number | null;
+  reason?: string;
+}
+
 export function DecisionRow({ decision }: { decision: DecisionRowData }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [explanation, setExplanation] = useState<ExplanationState>({ status: "idle" });
   const factors = (decision.rootCause?.factors ?? []).filter((f) => f.value != null);
   const alertInactive = decision.alertStatus === "RESOLVED" || decision.alertStatus === "DISMISSED";
 
@@ -47,6 +55,21 @@ export function DecisionRow({ decision }: { decision: DecisionRowData }) {
       router.refresh();
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleShowExplanation() {
+    setExplanation({ status: "loading" });
+    try {
+      const response = await fetch(`/api/uchi-os/decisions/${decision.id}/explanation`);
+      const body = await response.json();
+      if (body.available) {
+        setExplanation({ status: "available", text: body.outputText, confidence: body.confidence });
+      } else {
+        setExplanation({ status: "unavailable", reason: body.reason });
+      }
+    } catch {
+      setExplanation({ status: "unavailable", reason: "通信エラーが発生しました" });
     }
   }
 
@@ -71,9 +94,32 @@ export function DecisionRow({ decision }: { decision: DecisionRowData }) {
           ))}
         </ul>
       )}
+
+      {explanation.status === "available" && (
+        <div className="mt-2 rounded-lg bg-violet-50 p-3">
+          <div className="mb-1 flex items-center gap-1.5">
+            <DataSourceBadge kind="AI_ESTIMATE" confidence={explanation.confidence ?? undefined} />
+            <span className="text-[11px] text-violet-700">AIによる原因説明</span>
+          </div>
+          <p className="text-sm text-violet-900">{explanation.text}</p>
+        </div>
+      )}
+      {explanation.status === "unavailable" && (
+        <p className="mt-2 text-xs text-neutral-400">AI分析は利用できません({explanation.reason})</p>
+      )}
+
       <div className="mt-3 flex items-center gap-2">
         <DataSourceBadge kind="CALCULATED" confidence={decision.confidence} />
         <span className="text-xs text-neutral-400">Actions: {decision.actionCount}</span>
+        {explanation.status === "idle" && (
+          <button
+            onClick={handleShowExplanation}
+            className="text-xs font-medium text-violet-700 hover:text-violet-900"
+          >
+            AI分析を見る
+          </button>
+        )}
+        {explanation.status === "loading" && <span className="text-xs text-neutral-400">分析中...</span>}
         {decision.status !== "DISMISSED" && (
           <button
             onClick={handleDismiss}

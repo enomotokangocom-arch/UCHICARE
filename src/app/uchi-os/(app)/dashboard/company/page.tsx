@@ -4,10 +4,12 @@ import { prisma } from "@/server/uchi-os/db/client";
 import { computeMonthlyKpis } from "@/server/uchi-os/kpi-engine/compute";
 import { getKpiTrend } from "@/server/uchi-os/kpi-engine/trend";
 import { formatYearMonth } from "@/server/uchi-os/kpi-engine/dates";
+import { computeStationForecast, computeCashRunwayForecast } from "@/server/uchi-os/forecast-engine/forecast";
 import { PageHeader } from "@/components/uchi-os/PageHeader";
 import { KpiTile } from "@/components/uchi-os/KpiTile";
 import { TrendChart } from "@/components/uchi-os/TrendChart";
-import { formatYen, formatPercent, formatNumber } from "@/components/uchi-os/format";
+import { ForecastTile } from "@/components/uchi-os/ForecastTile";
+import { formatYen, formatPercent, formatNumber, formatMonths } from "@/components/uchi-os/format";
 
 function kpiMap(entries: Awaited<ReturnType<typeof computeMonthlyKpis>>) {
   return new Map(entries.map((e) => [e.kpiCode, e]));
@@ -23,10 +25,12 @@ export default async function CompanyDashboardPage() {
     orderBy: { name: "asc" },
   });
 
-  const [companyKpis, stationKpisList, revenueTrend] = await Promise.all([
+  const [companyKpis, stationKpisList, revenueTrend, revenueForecast, cashForecast] = await Promise.all([
     computeMonthlyKpis(session.organizationId, null, yearMonth),
     Promise.all(stations.map((s) => computeMonthlyKpis(session.organizationId, s.id, yearMonth))),
     getKpiTrend(session.organizationId, null, ["monthly_revenue"], 12, yearMonth),
+    computeStationForecast(session.organizationId, null, yearMonth),
+    computeCashRunwayForecast(session.organizationId, yearMonth),
   ]);
 
   const company = kpiMap(companyKpis);
@@ -50,6 +54,27 @@ export default async function CompanyDashboardPage() {
       <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5">
         <p className="mb-2 text-sm font-semibold text-neutral-700">月間売上の推移（直近12ヶ月）</p>
         <TrendChart data={revenueTrend.map((p) => ({ yearMonth: p.yearMonth, value: p.values.monthly_revenue }))} label="売上" />
+      </div>
+
+      <div className="mt-6">
+        <p className="mb-2 text-sm font-semibold text-neutral-700">予測（Forecast Engine、線形回帰による決定論的計算）</p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <ForecastTile label="売上予測" horizonLabel="翌月" forecast={revenueForecast.revenue.nextMonth} />
+          <ForecastTile label="売上予測" horizonLabel="3ヶ月後" forecast={revenueForecast.revenue.threeMonths} />
+          <ForecastTile label="営業利益予測" horizonLabel="翌月" forecast={revenueForecast.operatingProfit.nextMonth} />
+          <ForecastTile label="営業利益予測" horizonLabel="3ヶ月後" forecast={revenueForecast.operatingProfit.threeMonths} />
+        </div>
+        <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-neutral-500">Cash Runway予測（3ヶ月後時点）</p>
+          </div>
+          <p className="mt-1.5 text-2xl font-semibold tracking-tight text-neutral-900">
+            {formatMonths(cashForecast.projectedRunwayMonthsFromThen)}
+          </p>
+          <p className="mt-0.5 text-xs text-neutral-400">
+            前提: 直近3ヶ月平均Burn {formatYen(cashForecast.averageMonthlyBurn)}/月 が継続した場合
+          </p>
+        </div>
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-neutral-200 bg-white">

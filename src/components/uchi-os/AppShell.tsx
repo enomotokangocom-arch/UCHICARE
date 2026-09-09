@@ -13,8 +13,8 @@ const NAV_ITEMS = [
   { href: "/uchi-os/alerts", label: "Alerts", icon: "🔔", mobile: true, phase: 1 },
   { href: "/uchi-os/decisions", label: "AI Decisions", icon: "🧠", mobile: false, phase: 1 },
   { href: "/uchi-os/actions", label: "Action Center", icon: "✅", mobile: true, phase: 1 },
-  { href: "/uchi-os/chat", label: "AI経営参謀 Chat", icon: "💬", mobile: true, phase: 3 },
-  { href: "/uchi-os/scenarios", label: "Scenario Simulator", icon: "🧪", mobile: false, phase: 3 },
+  { href: "/uchi-os/chat", label: "AI経営参謀 Chat", icon: "💬", mobile: true, phase: 1 },
+  { href: "/uchi-os/scenarios", label: "Scenario Simulator", icon: "🧪", mobile: false, phase: 1 },
   { href: "/uchi-os/import", label: "Data Import", icon: "📥", mobile: false, phase: 1 },
   { href: "/uchi-os/settings", label: "Settings", icon: "⚙️", mobile: false, phase: 1 },
 ];

@@ -11,12 +11,7 @@ import {
   getSalesInputs,
 } from "./aggregate";
 import { shiftYearMonth } from "./dates";
-
-// 1FTEあたりの標準訪問可能時間の仮定値 (稼働率計算の分母)。
-// ハードコードを避けるべき対象だが、Phase1では組織別設定が未実装のため定数とする。
-// Phase2で AnomalyThreshold と同様に組織/拠点別の Settings 値へ移行する想定 (06章・07章冒頭の方針)。
-const STANDARD_VISIT_MINUTES_PER_DAY = 360;
-const STANDARD_WORKING_DAYS_PER_MONTH = 20;
+import { STANDARD_VISIT_MINUTES_PER_DAY, STANDARD_WORKING_DAYS_PER_MONTH } from "./constants";
 
 export interface KpiEntry {
   kpiCode: string;

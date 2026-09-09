@@ -1,12 +1,35 @@
-export default function ScenariosPage() {
+import { getSession } from "@/server/uchi-os/auth/session";
+import { prisma } from "@/server/uchi-os/db/client";
+import { formatYearMonth } from "@/server/uchi-os/kpi-engine/dates";
+import { PageHeader } from "@/components/uchi-os/PageHeader";
+import { ScenarioSimulator } from "@/components/uchi-os/scenarios/ScenarioSimulator";
+
+export default async function ScenariosPage() {
+  const session = await getSession();
+  if (!session) return null;
+
+  const [stations, scenarios] = await Promise.all([
+    prisma.station.findMany({ where: { organizationId: session.organizationId, status: "ACTIVE" }, orderBy: { name: "asc" } }),
+    prisma.scenario.findMany({ where: { organizationId: session.organizationId }, orderBy: { createdAt: "desc" }, take: 20 }),
+  ]);
+
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 text-center md:px-8">
-      <p className="text-4xl">🧪</p>
-      <h1 className="mt-3 text-lg font-semibold text-neutral-900">Scenario Simulator</h1>
-      <p className="mt-2 text-sm text-neutral-500">
-        Phase3で実装予定の機能です（02-mvp-scope.md）。看護師採用・退職・利用者増減・単価変更などの
-        What-ifシナリオをCalculation Engineでシミュレーションできるようになります。
+    <div className="mx-auto max-w-4xl px-4 py-6 md:px-8 md:py-10">
+      <PageHeader title="Scenario Simulator" yearMonth={formatYearMonth(new Date())} />
+      <p className="mb-4 text-xs text-neutral-400">
+        Calculation Engineによる決定論的な試算です（LLMは使用しません）。3ヶ月後の「何もしない場合」の
+        トレンド予測を基準に、シナリオ適用後との差分を表示します。
       </p>
+      <ScenarioSimulator
+        stations={stations.map((s) => ({ id: s.id, name: s.name }))}
+        history={scenarios.map((s) => ({
+          id: s.id,
+          name: s.name,
+          inputParams: s.inputParams as never,
+          resultSummary: s.resultSummary as never,
+          createdAt: s.createdAt.toISOString(),
+        }))}
+      />
     </div>
   );
 }

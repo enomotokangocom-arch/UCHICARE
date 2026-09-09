@@ -6,6 +6,7 @@ import type { KpiTrendPoint } from "@/server/uchi-os/kpi-engine/trend";
 import type { EmployeeWorkload } from "@/server/uchi-os/kpi-engine/workforce-detail";
 import type { ReferralSourceDetail } from "@/server/uchi-os/kpi-engine/referral-detail";
 import { forecastLinear } from "@/server/uchi-os/forecast-engine/simple-forecast";
+import { STANDARD_VISIT_MINUTES_PER_MONTH } from "@/server/uchi-os/kpi-engine/constants";
 import { computeConfidence } from "./confidence";
 import type { ThresholdDefaults } from "./thresholds";
 
@@ -541,7 +542,6 @@ export function evaluateNurseShortage(
   const forecastMinutes = forecastLinear(visitMinutesSeries.slice(-6), 3); // 3ヶ月後の訪問時間需要を予測
   if (nurseCount == null || forecastMinutes == null) return null;
 
-  const STANDARD_VISIT_MINUTES_PER_MONTH = 360 * 20; // 06.7節の仮定値と揃える
   const requiredNurses = Math.ceil(forecastMinutes / STANDARD_VISIT_MINUTES_PER_MONTH);
   const shortage = requiredNurses - nurseCount;
   if (shortage < t.shortage_warn_count) return null;
