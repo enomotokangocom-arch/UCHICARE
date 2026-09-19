@@ -22,25 +22,32 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  stations           Station[]
-  users              User[]
-  employees          Employee[]
-  patients           Patient[]
-  patientEvents      PatientEvent[]
-  visits             Visit[]
-  financialRecords   FinancialRecord[]
-  salesActivities    SalesActivity[]
-  referralSources    ReferralSource[]
-  recruitmentRecords RecruitmentRecord[]
-  kpiSnapshots       KPISnapshot[]
-  thresholds         AnomalyThreshold[]
-  alerts             Alert[]
-  aiInsights         AIInsight[]
-  decisions          Decision[]
-  actions            Action[]
-  scenarios          Scenario[]
-  auditLogs          AuditLog[]
-  importBatches      DataImportBatch[]
+  // Phase4 通知設定 (23章): CRITICAL Alert発生時のWebhook通知・定期レポート自動送信の宛先。
+  slackWebhookUrl       String?
+  notifyOnCriticalAlert Boolean  @default(false)
+  dailyDigestEnabled    Boolean  @default(false)
+  digestEmailRecipients String[] @default([])
+
+  stations            Station[]
+  users               User[]
+  employees           Employee[]
+  patients            Patient[]
+  patientEvents       PatientEvent[]
+  visits              Visit[]
+  financialRecords    FinancialRecord[]
+  salesActivities     SalesActivity[]
+  referralSources     ReferralSource[]
+  recruitmentRecords  RecruitmentRecord[]
+  kpiSnapshots        KPISnapshot[]
+  thresholds          AnomalyThreshold[]
+  alerts              Alert[]
+  aiInsights          AIInsight[]
+  decisions           Decision[]
+  actions             Action[]
+  scenarios           Scenario[]
+  auditLogs           AuditLog[]
+  importBatches       DataImportBatch[]
+  externalConnections ExternalConnection[]
 }
 
 enum StationStatus {
@@ -61,17 +68,17 @@ model Station {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  organization       Organization         @relation(fields: [organizationId], references: [id])
-  employees           Employee[]
-  patients             Patient[]
-  visits               Visit[]
-  financialRecords     FinancialRecord[]
-  salesActivities      SalesActivity[]
-  recruitmentRecords   RecruitmentRecord[]
-  kpiSnapshots         KPISnapshot[]
-  thresholds           AnomalyThreshold[]
-  alerts               Alert[]
-  decisions            Decision[]
+  organization       Organization        @relation(fields: [organizationId], references: [id])
+  employees          Employee[]
+  patients           Patient[]
+  visits             Visit[]
+  financialRecords   FinancialRecord[]
+  salesActivities    SalesActivity[]
+  recruitmentRecords RecruitmentRecord[]
+  kpiSnapshots       KPISnapshot[]
+  thresholds         AnomalyThreshold[]
+  alerts             Alert[]
+  decisions          Decision[]
 
   @@index([organizationId])
 }
@@ -137,10 +144,10 @@ model Employee {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  organization      Organization        @relation(fields: [organizationId], references: [id])
-  station            Station             @relation(fields: [stationId], references: [id])
-  visits             Visit[]
-  recruitmentRecord  RecruitmentRecord?
+  organization      Organization       @relation(fields: [organizationId], references: [id])
+  station           Station            @relation(fields: [stationId], references: [id])
+  visits            Visit[]
+  recruitmentRecord RecruitmentRecord?
 
   @@index([organizationId, stationId])
 }
@@ -336,15 +343,15 @@ enum KPIValueType {
 }
 
 model KPISnapshot {
-  id             String       @id @default(cuid())
-  organizationId String
-  stationId      String? // null = 法人全体集計
-  yearMonth      String
-  kpiCode        String
-  value          Decimal?
-  insufficientData Boolean    @default(false)
-  valueType      KPIValueType @default(CALCULATED)
-  computedAt     DateTime     @default(now())
+  id               String       @id @default(cuid())
+  organizationId   String
+  stationId        String? // null = 法人全体集計
+  yearMonth        String
+  kpiCode          String
+  value            Decimal?
+  insufficientData Boolean      @default(false)
+  valueType        KPIValueType @default(CALCULATED)
+  computedAt       DateTime     @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id])
   station      Station?     @relation(fields: [stationId], references: [id])
@@ -539,19 +546,58 @@ enum ImportStatus {
 }
 
 model DataImportBatch {
-  id               String       @id @default(cuid())
-  organizationId   String
-  uploadedByUserId String
-  targetEntity     String
-  fileName         String
-  status           ImportStatus @default(PENDING)
-  rowCount         Int?
-  errorCount       Int?
-  errorDetail      Json?
-  createdAt        DateTime     @default(now())
-  completedAt      DateTime?
+  id                   String       @id @default(cuid())
+  organizationId       String
+  // 人手によるCSV/Excelアップロードは uploadedByUserId、Adapter Layer(14章)経由の自動同期は
+  // externalConnectionId を持つ。どちらか一方は必ず設定される。
+  uploadedByUserId     String?
+  externalConnectionId String?
+  targetEntity         String
+  fileName             String
+  status               ImportStatus @default(PENDING)
+  rowCount             Int?
+  errorCount           Int?
+  errorDetail          Json?
+  createdAt            DateTime     @default(now())
+  completedAt          DateTime?
 
-  organization Organization @relation(fields: [organizationId], references: [id])
+  organization       Organization        @relation(fields: [organizationId], references: [id])
+  externalConnection ExternalConnection? @relation(fields: [externalConnectionId], references: [id])
+
+  @@index([organizationId])
+}
+
+enum ExternalConnectorType {
+  REST_JSON
+}
+
+enum ExternalConnectionStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+}
+
+// 14章 Adapter Layer (Phase4): 外部システム(レセプト・勤怠・会計等)との連携設定。
+// 認証情報は authTokenEncrypted にアプリ層で暗号化して保存する(09章と同じ方式、security/encryption.ts)。
+model ExternalConnection {
+  id                 String                   @id @default(cuid())
+  organizationId     String
+  name               String
+  targetEntity       String // import/schemas.ts の ImportEntity と一致
+  connectorType      ExternalConnectorType    @default(REST_JSON)
+  baseUrl            String
+  authHeaderName     String?
+  authTokenEncrypted Bytes?
+  status             ExternalConnectionStatus @default(ACTIVE)
+  lastSyncedAt       DateTime?
+  lastSyncStatus     ImportStatus?
+  lastSyncError      String?
+  createdByUserId    String
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  organization  Organization      @relation(fields: [organizationId], references: [id])
+  importBatches DataImportBatch[]
 
   @@index([organizationId])
 }

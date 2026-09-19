@@ -23,6 +23,11 @@ export type FinancialMonthlyRow = z.infer<typeof financialMonthlyRowSchema>;
 export const IMPORT_ENTITIES = ["stations", "financial_monthly"] as const;
 export type ImportEntity = (typeof IMPORT_ENTITIES)[number];
 
+export const IMPORT_ENTITY_LABELS: Record<ImportEntity, string> = {
+  stations: "拠点 (stations)",
+  financial_monthly: "月次財務 (financial_monthly)",
+};
+
 export const IMPORT_TEMPLATES: Record<ImportEntity, string> = {
   stations: "name,address,openedAt\n東京中央,東京都千代田区1-1-1,2020-04-01\n",
   financial_monthly:

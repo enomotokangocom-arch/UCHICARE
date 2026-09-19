@@ -3,6 +3,7 @@ import { prisma } from "@/server/uchi-os/db/client";
 import { formatYearMonth } from "@/server/uchi-os/kpi-engine/dates";
 import { PageHeader } from "@/components/uchi-os/PageHeader";
 import { ImportUploader } from "@/components/uchi-os/import/ImportUploader";
+import { ExternalConnectionsPanel } from "@/components/uchi-os/import/ExternalConnectionsPanel";
 
 export default async function ImportPage() {
   const session = await getSession();
@@ -19,6 +20,16 @@ export default async function ImportPage() {
       <PageHeader title="Data Import" yearMonth={formatYearMonth(new Date())} />
 
       <ImportUploader />
+
+      <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5">
+        <h2 className="text-sm font-semibold text-neutral-700">外部システム連携(Adapter Layer)</h2>
+        <p className="mt-1 text-xs text-neutral-400">
+          14章 Adapter Layer: レセプト・勤怠・会計等の外部システムからREST/JSONで定期的にデータを取得します。
+        </p>
+        <div className="mt-3">
+          <ExternalConnectionsPanel />
+        </div>
+      </div>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
         <p className="border-b border-neutral-200 px-5 py-3 text-sm font-semibold text-neutral-700">取り込み履歴</p>

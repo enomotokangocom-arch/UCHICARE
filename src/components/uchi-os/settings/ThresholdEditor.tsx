@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RULE_LABELS } from "@/server/uchi-os/decision-engine/rule-labels";
 
 interface Station {
   id: string;
@@ -8,28 +9,6 @@ interface Station {
 }
 
 type ThresholdMap = Record<string, Record<string, number>>;
-
-const RULE_LABELS: Record<string, string> = {
-  "DR-01": "売上低下",
-  "DR-02": "売上予測未達",
-  "DR-03": "利用者純減",
-  "DR-04": "終了者急増",
-  "DR-05": "新規利用者減少",
-  "DR-06": "稼働率低下",
-  "DR-07": "過稼働",
-  "DR-08": "人件費率上昇",
-  "DR-09": "営業利益率低下",
-  "DR-10": "営業件数不足",
-  "DR-11": "営業紹介率低下",
-  "DR-12": "重要紹介元休眠",
-  "DR-13": "看護師不足",
-  "DR-14": "看護師過剰",
-  "DR-16": "採用停止",
-  "DR-17": "Cash Runway低下",
-  "DR-18": "拠点赤字",
-  "DR-19": "出店可能性",
-  "DR-20": "撤退検討",
-};
 
 export function ThresholdEditor({ stations }: { stations: Station[] }) {
   const [scope, setScope] = useState<string>(""); // "" = 組織全体

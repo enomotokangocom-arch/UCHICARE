@@ -12,8 +12,10 @@ function parseCsv(csvText: string): Record<string, string>[] {
   return parse(csvText, { columns: true, skip_empty_lines: true, trim: true });
 }
 
-async function importStations(organizationId: string, csvText: string): Promise<ImportResult> {
-  const rows = parseCsv(csvText);
+// 14章 Adapter Layer: CSV由来(文字列)・REST/JSON由来(文字列/数値混在)のどちらの行データも
+// 同じ行処理ロジック(processStationRows/processFinancialMonthlyRows)を通す。
+// zodスキーマ側で z.coerce を使っているため、型の違いはここで吸収される。
+async function processStationRows(organizationId: string, rows: Record<string, unknown>[]): Promise<ImportResult> {
   const errors: ImportResult["errors"] = [];
 
   for (const [i, raw] of rows.entries()) {
@@ -36,8 +38,7 @@ async function importStations(organizationId: string, csvText: string): Promise<
   return { rowCount: rows.length, errorCount: errors.length, errors };
 }
 
-async function importFinancialMonthly(organizationId: string, csvText: string): Promise<ImportResult> {
-  const rows = parseCsv(csvText);
+async function processFinancialMonthlyRows(organizationId: string, rows: Record<string, unknown>[]): Promise<ImportResult> {
   const errors: ImportResult["errors"] = [];
 
   for (const [i, raw] of rows.entries()) {
@@ -87,7 +88,16 @@ async function importFinancialMonthly(organizationId: string, csvText: string): 
   return { rowCount: rows.length, errorCount: errors.length, errors };
 }
 
+/** entityコードに対応する行処理関数を呼ぶ。CSV importとAdapter Layer(REST/JSON)の共通入口。 */
+export async function processRowsForEntity(
+  organizationId: string,
+  entity: ImportEntity,
+  rows: Record<string, unknown>[],
+): Promise<ImportResult> {
+  if (entity === "stations") return processStationRows(organizationId, rows);
+  return processFinancialMonthlyRows(organizationId, rows);
+}
+
 export async function runImport(organizationId: string, entity: ImportEntity, csvText: string): Promise<ImportResult> {
-  if (entity === "stations") return importStations(organizationId, csvText);
-  return importFinancialMonthly(organizationId, csvText);
+  return processRowsForEntity(organizationId, entity, parseCsv(csvText));
 }

@@ -3,8 +3,11 @@ import { computeMonthlyKpis } from "@/server/uchi-os/kpi-engine/compute";
 import { getKpiTrend } from "@/server/uchi-os/kpi-engine/trend";
 import { getEmployeeWorkloads } from "@/server/uchi-os/kpi-engine/workforce-detail";
 import { getReferralSourceDetails } from "@/server/uchi-os/kpi-engine/referral-detail";
+import { computeAllRulePerformance } from "@/server/uchi-os/feedback-loop/rule-performance";
+import { notifyCriticalAlert } from "@/server/uchi-os/notifications/critical-alert";
 import type { Priority, ApprovalCategory, Prisma } from "@prisma/client";
 import { resolveThresholdsForRules } from "./thresholds";
+import { applyHistoricalPrior } from "./confidence";
 import {
   evaluateRevenueDecline,
   evaluateRevenueForecastMiss,
@@ -73,6 +76,9 @@ const COMPANY_RULE_CODES = ["DR-17", "DR-19"];
 
 const OPEN_ALERT_STATUSES = ["OPEN", "ACKNOWLEDGED"] as const;
 const OPEN_DECISION_STATUSES = ["DRAFT", "AI_RECOMMENDED", "HUMAN_REVIEWED"] as const;
+
+// 23章 Feedback Loop: 実績データがこの件数未満のルールは既定値0.6のままとする(サンプル不足で信頼できないため)。
+export const MIN_SAMPLE_SIZE_FOR_PRIOR = 3;
 
 function toPriority(severity: Severity): Priority {
   if (severity === "CRITICAL") return "CRITICAL";
@@ -177,6 +183,15 @@ export async function ensureDecisionsForOrg(organizationId: string, yearMonth: s
 
   allFindings.push(...(await evaluateCompany(organizationId, yearMonth, stationUtilizations)));
 
+  // 23章 Feedback Loop: ルール別の過去の成果達成率をConfidenceのhistoricalPriorへ反映する。
+  const rulePerformance = await computeAllRulePerformance(organizationId);
+  for (const { finding } of allFindings) {
+    const performance = rulePerformance[finding.ruleCode];
+    if (performance && performance.sampleSize >= MIN_SAMPLE_SIZE_FOR_PRIOR) {
+      finding.confidence = applyHistoricalPrior(finding.confidence, performance.successRate);
+    }
+  }
+
   await syncAlertsAndDecisions(organizationId, yearMonth, allFindings);
 }
 
@@ -213,6 +228,11 @@ async function syncAlertsAndDecisions(organizationId: string, yearMonth: string,
             status: "OPEN",
           },
         });
+
+    // 新規発生したCRITICAL Alertのみ通知する(再評価での更新では通知しない、重複防止)。
+    if (!existingAlert && finding.severity === "CRITICAL") {
+      await notifyCriticalAlert(organizationId, { ruleCode: finding.ruleCode, title: finding.title });
+    }
 
     await upsertDecisionFromFinding(organizationId, stationId, alert.id, finding);
   }
@@ -269,6 +289,7 @@ async function upsertDecisionFromFinding(
         title: action.title,
         description: action.description,
         requiresApprovalCategory: (action.approvalCategory as ApprovalCategory | undefined) ?? null,
+        expectedImpact: action.expectedImpact ? (action.expectedImpact as unknown as Prisma.InputJsonValue) : undefined,
         status: "AI_RECOMMENDED",
       },
     });

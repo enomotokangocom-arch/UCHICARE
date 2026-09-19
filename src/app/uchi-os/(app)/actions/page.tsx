@@ -4,7 +4,7 @@ import { getSession } from "@/server/uchi-os/auth/session";
 import { prisma } from "@/server/uchi-os/db/client";
 import { formatYearMonth } from "@/server/uchi-os/kpi-engine/dates";
 import { PageHeader } from "@/components/uchi-os/PageHeader";
-import { ActionRow, type ActualImpact } from "@/components/uchi-os/actions/ActionRow";
+import { ActionRow, type ActualImpact, type ExpectedImpact } from "@/components/uchi-os/actions/ActionRow";
 import type { ActionStatus } from "@prisma/client";
 
 const STATUS_TABS: { value: ActionStatus | "ALL"; label: string }[] = [
@@ -76,6 +76,7 @@ export default async function ActionCenterPage({
                 stationName: a.decision.station?.name ?? "法人全体",
                 ruleCode: a.decision.ruleCode,
                 holdReason: a.holdReason,
+                expectedImpact: (a.expectedImpact as unknown as ExpectedImpact | null) ?? null,
                 actualImpact: (a.actualImpact as unknown as ActualImpact | null) ?? null,
               }}
             />

@@ -2,11 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-
-const ENTITIES: { value: string; label: string }[] = [
-  { value: "stations", label: "拠点 (stations)" },
-  { value: "financial_monthly", label: "月次財務 (financial_monthly)" },
-];
+import { IMPORT_ENTITIES, IMPORT_ENTITY_LABELS } from "@/server/uchi-os/import/schemas";
 
 export function ImportUploader() {
   const router = useRouter();
@@ -51,9 +47,9 @@ export function ImportUploader() {
             onChange={(e) => setEntity(e.target.value)}
             className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
           >
-            {ENTITIES.map((e) => (
-              <option key={e.value} value={e.value}>
-                {e.label}
+            {IMPORT_ENTITIES.map((e) => (
+              <option key={e} value={e}>
+                {IMPORT_ENTITY_LABELS[e]}
               </option>
             ))}
           </select>

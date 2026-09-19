@@ -18,10 +18,21 @@ export interface RootCauseFactor {
   value: number | null;
 }
 
+export interface ExpectedImpact {
+  metric: string; // KPIコード
+  label: string;
+  low: number;
+  high: number;
+  unit: string;
+}
+
 export interface RecommendedAction {
   title: string;
   description: string;
   approvalCategory?: string;
+  /** 23章 Feedback Loop: ActionがResult Verifiedになった際、実績(actualImpact)と比較する期待値。
+   * 分析・調査のみのActionには付与しない(数値目標を立てられないため)。 */
+  expectedImpact?: ExpectedImpact;
 }
 
 export interface RuleFinding {
@@ -110,7 +121,11 @@ export function evaluateRevenueDecline(stationName: string, kpis: KpiMap, t: Thr
     predictedImpact: impactFromMoM(revenue, revenueMoM),
     confidence: computeConfidence({ dataCompleteness, signalStrength }),
     recommendedActions: [
-      { title: `${stationName}への営業活動集中`, description: "今週の営業活動を対象拠点へ重点配分する。" },
+      {
+        title: `${stationName}への営業活動集中`,
+        description: "今週の営業活動を対象拠点へ重点配分する。",
+        expectedImpact: { metric: "new_patients", label: "新規利用者", low: 2, high: 4, unit: "人" },
+      },
       { title: "過去90日で紹介実績のある紹介元への再訪", description: "紹介実績のある居宅介護支援事業所等へ優先的に再訪する。" },
       { title: "新規採用の一時保留を検討", description: "稼働率が低い場合は採用計画を見直す(DR-16参照)。" },
       { title: "管理者との15分レビュー", description: "拠点管理者と状況を共有し、現場要因を確認する。" },
@@ -191,7 +206,11 @@ export function evaluatePatientNetDecrease(
     confidence: computeConfidence({ dataCompleteness: 1, signalStrength: Math.min(1, streak / 3) }),
     recommendedActions: [
       { title: "終了理由の分析", description: "PatientEventのendReason内訳を確認し、対応可能な要因を洗い出す。" },
-      { title: "営業活動の見直し", description: "新規利用開始を増やすための営業計画を再検討する。" },
+      {
+        title: "営業活動の見直し",
+        description: "新規利用開始を増やすための営業計画を再検討する。",
+        expectedImpact: { metric: "net_patient_change", label: "利用者純増減", low: 1, high: 3, unit: "人" },
+      },
     ],
   };
 }
@@ -270,7 +289,11 @@ export function evaluateNewPatientDecline(
     predictedImpact: null,
     confidence: computeConfidence({ dataCompleteness: history.filter((v) => v != null).length / 3, signalStrength: Math.min(1, 1 - current / avg) }),
     recommendedActions: [
-      { title: "営業計画の見直し", description: "営業件数・紹介率の推移を踏まえ、週次営業計画を再設計する。" },
+      {
+        title: "営業計画の見直し",
+        description: "営業件数・紹介率の推移を踏まえ、週次営業計画を再設計する。",
+        expectedImpact: { metric: "new_patients", label: "新規利用者", low: 2, high: 4, unit: "人" },
+      },
       { title: "優先紹介元リストの活用", description: "紹介実績のある紹介元へのフォローを優先する。" },
     ],
   };
@@ -305,7 +328,11 @@ export function evaluateUtilizationDrop(stationName: string, kpis: KpiMap, t: Th
     confidence: computeConfidence({ dataCompleteness: 1, signalStrength }),
     recommendedActions: [
       { title: "訪問スケジュールの最適化", description: "職員間の訪問配分を見直し、稼働の偏りを解消する。" },
-      { title: "利用者増加に向けた営業強化", description: "新規利用開始を増やし稼働率を回復させる。" },
+      {
+        title: "利用者増加に向けた営業強化",
+        description: "新規利用開始を増やし稼働率を回復させる。",
+        expectedImpact: { metric: "utilization_rate", label: "稼働率", low: 5, high: 10, unit: "pt" },
+      },
     ],
   };
 }
@@ -376,7 +403,11 @@ export function evaluateLaborCostRatioRise(stationName: string, kpis: KpiMap, t:
     predictedImpact: null,
     confidence: computeConfidence({ dataCompleteness: 1, signalStrength: Math.min(1, (laborCostRatio - t.labor_cost_ratio_warn_pct) / 10) }),
     recommendedActions: [
-      { title: "稼働率改善による売上増を優先", description: "人員配置を見直す前に、稼働率・新規獲得での改善余地を確認する。" },
+      {
+        title: "稼働率改善による売上増を優先",
+        description: "人員配置を見直す前に、稼働率・新規獲得での改善余地を確認する。",
+        expectedImpact: { metric: "labor_cost_ratio", label: "人件費率", low: -5, high: -3, unit: "pt" },
+      },
       { title: "人員配置の最適化", description: "拠点間の応援体制やシフトの見直しを検討する。" },
     ],
   };
@@ -449,7 +480,17 @@ export function evaluateInsufficientSalesActivity(
     predictedImpact: null,
     confidence: computeConfidence({ dataCompleteness: history.filter((v) => v != null).length / 3, signalStrength: Math.min(1, 1 - current / avg) }),
     recommendedActions: [
-      { title: "週次営業計画の見直し", description: "営業担当別の活動件数を確認し、計画を再設計する。" },
+      {
+        title: "週次営業計画の見直し",
+        description: "営業担当別の活動件数を確認し、計画を再設計する。",
+        expectedImpact: {
+          metric: "sales_activity_count",
+          label: "営業件数",
+          low: Math.max(1, Math.round(avg - current)),
+          high: Math.max(2, Math.round(avg - current) + 3),
+          unit: "件",
+        },
+      },
       { title: "優先紹介元リストの提示", description: "訪問優先度の高い紹介元をリスト化して配布する。" },
     ],
   };
@@ -485,7 +526,11 @@ export function evaluateReferralRateDecline(
     confidence: computeConfidence({ dataCompleteness: history.filter((v) => v != null).length / 3, signalStrength: Math.min(1, 1 - current / avg) }),
     recommendedActions: [
       { title: "紹介元別の変化を確認", description: "特定紹介元の変化か全体傾向かを切り分ける(DR-12もあわせて確認)。" },
-      { title: "営業トークの見直し", description: "紹介依頼の伝え方・タイミングを見直す。" },
+      {
+        title: "営業トークの見直し",
+        description: "紹介依頼の伝え方・タイミングを見直す。",
+        expectedImpact: { metric: "referral_rate", label: "紹介率", low: 3, high: 5, unit: "pt" },
+      },
     ],
   };
 }
@@ -523,7 +568,11 @@ export function evaluateKeyReferralSourceDormant(
     predictedImpact: null,
     confidence: computeConfidence({ dataCompleteness: 1, signalStrength: Math.min(1, (worst.dormancyDays ?? 0) / t.dormancy_critical_days) }),
     recommendedActions: [
-      { title: `${worst.name}への優先再訪`, description: "担当営業を割り当て、早期に再訪問を実施する。" },
+      {
+        title: `${worst.name}への優先再訪`,
+        description: "担当営業を割り当て、早期に再訪問を実施する。",
+        expectedImpact: { metric: "referral_count", label: "紹介件数", low: 1, high: 2, unit: "件" },
+      },
     ],
   };
 }
@@ -560,7 +609,12 @@ export function evaluateNurseShortage(
     predictedImpact: null,
     confidence: computeConfidence({ dataCompleteness: visitMinutesSeries.filter((v) => v != null).length / 6, signalStrength: Math.min(1, shortage / 2) }),
     recommendedActions: [
-      { title: "採用計画の立案", description: `${stationName}向けに看護師${shortage}名の採用を計画する。`, approvalCategory: "HIRING" },
+      {
+        title: "採用計画の立案",
+        description: `${stationName}向けに看護師${shortage}名の採用を計画する。`,
+        approvalCategory: "HIRING",
+        expectedImpact: { metric: "nurse_count", label: "看護師数", low: shortage, high: shortage, unit: "人" },
+      },
     ],
   };
 }
@@ -655,7 +709,12 @@ export function evaluateHiringFreeze(
     predictedImpact: null,
     confidence: computeConfidence({ dataCompleteness: 1, signalStrength: 0.6 }),
     recommendedActions: [
-      { title: "進行中採用の一時保留", description: "進行中のRecruitmentRecordを一時保留し、状況を再評価する。", approvalCategory: "HIRING" },
+      {
+        title: "進行中採用の一時保留",
+        description: "進行中のRecruitmentRecordを一時保留し、状況を再評価する。",
+        approvalCategory: "HIRING",
+        expectedImpact: { metric: "labor_cost_ratio", label: "人件費率", low: -4, high: -2, unit: "pt" },
+      },
     ],
   };
 }
@@ -686,7 +745,11 @@ export function evaluateCashRunway(kpis: KpiMap, t: ThresholdDefaults): RuleFind
     predictedImpact: cashBalance,
     confidence: computeConfidence({ dataCompleteness: cashBalance != null && netBurn != null ? 1 : 0.5, signalStrength }),
     recommendedActions: [
-      { title: "コスト削減案の検討", description: "固定費・変動費の見直しにより月次Burnを抑制する。" },
+      {
+        title: "コスト削減案の検討",
+        description: "固定費・変動費の見直しにより月次Burnを抑制する。",
+        expectedImpact: { metric: "cash_runway_months", label: "Cash Runway", low: 1, high: 2, unit: "ヶ月" },
+      },
       { title: "資金調達(借入)の検討", description: "運転資金の借入を含めた資金計画を経営会議で検討する。", approvalCategory: "LOAN" },
     ],
   };

@@ -3,13 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
+import { evaluateImpact, VERDICT_LABELS } from "@/server/uchi-os/feedback-loop/impact-evaluation";
+import type { ExpectedImpact, ActualImpact } from "@/server/uchi-os/feedback-loop/types";
 
-export interface ActualImpact {
-  metric: string;
-  value: number;
-  unit: string;
-  note?: string;
-}
+export type { ExpectedImpact, ActualImpact };
 
 export interface ActionRowData {
   id: string;
@@ -21,8 +18,16 @@ export interface ActionRowData {
   stationName: string;
   ruleCode: string;
   holdReason: string | null;
+  expectedImpact?: ExpectedImpact | null;
   actualImpact?: ActualImpact | null;
 }
+
+const VERDICT_STYLE: Record<string, string> = {
+  EXCEEDED: "bg-emerald-100 text-emerald-800",
+  MET: "bg-emerald-50 text-emerald-700",
+  PARTIAL: "bg-amber-50 text-amber-700",
+  MISSED: "bg-red-50 text-red-700",
+};
 
 const STATUS_STYLE: Record<string, string> = {
   DRAFT: "bg-neutral-100 text-neutral-500",
@@ -49,6 +54,8 @@ const STATUS_LABEL: Record<string, string> = {
 export function ActionRow({ action }: { action: ActionRowData }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const verdict =
+    action.expectedImpact && action.actualImpact ? evaluateImpact(action.expectedImpact, action.actualImpact) : null;
 
   async function post(path: string, body?: unknown) {
     setIsSubmitting(true);
@@ -109,11 +116,24 @@ export function ActionRow({ action }: { action: ActionRowData }) {
           {action.status === "HELD" ? "保留理由" : "却下理由"}: {action.holdReason}
         </p>
       )}
+      {action.expectedImpact && !action.actualImpact && (
+        <p className="mt-1 text-xs text-neutral-400">
+          期待効果: {action.expectedImpact.label} {action.expectedImpact.low}〜{action.expectedImpact.high}
+          {action.expectedImpact.unit}
+        </p>
+      )}
       {action.actualImpact && (
-        <p className="mt-1 text-xs text-emerald-700">
-          実績: {action.actualImpact.metric} = {action.actualImpact.value}
-          {action.actualImpact.unit}
-          {action.actualImpact.note ? `(${action.actualImpact.note})` : ""}
+        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-emerald-700">
+          <span>
+            実績: {action.actualImpact.metric} = {action.actualImpact.value}
+            {action.actualImpact.unit}
+            {action.actualImpact.note ? `(${action.actualImpact.note})` : ""}
+          </span>
+          {verdict && verdict !== "UNKNOWN" && (
+            <span className={clsx("rounded px-1.5 py-0.5 text-[11px] font-medium", VERDICT_STYLE[verdict])}>
+              {VERDICT_LABELS[verdict]}
+            </span>
+          )}
         </p>
       )}
 
