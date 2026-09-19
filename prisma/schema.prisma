@@ -1,0 +1,572 @@
+// Uchi care 採用CRM データベーススキーマ
+//
+// 開発環境では SQLite (file:./dev.db) を使用します。
+// 本番運用時は datasource の provider を "postgresql" に変更し、
+// DATABASE_URL を接続先に差し替えてください（スキーマの型はそのまま利用可能です）。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// 権限・スタッフ
+// ---------------------------------------------------------------------------
+
+enum StaffRole {
+  ADMIN
+  RECRUITER
+  VIEWER
+}
+
+model StaffUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         StaffRole @default(RECRUITER)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  assignedCandidates  Candidate[]           @relation("AssignedStaff")
+  auditLogs           AuditLog[]
+  recruitmentActivity RecruitmentActivity[]
+  candidateEvents     CandidateEvent[]
+  interviews          Interview[]
+  visits              Visit[]
+  createdCampaigns    Campaign[]            @relation("CampaignCreatedBy")
+  approvedCampaigns   Campaign[]            @relation("CampaignApprovedBy")
+  readNotifications   Notification[]
+
+  @@index([role])
+}
+
+// ---------------------------------------------------------------------------
+// マスタ（職種・エリア・タグ・流入経路）
+// ---------------------------------------------------------------------------
+
+model Occupation {
+  id        String   @id @default(cuid())
+  code      String   @unique // JOB_NS / JOB_PT / JOB_OT / JOB_ST / JOB_CM / JOB_OTHER
+  name      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidates   Candidate[]
+  stepMessages StepMessageOccupation[]
+  applications Application[]
+}
+
+model Area {
+  id        String   @id @default(cuid())
+  name      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidates Candidate[]
+}
+
+enum TagCategory {
+  OCCUPATION
+  TIMING
+  LEAD_STATUS
+  ACTION
+  RECRUITMENT
+  CUSTOM
+}
+
+model Tag {
+  id        String      @id @default(cuid())
+  code      String      @unique
+  label     String
+  category  TagCategory
+  color     String?
+  sortOrder Int         @default(0)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  candidates CandidateTag[]
+}
+
+model InflowSource {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  channel   String // Instagram / 公式HP / Indeed / 求人チラシ / スタッフ紹介 / UCHINOWA / イベント / 事業所QR / その他
+  campaign  String?
+  qrUrl     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidates Candidate[]
+}
+
+// ---------------------------------------------------------------------------
+// 候補者（Candidate CRM）
+// ---------------------------------------------------------------------------
+
+enum TransferTiming {
+  TIME_NOW
+  TIME_3M
+  TIME_6_12M
+  TIME_RESEARCH
+}
+
+enum LeadStatus {
+  LEAD_COLD
+  LEAD_WARM
+  LEAD_HOT
+}
+
+enum CandidateStage {
+  NURTURING
+  CASUAL
+  VISIT
+  APPLIED
+  INTERVIEW
+  OFFER
+  HIRED
+  DECLINED
+}
+
+model Candidate {
+  id              String  @id @default(cuid())
+  lineUserId      String? @unique
+  lineDisplayName String?
+  name            String?
+  phone           String?
+  email           String?
+
+  occupationId     String?
+  occupationDetail String? // リハ職の PT/OT/ST 追加分類など
+  transferTiming   TransferTiming?
+  areaId           String?
+
+  inflowSourceId String?
+  campaignParam  String?
+
+  registeredAt       DateTime  @default(now())
+  lastLineReactionAt DateTime?
+  lastStaffContactAt DateTime?
+
+  leadStatus LeadStatus     @default(LEAD_COLD)
+  leadScore  Int            @default(0)
+  stage      CandidateStage @default(NURTURING)
+
+  assignedStaffId String?
+
+  memo      String?
+  isBlocked Boolean   @default(false)
+  blockedAt DateTime?
+
+  stepSequenceId        String?
+  stepSequenceDay       Int?      @default(0)
+  stepSequenceStartedAt DateTime?
+  lastRehearingSentAt   DateTime?
+
+  onboardingState String? // オンボーディング途中状態(JSON文字列): 次にどの質問を送るか
+
+  deletedAt DateTime? // 論理削除
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  occupation    Occupation?   @relation(fields: [occupationId], references: [id])
+  area          Area?         @relation(fields: [areaId], references: [id])
+  inflowSource  InflowSource? @relation(fields: [inflowSourceId], references: [id])
+  assignedStaff StaffUser?    @relation("AssignedStaff", fields: [assignedStaffId], references: [id])
+  stepSequence  StepSequence? @relation(fields: [stepSequenceId], references: [id])
+
+  tags                CandidateTag[]
+  events              CandidateEvent[]
+  lineMessages        LineMessage[]
+  lineInteractions    LineInteraction[]
+  stepProgress        CandidateStepProgress[]
+  recruitmentActivity RecruitmentActivity[]
+  interviews          Interview[]
+  visits              Visit[]
+  applications        Application[]
+  notifications       Notification[]
+  campaignAudience    CampaignAudience[]
+  campaignDeliveries  CampaignDelivery[]
+
+  @@index([leadStatus])
+  @@index([stage])
+  @@index([occupationId])
+  @@index([areaId])
+  @@index([transferTiming])
+  @@index([assignedStaffId])
+  @@index([registeredAt])
+  @@index([deletedAt])
+}
+
+model CandidateTag {
+  candidateId String
+  tagId       String
+  createdAt   DateTime @default(now())
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([candidateId, tagId])
+}
+
+// タイムライン（LINE上の行動 + スタッフの手動対応を統合）
+model CandidateEvent {
+  id           String   @id @default(cuid())
+  candidateId  String
+  type         String // LINE_FOLLOW / OCCUPATION_SET / TIMING_SET / AREA_SET / ACT_JOB_VIEW / ACT_QUESTION /
+  // ACT_VISIT / ACT_CASUAL / ACT_APPLY / STAGE_CHANGE / LEAD_STATUS_CHANGE /
+  // REHEARING_ANSWER / STEP_MESSAGE_SENT / STAFF_NOTE / REC_CONTACT / REC_INTERVIEW /
+  // REC_OFFER / REC_HIRED / REC_DECLINED ...
+  label        String? // 表示用ラベル
+  payload      String? // JSON文字列（前後の値・詳細情報など）
+  scoreDelta   Int?     @default(0)
+  actorType    String   @default("SYSTEM") // SYSTEM / STAFF / CANDIDATE
+  actorStaffId String?
+  createdAt    DateTime @default(now())
+
+  candidate  Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  actorStaff StaffUser? @relation(fields: [actorStaffId], references: [id])
+
+  @@index([candidateId, createdAt])
+  @@index([type])
+}
+
+// ---------------------------------------------------------------------------
+// Lead Score
+// ---------------------------------------------------------------------------
+
+model LeadScoreRule {
+  id         String   @id @default(cuid())
+  actionCode String   @unique // ACT_JOB_VIEW など CandidateEvent.type と対応
+  label      String
+  points     Int
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model LeadScoreConfig {
+  id             String   @id @default(cuid())
+  warmThreshold  Int      @default(20)
+  hotThreshold   Int      @default(50)
+  decayEnabled   Boolean  @default(false)
+  decayPoints    Int      @default(5)
+  decayAfterDays Int      @default(30)
+  updatedAt      DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// LINE連携
+// ---------------------------------------------------------------------------
+
+model LineAccount {
+  id        String   @id @default(cuid())
+  name      String
+  channelId String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  messages LineMessage[]
+}
+
+model LineMessage {
+  id             String   @id @default(cuid())
+  candidateId    String?
+  lineAccountId  String?
+  direction      String // IN / OUT
+  messageType    String // text / image / postback / template / flex
+  content        String? // JSON文字列
+  lineMessageId  String?  @unique
+  webhookEventId String?  @unique // Webhook冪等性担保用
+  createdAt      DateTime @default(now())
+
+  candidate   Candidate?   @relation(fields: [candidateId], references: [id])
+  lineAccount LineAccount? @relation(fields: [lineAccountId], references: [id])
+
+  @@index([candidateId, createdAt])
+}
+
+model LineInteraction {
+  id          String   @id @default(cuid())
+  candidateId String
+  type        String // FOLLOW / UNFOLLOW / POSTBACK / RICH_MENU / MESSAGE
+  data        String? // JSON文字列
+  createdAt   DateTime @default(now())
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, createdAt])
+}
+
+model RichMenuConfig {
+  id          String   @id @default(cuid())
+  slot        Int      @unique // 1-6
+  label       String
+  imageUrl    String?
+  actionType  String   @default("URL") // URL / POSTBACK / MESSAGE
+  actionValue String
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// ステップ配信（30日ナーチャリング + 継続配信の土台）
+// ---------------------------------------------------------------------------
+
+model StepSequence {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  steps      StepMessage[]
+  candidates Candidate[]
+}
+
+model StepMessage {
+  id             String   @id @default(cuid())
+  stepSequenceId String
+  dayOffset      Int // 0,1,3,7,10,14,21,30...
+  title          String
+  body           String // JSON文字列（テキスト・画像・CTAボタン構成）
+  ctaOptions     String? // JSON文字列（選択肢一覧）
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  stepSequence StepSequence            @relation(fields: [stepSequenceId], references: [id], onDelete: Cascade)
+  occupations  StepMessageOccupation[] // 空 = 全職種共通
+  progress     CandidateStepProgress[]
+
+  @@index([stepSequenceId, dayOffset])
+}
+
+model StepMessageOccupation {
+  stepMessageId String
+  occupationId  String
+
+  stepMessage StepMessage @relation(fields: [stepMessageId], references: [id], onDelete: Cascade)
+  occupation  Occupation  @relation(fields: [occupationId], references: [id], onDelete: Cascade)
+
+  @@id([stepMessageId, occupationId])
+}
+
+model CandidateStepProgress {
+  id            String   @id @default(cuid())
+  candidateId   String
+  stepMessageId String
+  sentAt        DateTime @default(now())
+
+  candidate   Candidate   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  stepMessage StepMessage @relation(fields: [stepMessageId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, stepMessageId])
+}
+
+// ---------------------------------------------------------------------------
+// 配信管理（キャンペーン / AI生成 / 承認ワークフロー）
+// ---------------------------------------------------------------------------
+
+enum CampaignStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  SCHEDULED
+  SENT
+}
+
+model Campaign {
+  id       String  @id @default(cuid())
+  title    String
+  category String
+  body     String
+  imageUrl String?
+  ctaLabel String?
+  ctaUrl   String?
+
+  targetOccupations  String? // JSON配列 (Occupation.code)
+  targetTimings      String? // JSON配列 (TransferTiming)
+  targetAreas        String? // JSON配列 (Area.id)
+  targetLeadStatuses String? // JSON配列 (LeadStatus)
+  targetStages       String? // JSON配列 (CandidateStage)
+
+  status      CampaignStatus @default(DRAFT)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+
+  aiGenerated Boolean @default(false)
+  aiPrompt    String?
+
+  createdByStaffId  String?
+  approvedByStaffId String?
+  approvedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdByStaff  StaffUser? @relation("CampaignCreatedBy", fields: [createdByStaffId], references: [id])
+  approvedByStaff StaffUser? @relation("CampaignApprovedBy", fields: [approvedByStaffId], references: [id])
+
+  audience   CampaignAudience[]
+  deliveries CampaignDelivery[]
+
+  @@index([status])
+}
+
+model CampaignAudience {
+  id          String   @id @default(cuid())
+  campaignId  String
+  candidateId String
+  addedAt     DateTime @default(now())
+
+  campaign  Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, candidateId])
+}
+
+model CampaignDelivery {
+  id            String    @id @default(cuid())
+  campaignId    String
+  candidateId   String
+  status        String    @default("PENDING") // PENDING / SENT / FAILED
+  sentAt        DateTime?
+  lineMessageId String?
+  error         String?
+  createdAt     DateTime  @default(now())
+
+  campaign  Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, candidateId])
+}
+
+// ---------------------------------------------------------------------------
+// 選考プロセス（面談・見学・応募）
+// ---------------------------------------------------------------------------
+
+model RecruitmentActivity {
+  id           String   @id @default(cuid())
+  candidateId  String
+  staffId      String?
+  activityType String // CONTACT / CALL / EMAIL / NOTE / OTHER
+  note         String?
+  occurredAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  candidate Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  staff     StaffUser? @relation(fields: [staffId], references: [id])
+
+  @@index([candidateId, occurredAt])
+}
+
+model Interview {
+  id               String    @id @default(cuid())
+  candidateId      String
+  type             String    @default("CASUAL") // CASUAL / FORMAL
+  scheduledAt      DateTime?
+  status           String    @default("SCHEDULED") // SCHEDULED / COMPLETED / CANCELED / NO_SHOW
+  location         String?
+  note             String?
+  calendarEventId  String? // 将来のGoogle Calendar連携用
+  createdByStaffId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  candidate      Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  createdByStaff StaffUser? @relation(fields: [createdByStaffId], references: [id])
+
+  @@index([candidateId])
+}
+
+model Visit {
+  id               String    @id @default(cuid())
+  candidateId      String
+  scheduledAt      DateTime?
+  facility         String?
+  status           String    @default("SCHEDULED") // SCHEDULED / COMPLETED / CANCELED
+  note             String?
+  calendarEventId  String?
+  createdByStaffId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  candidate      Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  createdByStaff StaffUser? @relation(fields: [createdByStaffId], references: [id])
+
+  @@index([candidateId])
+}
+
+model Application {
+  id           String   @id @default(cuid())
+  candidateId  String
+  occupationId String?
+  appliedAt    DateTime @default(now())
+  status       String   @default("SUBMITTED") // SUBMITTED / SCREENING / INTERVIEW / OFFER / HIRED / DECLINED / WITHDRAWN
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  candidate  Candidate   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  occupation Occupation? @relation(fields: [occupationId], references: [id])
+
+  @@index([candidateId])
+}
+
+// ---------------------------------------------------------------------------
+// 通知
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id            String    @id @default(cuid())
+  type          String // CASUAL_REQUEST / VISIT_REQUEST / APPLICATION / LINE_QUESTION / HOT_TRANSITION / STALE_CANDIDATE / REHEARING_DUE
+  candidateId   String?
+  title         String
+  body          String?
+  status        String    @default("PENDING") // PENDING / SENT / FAILED
+  payload       String? // JSON文字列
+  createdAt     DateTime  @default(now())
+  sentAt        DateTime?
+  readAt        DateTime?
+  readByStaffId String?
+
+  candidate   Candidate? @relation(fields: [candidateId], references: [id])
+  readByStaff StaffUser? @relation(fields: [readByStaffId], references: [id])
+
+  @@index([status, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// 監査ログ
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  staffId    String?
+  action     String
+  targetType String
+  targetId   String?
+  before     String? // JSON文字列
+  after      String? // JSON文字列
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  staff StaffUser? @relation(fields: [staffId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}

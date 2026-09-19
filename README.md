@@ -56,10 +56,93 @@ WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx xxxx xxxx
 
 WordPress連携が未設定の場合、承認・自動送信キューの表示自体は使えますが、実際の送信(自動送信・「今すぐWordPressへ送信する」)はエラーになります。
 
-## 技術スタック
+## 技術スタック (健康経営ダッシュボード)
 
 - Next.js (App Router) + TypeScript
 - Tailwind CSS
 - Zustand (状態管理 / localStorage永続化)
 - Recharts (グラフ描画)
 - Claude API (`@anthropic-ai/sdk`) — 企業課題チャットのAI応答
+
+---
+
+# 採用CRM (Uchi care Recruitment CRM)
+
+`/admin` 以下に、LINE公式アカウントを起点とした採用候補者管理(Talent Pool / Recruitment CRM)を実装しています。
+単なる求人問い合わせ窓口ではなく、「今すぐ転職予定はないが将来的に候補者になりうる人」までLINE上でストックし、
+属性取得 → 自動ナーチャリング → 行動データに基づくLead Score → 面談・見学・応募 → 採用、まで一気通貫で管理します。
+
+## 機能一覧
+
+- **LINE Webhook連携** (`/api/line/webhook`): 友だち追加・ブロック・メッセージ・Postbackを受信し、署名検証・冪等性(重複配信排除)を担保した上で候補者データベースに反映します。
+- **オンボーディング**: 友だち追加時に職種(看護師/PT・OT・ST/ケアマネ/その他)→転職時期→希望エリアを、LINEのクイックリプライで負担なく取得します。
+- **30日間ステップ配信**: Day0/1/3/7/10/14/21/30の自動配信。職種によって内容を出し分けます(`prisma/seed.ts` で初期シーケンスを投入)。
+- **継続ナーチャリング / 再ヒアリング**: 30日終了後も定期配信の土台(StepSequence)を用意。転職意向「情報収集中」「半年〜1年以内」の候補者には90日・180日ごとに意向を再確認し、過去の回答は上書きせず履歴(CandidateEvent)として保持します。
+- **Lead Score / Lead Status**: 行動(求人閲覧・LINE返信・見学希望・応募など)に応じたスコア加算と、Cold/Warm/Hotへの自動昇格。閾値・配点は管理画面(`/admin/lead-score`)から変更可能です。
+- **候補者CRM**: 一覧(`/admin/candidates`、職種・転職時期・エリア・Lead Status・ステージ・タグ・担当者・期間でのフィルタ+フリーワード検索)、詳細(`/admin/candidates/[id]`、プロフィール・タグ・タイムライン)、選考カンバン(`/admin/kanban`、ドラッグ&ドロップでステージ変更)。
+- **Talent Pool** (`/admin/talent-pool`): 職種別の保有候補者数・温度別内訳・転職時期別内訳を可視化。
+- **採用ダッシュボード** (`/admin/dashboard`): LINE友だち数・新規登録・ブロック率・職種/転職時期取得率・各CVR・ファネルなどをKPIカードとグラフで表示(期間フィルタ対応)。
+- **Today's Action** (`/admin` トップ): HOT候補者・未対応のLINE質問・面談/見学希望・7日以上未対応・再ヒアリング対象を一覧化し、今日やるべき対応が一目でわかる業務画面にしています。
+- **配信管理 / AIコンテンツ生成** (`/admin/campaigns`): DRAFT→REVIEW→APPROVED→SCHEDULED→SENTの承認ワークフロー。Claude APIによる配信案生成(3案)にも対応していますが、**生成された文章がそのまま自動配信されることはなく**、必ず人間の確認・編集・承認を経てから予約配信されます。
+- **マスタ管理** (`/admin/masters`): 職種・エリア・タグ・流入経路を管理画面から追加/編集できます(コード管理せず拡張可能)。
+- **リッチメニュー設定** (`/admin/rich-menu`): 6メニューのリンク先を管理画面から変更可能(画像のアップロード自体はLINE Developersコンソール側の作業を想定)。
+- **スタッフ管理・RBAC** (`/admin/users`): ADMIN / RECRUITER / VIEWER の3ロール。VIEWERは閲覧のみ、RECRUITERは候補者操作可、ADMINはマスタ・承認・配信・スタッフ管理まで可能です。
+- **通知** (`/admin/notifications`): カジュアル面談・見学希望・LINE質問・HOT化・長期未対応・再ヒアリング対象の発生を通知として記録。Slack Webhook等への配信は`NotificationProvider`抽象化により後から追加できます。
+- **監査ログ**: 候補者情報の変更・スタッフ操作・キャンペーン承認等を`AuditLog`に記録します。
+
+## セットアップ
+
+```bash
+cp .env.local.example .env.local
+# .env.local を編集: DATABASE_URL, AUTH_SECRET, SEED_ADMIN_EMAIL/PASSWORD, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN, CRON_SECRET 等
+
+npm install
+npm run db:migrate   # Prismaマイグレーション適用 (開発時はSQLiteファイルを作成)
+npm run db:seed      # マスタデータ・初期ステップ配信・スタッフアカウント・デモ候補者を投入
+npm run dev
+```
+
+[http://localhost:3000/admin/login](http://localhost:3000/admin/login) から、シードで作成した管理者アカウント(`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`)でログインできます。
+
+### 環境変数
+
+| 変数 | 用途 |
+| --- | --- |
+| `DATABASE_URL` | Prisma接続文字列。開発時は `file:./dev.db` (SQLite)。本番はPostgreSQL等への切り替えを推奨(`prisma/schema.prisma` の `datasource.provider` を変更)。 |
+| `AUTH_SECRET` | 管理画面セッション(JWT)の署名鍵。32文字以上のランダムな文字列を設定してください。 |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `npm run db:seed` で作成される初回管理者アカウント。 |
+| `LINE_CHANNEL_SECRET` | LINE Webhookの署名検証に使用(必須)。 |
+| `LINE_CHANNEL_ACCESS_TOKEN` | LINEへのメッセージ送信(Push/Reply/Multicast)に使用。 |
+| `CRON_SECRET` | 定期実行ジョブ(ステップ配信・再ヒアリング・キャンペーン配信)を保護するBearerトークン。 |
+| `SLACK_WEBHOOK_URL` | (任意) 通知をSlackにも送信する場合に設定。 |
+
+### LINE Developersコンソール側の設定
+
+1. Messaging APIチャネルを作成し、Webhook URLに `https://<your-domain>/api/line/webhook` を設定してWebhookを有効化してください。
+2. Channel Secret / Channel Access Token を `.env.local` (本番はホスティング先の環境変数) に設定してください。
+3. リッチメニューの画像自体はLINE Developersコンソールまたは Messaging API での画像アップロードが必要です(本アプリではリンク先の管理のみ行います)。
+
+### 定期実行ジョブ (Cron)
+
+以下のエンドポイントを、Vercel Cron等から `Authorization: Bearer <CRON_SECRET>` 付きで定期的に呼び出してください。
+
+| エンドポイント | 推奨頻度 | 内容 |
+| --- | --- | --- |
+| `POST /api/cron/step-sequences` | 1日1回以上 | 30日間ステップ配信の進行(Day1〜30の未送信メッセージを配信) |
+| `POST /api/cron/rehearing` | 1日1回 | 90日/180日の転職意向再ヒアリング送信 |
+| `POST /api/cron/stale-check` | 1日1回 | 長期未対応候補者の通知生成 |
+| `POST /api/cron/campaigns` | 数分〜1時間に1回 | 予約配信(SCHEDULED)キャンペーンの配信実行 |
+
+## セキュリティ
+
+- パスワードは bcrypt でハッシュ化して保存し、平文では保持しません。
+- 管理画面セッションは HttpOnly / SameSite=Lax Cookie + JWT (`AUTH_SECRET`)で管理し、`src/proxy.ts` (旧middleware) でUIレベルの未認証アクセスを防止した上で、各APIルートでも `requireSession()` により認証・ロール(RBAC)を再検証しています。
+- LINE Webhookは署名検証(HMAC-SHA256)を必須とし、`webhookEventId` によりWebhookの重複配信に対して冪等性を担保しています。
+- 個人情報(氏名・電話番号・メール等)を含む候補者データの変更操作は `AuditLog` に記録されます。候補者の削除は物理削除ではなく論理削除(`deletedAt`)です。
+- 入力値は zod でバリデーションし、Prisma(パラメータ化クエリ)によりSQLインジェクションを防止しています。
+- ログイン・LINE Webhookエンドポイントにはインメモリのレートリミットを適用しています(複数インスタンスでスケールする場合はRedis等への置き換えを推奨)。
+- LINE User ID等の個人情報はログに出力しない実装にしています。
+
+## データベース設計
+
+`prisma/schema.prisma` を参照してください。Candidate(候補者)を中心に、CandidateProfile相当の拡張情報・タグ・イベント(タイムライン)・LINEメッセージ/インタラクション・ステップ配信・キャンペーン・面談/見学/応募・通知・監査ログを正規化したテーブルで管理しています。
