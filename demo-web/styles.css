@@ -1,0 +1,11 @@
+@import "tailwindcss" source(none);
+@source "../src/onboarding";
+@source "../src/app/onboarding";
+@source "./";
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, system-ui, sans-serif;
+}

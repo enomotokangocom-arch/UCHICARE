@@ -12,7 +12,8 @@
     "onboarding:init": "tsx scripts/onboarding/init.ts",
     "onboarding:demo": "tsx scripts/onboarding/seed-demo.ts",
     "onboarding:backup": "tsx scripts/onboarding/backup.ts",
-    "onboarding:restore": "tsx scripts/onboarding/restore.ts"
+    "onboarding:restore": "tsx scripts/onboarding/restore.ts",
+    "demo:web": "node demo-web/build.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
@@ -28,9 +29,11 @@
     "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sql.js": "^1.4.11",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "playwright": "^1.62.0",
+    "sql.js": "^1.14.2",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

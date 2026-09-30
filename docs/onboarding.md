@@ -28,6 +28,13 @@ npm run build && npm start     # → http://<サーバー>:3000/onboarding
 - ログインCookieは、HTTPSでアクセスしたときだけ `Secure` が付きます(社内LANのHTTPでもログインできます)。社外に公開する場合は必ずHTTPSにしてください。
 - データの保存先は環境変数 `ONBOARDING_DB_PATH` で変更できます。`data/` と `backups/` はGitに含めません。
 
+### ブラウザだけで動くデモ版
+サーバーを用意しなくても試せるよう、同じ画面と業務ロジックをブラウザ内で動かすデモ版を作れます(データは架空で、開いたブラウザにだけ保存されます)。
+```bash
+npm run demo:web   # → demo-web/dist/(index.html と app.js)
+```
+印刷・CSVダウンロードはデモ版では使えません。実データは入れないでください。
+
 ## 2. 画面と操作
 
 | 画面 | 主な利用者 | できること |

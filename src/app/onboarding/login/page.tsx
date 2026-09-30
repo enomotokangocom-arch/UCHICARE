@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/onboarding/ui/client";
 import { Alert, Button, Field, inputCls } from "@/onboarding/ui/kit";
+import { currentQuery, goTo } from "@/onboarding/ui/nav";
 
 type Status = { needsInit: boolean; demo: boolean };
 
@@ -41,8 +42,8 @@ export default function LoginPage() {
         setError("パスワードは正しいのですが、ブラウザにログイン状態を保存できませんでした。ブラウザのCookieが無効になっていないか確認してください。");
         return;
       }
-      const next = new URLSearchParams(window.location.search).get("next");
-      window.location.href = next && next.startsWith("/onboarding") && !next.startsWith("/onboarding/login") ? next : "/onboarding";
+      const next = currentQuery().get("next");
+      goTo(next && next.startsWith("/onboarding") && !next.startsWith("/onboarding/login") ? next : "/onboarding");
     } catch (err) {
       setError((err as ApiError).message);
     } finally {

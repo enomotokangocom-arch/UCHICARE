@@ -6,6 +6,7 @@ import { api, fmtDate, Options, useApi } from "@/onboarding/ui/client";
 import { useMe } from "@/onboarding/ui/me";
 import { Alert, Button, Card, Empty, Field, inputCls, PageTitle, Tag, Unset, useAction } from "@/onboarding/ui/kit";
 import { LEND_STATUS_LABELS, LendStatus } from "@/onboarding/shared/labels";
+import { currentQuery } from "@/onboarding/ui/nav";
 
 type Device = {
   id: number; asset_no: string; kind: string; model: string | null; serial: string | null; phone_number: string | null; hire_id: number | null;
@@ -29,7 +30,7 @@ export default function DevicesPage() {
   const [editId, setEditId] = useState<number | null>(null);
 
   useEffect(() => {
-    const hire = new URLSearchParams(window.location.search).get("hire");
+    const hire = currentQuery().get("hire");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (hire) setForm({ ...empty, hire_id: hire });
   }, []);

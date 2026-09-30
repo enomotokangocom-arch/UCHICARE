@@ -6,6 +6,7 @@ import { fmtDate, Options, todayLocal, useApi } from "@/onboarding/ui/client";
 import { useMe } from "@/onboarding/ui/me";
 import { Alert, Button, Card, Empty, HireBadge, inputCls, PageTitle, Progress, TaskBadge, Tag } from "@/onboarding/ui/kit";
 import { HIRE_STATUS_LABELS } from "@/onboarding/shared/labels";
+import { goTo, isBrowserDemo } from "@/onboarding/ui/nav";
 
 type Hire = {
   id: number; name: string; name_romaji: string; start_date: string; prep_deadline: string; status: string;
@@ -33,9 +34,11 @@ export default function Dashboard() {
         sub="入職予定者ごとの準備状況・期限超過・榎本の対応が必要な作業を確認できます。"
         actions={
           <>
-            <Button variant="secondary" onClick={() => (window.location.href = "/api/onboarding/export/progress")}>
-              進捗CSVを出力(認証情報なし)
-            </Button>
+            {!isBrowserDemo() && (
+              <Button variant="secondary" onClick={() => goTo("/api/onboarding/export/progress")}>
+                進捗CSVを出力(認証情報なし)
+              </Button>
+            )}
             {me.actor.role === "admin" && (
               <Link href="/onboarding/hires/new" className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">
                 + 入職者を登録

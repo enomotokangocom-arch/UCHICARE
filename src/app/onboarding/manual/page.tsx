@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { fmtDate, Options, useApi } from "@/onboarding/ui/client";
+import { isBrowserDemo } from "@/onboarding/ui/nav";
 import { Alert, Button, inputCls } from "@/onboarding/ui/kit";
 import { ACCOUNT_TYPE_LABELS, AccountType, OWNER_MODE_LABELS, OwnerMode, PLACEMENT_LABELS, Placement, REQUIREMENT_LABELS, Requirement } from "@/onboarding/shared/labels";
 
@@ -26,7 +27,7 @@ export default function ManualPage() {
             {opts?.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </label>
-        <Button onClick={() => window.print()}>印刷する</Button>
+        {!isBrowserDemo() && <Button onClick={() => window.print()}>印刷する</Button>}
       </div>
       {error && <Alert tone="error">{error}</Alert>}
       {m && (

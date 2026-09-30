@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { use } from "react";
 import { fmtDate, todayLocal, useApi } from "@/onboarding/ui/client";
+import { isBrowserDemo } from "@/onboarding/ui/nav";
 import { Alert, Button } from "@/onboarding/ui/kit";
 import { HireDetail } from "@/onboarding/ui/types";
 import { HIRE_STATUS_LABELS, HireStatus, REQUEST_STATUS_LABELS, RequestStatus, REQUIREMENT_LABELS, Requirement, TASK_STATUS_LABELS, TaskStatus, PLACEMENT_LABELS, Placement } from "@/onboarding/shared/labels";
@@ -19,7 +20,7 @@ export default function PrintHire({ params }: { params: Promise<{ id: string }> 
   return (
     <div className="mx-auto max-w-4xl bg-white p-6 text-[12px] leading-relaxed print:p-0">
       <div className="mb-4 flex gap-2 print:hidden">
-        <Button onClick={() => window.print()}>印刷する</Button>
+        {!isBrowserDemo() && <Button onClick={() => window.print()}>印刷する</Button>}
         <Link href={`/onboarding/hires/${h.id}`} className="rounded-lg border border-slate-300 px-4 py-2 text-sm">戻る</Link>
       </div>
       <h1 className="text-lg font-bold">入職前システム準備チェックリスト</h1>

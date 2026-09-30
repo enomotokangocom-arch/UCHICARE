@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { currentLocation, goTo } from "./nav";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -21,8 +22,8 @@ export async function api<T = unknown>(path: string, opts: { method?: string; bo
   } catch {
     /* 空応答 */
   }
-  if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/onboarding/login")) {
-    window.location.href = "/onboarding/login?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+  if (res.status === 401 && typeof window !== "undefined" && !currentLocation().startsWith("/onboarding/login")) {
+    goTo("/onboarding/login?next=" + encodeURIComponent(currentLocation()));
   }
   if (!res.ok) throw new ApiError(res.status, (data as { error?: string })?.error ?? "エラーが発生しました。");
   return data as T;
