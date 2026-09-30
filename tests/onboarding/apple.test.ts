@@ -116,3 +116,41 @@ test("発行済みの最新番号の設定を変えると、その次から採�
   const h = newHire(ctx, "houmon");
   assert.equal(reserveNext(ctx.db, ctx.prep1, h).number, 41);
 });
+
+test("既存アドレスの一括登録: 番号形式のみ作成済みで登録し、重複と対象外を除外、次の予約は続きから", async () => {
+  const { importExistingAddresses } = await import("../../src/onboarding/server/apple");
+  const ctx = setup();
+  const text = [
+    "社員番号\t氏名\tカナ\tメールアドレス\t属性1\t属性2\t属性3\t属性4",
+    "\t架空 一郎\tカクウイチロウ\tpersonal.demo@gmail.com\t訪問看護\t看護師\t代表\t本社",
+    "\t架空 二郎\tカクウジロウ\tuchicare002@icloud.com\t訪問看護\t看護師\t\t事業所A",
+    "\t架空 三郎\tカクウサブロウ\tuchicareplan01@icloud.com\t居宅介護\tケアマネ",
+    "\t架空 四郎\tカクウシロウ\tUchicare036@icloud.com\t訪問看護\tリハビリ\t\t事業所B",
+    "\t架空 五郎\tカクウゴロウ\tuchicare002@icloud.com\t訪問看護\t事務",
+  ].join("\n");
+  // 確認のみ(登録しない)
+  const dry = importExistingAddresses(ctx.db, ctx.admin, text, true);
+  assert.deepEqual(dry.added.map((a) => a.number), [2, 36]);
+  assert.equal(get<{ c: number }>(ctx.db, "SELECT COUNT(*) AS c FROM apple_numbers")!.c, 0);
+  assert.equal(dry.skipped.length, 3); // gmail・plan01・一覧内の重複
+  // 準備担当者は実行できない
+  assert.throws(() => importExistingAddresses(ctx.db, ctx.prep1, text, false), (e) => status(e) === 403);
+
+  const r = importExistingAddresses(ctx.db, ctx.admin, text, false);
+  assert.equal(r.added.length, 2);
+  const row = get<{ status: string; actual_email: string; holder_name: string; holder_note: string; hire_id: number | null }>(
+    ctx.db, "SELECT * FROM apple_numbers WHERE number = 36",
+  )!;
+  assert.equal(row.status, "created");
+  assert.equal(row.actual_email, "uchicare036@icloud.com");
+  assert.equal(row.holder_name, "架空 四郎");
+  assert.equal(row.holder_note, "訪問看護 / リハビリ / 事業所B");
+  assert.equal(row.hire_id, null);
+  // 2回目は既に登録済みとして除外
+  assert.equal(importExistingAddresses(ctx.db, ctx.admin, text, false).added.length, 0);
+  // 次の予約は037、既存アドレスと同じメールでの作成記録は拒否
+  const h = newHire(ctx, "houmon");
+  const a = reserveNext(ctx.db, ctx.prep1, h);
+  assert.equal(a.number, 37);
+  assert.throws(() => recordCreated(ctx.db, ctx.prep1, a.id, "uchicare002@icloud.com", "誤入力"), (e) => status(e) === 409);
+});

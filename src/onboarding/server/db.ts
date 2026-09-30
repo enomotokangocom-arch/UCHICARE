@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
-import { SCHEMA_SQL } from "./schema";
+import { MIGRATIONS, SCHEMA_SQL } from "./schema";
 
 /**
  * 入職前システム準備管理ツールのデータベース接続。
@@ -28,6 +28,10 @@ export function openDb(dbPath: string = defaultDbPath()): DB {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec(SCHEMA_SQL);
+  for (const m of MIGRATIONS) {
+    const cols = db.prepare(`PRAGMA table_info(${m.table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === m.column)) db.exec(m.ddl);
+  }
   return db;
 }
 

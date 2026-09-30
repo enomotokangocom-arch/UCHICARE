@@ -177,10 +177,105 @@ export function listNumbers(db: DB, actor: Actor) {
     lastIssued: Number(getSetting(db, "apple_last_issued") ?? "0"),
     rows: all(
       db,
-      `SELECT a.*, h.name AS hire_name, u.name AS reserved_by_name, ra.name AS reuse_approved_by_name
+      `SELECT a.*, COALESCE(h.name, a.holder_name) AS hire_name, u.name AS reserved_by_name, ra.name AS reuse_approved_by_name
          FROM apple_numbers a LEFT JOIN hires h ON h.id = a.hire_id LEFT JOIN users u ON u.id = a.reserved_by
          LEFT JOIN users ra ON ra.id = a.reuse_approved_by
         ORDER BY a.number DESC`,
     ),
   };
+}
+
+// ---------------------------------------------------------------------------
+// 既存アドレスの一括登録(Excel等からの貼り付け)
+// ---------------------------------------------------------------------------
+
+export interface ImportResult {
+  added: { number: number; email: string; name: string | null; note: string | null }[];
+  skipped: { line: number; text: string; reason: string }[];
+  lastIssuedBefore: number;
+  lastIssuedAfter: number;
+}
+
+/**
+ * すでにApple側で作成済みのアドレス(既存職員分)を、番号台帳に「作成済み」として登録します。
+ * 貼り付けたテキスト(Excelからのコピーはタブ区切り)の各行からメールアドレスを探し、
+ * 「接頭辞+3桁@ドメイン」の形式のものだけを番号付きで登録します。
+ * 同じ番号・同じアドレスが既にあれば登録しません。dryRun のときは結果の確認のみ行います。
+ */
+export function importExistingAddresses(db: DB, actor: Actor, text: unknown, dryRun: boolean): ImportResult {
+  requireRole(actor, "admin");
+  if (typeof text !== "string" || !text.trim()) throw badRequest("登録するアドレスの一覧を貼り付けてください。");
+  const prefix = getSetting(db, "apple_prefix") ?? "uchicare";
+  const domain = getSetting(db, "apple_domain") ?? "icloud.com";
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const numbered = new RegExp(`^${esc(prefix)}(\\d{3})@${esc(domain)}$`, "i");
+  const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+
+  const lastIssuedBefore = Number(getSetting(db, "apple_last_issued") ?? "0");
+  const result: ImportResult = { added: [], skipped: [], lastIssuedBefore, lastIssuedAfter: lastIssuedBefore };
+  const seen = new Set<number>();
+
+  const work = () => {
+    text.split(/\r?\n/).forEach((raw, idx) => {
+      const line = raw.trim();
+      if (!line) return;
+      const cells = raw.split(/\t|,/).map((c) => c.trim()).filter(Boolean);
+      const emailCell = cells.find((c) => EMAIL.test(c));
+      const shown = cells.join(" / ");
+      if (!emailCell) {
+        if (!/メール|mail/i.test(line)) result.skipped.push({ line: idx + 1, text: shown, reason: "メールアドレスがありません" });
+        return;
+      }
+      const email = emailCell.match(EMAIL)![0].toLowerCase();
+      const m = numbered.exec(email);
+      if (!m) {
+        result.skipped.push({ line: idx + 1, text: shown, reason: `「${prefix}+3桁@${domain}」の形式ではないため番号管理の対象外` });
+        return;
+      }
+      const n = Number(m[1]);
+      const at = cells.indexOf(emailCell);
+      // メールより前: 氏名(とカナ)、メールより後: 部門・職種・役職・事業所など
+      const before = cells.slice(0, at).filter((c) => !/^\d+$/.test(c));
+      const name = before.find((c) => !/^[ァ-ヶー・\s]+$/.test(c)) ?? before[0] ?? null;
+      const note = cells.slice(at + 1).join(" / ") || null;
+      assertNoSecret(note, "所属・メモ");
+      if (seen.has(n)) {
+        result.skipped.push({ line: idx + 1, text: shown, reason: `番号 ${pad3(n)} が一覧内で重複しています` });
+        return;
+      }
+      const dup = get<{ number: number }>(
+        db, "SELECT number FROM apple_numbers WHERE number = ? OR planned_email = ? OR actual_email = ?", n, email, email,
+      );
+      if (dup) {
+        result.skipped.push({ line: idx + 1, text: shown, reason: `番号 ${pad3(dup.number)} は既に台帳に登録されています` });
+        return;
+      }
+      seen.add(n);
+      if (!dryRun) {
+        run(
+          db,
+          `INSERT INTO apple_numbers (number, planned_email, actual_email, status, hire_id, reserved_by, reserved_at,
+             created_recorded_by, created_recorded_at, holder_name, holder_note, note)
+           VALUES (?,?,?, 'created', NULL, ?, ?, ?, ?, ?, ?, '既存アカウントを一括登録')`,
+          n, email, email, actor.id, nowIso(), actor.id, nowIso(), name, note,
+        );
+      }
+      result.added.push({ number: n, email, name, note });
+    });
+    const maxAdded = Math.max(0, ...result.added.map((a) => a.number));
+    if (maxAdded > lastIssuedBefore) {
+      result.lastIssuedAfter = maxAdded;
+      if (!dryRun) run(db, "UPDATE settings SET value = ?, updated_at = ?, updated_by = ? WHERE key = 'apple_last_issued'", String(maxAdded), nowIso(), actor.id);
+    }
+    if (!dryRun && result.added.length) {
+      audit(db, actor, "既存のAppleアドレスを一括登録", "apple", null, null, {
+        count: result.added.length,
+        numbers: result.added.map((a) => pad3(a.number)).join("、"),
+        last_issued: result.lastIssuedAfter,
+      });
+    }
+  };
+  if (dryRun) work();
+  else tx(db, work);
+  return result;
 }

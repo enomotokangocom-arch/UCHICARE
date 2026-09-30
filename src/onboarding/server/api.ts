@@ -94,6 +94,7 @@ r("PATCH", "/requests/:id", ({ db, actor, params, body }) => {
 
 // ---- Apple番号 ----
 r("GET", "/apple", ({ db, actor }) => apple.listNumbers(db, actor));
+r("POST", "/apple/import", ({ db, actor, body }) => apple.importExistingAddresses(db, actor, body.text, body.dry_run !== false));
 r("POST", "/apple/:id", ({ db, actor, params, body }) => {
   const aid = id(params[0]);
   switch (body.action) {

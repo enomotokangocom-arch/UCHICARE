@@ -148,6 +148,9 @@ CREATE TABLE IF NOT EXISTS apple_numbers (
   cancelled_at TEXT,
   reuse_approved_by INTEGER,
   reuse_approved_at TEXT,
+  -- 入職者として登録していない既存職員のアカウント(一括登録分)の利用者名・所属など
+  holder_name TEXT,
+  holder_note TEXT,
   note TEXT
 );
 
@@ -286,3 +289,9 @@ CREATE INDEX IF NOT EXISTS idx_tasks_hire ON hire_tasks(hire_id);
 CREATE INDEX IF NOT EXISTS idx_audit_hire ON audit_logs(hire_id);
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity, entity_id);
 `;
+
+/** 既存のデータベースに後から追加した列(CREATE TABLE IF NOT EXISTS では追加されないため) */
+export const MIGRATIONS: { table: string; column: string; ddl: string }[] = [
+  { table: "apple_numbers", column: "holder_name", ddl: "ALTER TABLE apple_numbers ADD COLUMN holder_name TEXT" },
+  { table: "apple_numbers", column: "holder_note", ddl: "ALTER TABLE apple_numbers ADD COLUMN holder_note TEXT" },
+];
