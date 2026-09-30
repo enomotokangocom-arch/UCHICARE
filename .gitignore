@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# onboarding tool data (実データ・バックアップはGitに含めない)
+/data/
+/backups/

@@ -11,10 +11,14 @@ const mainNavItems = [
   { href: "/dashboard", label: "健康経営ダッシュボード", icon: "📊" },
   { href: "/chat", label: "企業課題チャット", icon: "💬" },
   { href: "/articles", label: "記事自動作成", icon: "📝" },
+  { href: "/onboarding", label: "入職準備管理", icon: "📱" },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+
+  // 入職準備管理ツールは独自のヘッダーを持つため、サイドバーを表示しない
+  if (pathname.startsWith("/onboarding")) return null;
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white">

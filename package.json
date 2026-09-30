@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:onboarding": "node --import tsx --test --test-concurrency=1 tests/onboarding/*.test.ts",
+    "onboarding:init": "tsx scripts/onboarding/init.ts",
+    "onboarding:demo": "tsx scripts/onboarding/seed-demo.ts",
+    "onboarding:backup": "tsx scripts/onboarding/backup.ts",
+    "onboarding:restore": "tsx scripts/onboarding/restore.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
@@ -19,13 +24,14 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "playwright": "^1.62.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
