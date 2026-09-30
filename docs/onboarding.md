@@ -14,19 +14,18 @@
 ```bash
 npm install
 
-# ■ デモ(架空の職員・ダミー端末)で試す場合
-ONBOARDING_DB_PATH=data/demo.db npm run onboarding:demo
-ONBOARDING_DB_PATH=data/demo.db npm run dev
+# ■ デモ(架空の職員・ダミー端末)で試す場合(Windows・Mac共通、1コマンド)
+npm run demo
 #   → http://localhost:3000/onboarding
-#   ログインID: enomoto / admin / prep1 / prep2 / jimu / sekinin / viewer
-#   共通パスワード: demo-pass-2026(デモ専用。本番では使わない)
+#   ログインID: admin / prep1 / jimu / viewer(大文字・小文字は区別しません)
+#   共通パスワード: demo-pass-2026(デモ専用。ログイン画面のボタンで入力できます)
 
 # ■ 実データで使う場合(最初の1回だけ)
 npm run onboarding:init        # 最初の管理者を作成(パスワードは画面に表示されません)
 npm run build && npm start     # → http://<サーバー>:3000/onboarding
 ```
 
-- 本番(`npm start`)ではログインCookieに `Secure` が付くため、HTTPSで公開してください。社内LANでHTTPのまま確認する場合のみ `ONBOARDING_INSECURE_COOKIE=1` を指定します。
+- ログインCookieは、HTTPSでアクセスしたときだけ `Secure` が付きます(社内LANのHTTPでもログインできます)。社外に公開する場合は必ずHTTPSにしてください。
 - データの保存先は環境変数 `ONBOARDING_DB_PATH` で変更できます。`data/` と `backups/` はGitに含めません。
 
 ## 2. 画面と操作

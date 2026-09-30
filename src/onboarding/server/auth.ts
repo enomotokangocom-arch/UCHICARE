@@ -14,7 +14,10 @@ export function login(db: DB, loginId: unknown, password: unknown): { token: str
   if (typeof loginId !== "string" || typeof password !== "string" || !loginId || !password) {
     throw new AppError(400, "ログインIDとパスワードを入力してください。");
   }
-  const u = get<{ id: number; password_hash: string; active: number }>(db, "SELECT id, password_hash, active FROM users WHERE login_id = ?", loginId);
+  if (!get(db, "SELECT 1 FROM users LIMIT 1")) {
+    throw new AppError(401, "ユーザーがまだ登録されていません。サーバーで npm run onboarding:demo(デモ)または npm run onboarding:init(実データ)を実行してください。");
+  }
+  const u = get<{ id: number; password_hash: string; active: number }>(db, "SELECT id, password_hash, active FROM users WHERE lower(login_id) = lower(?)", loginId.trim());
   if (!u || !u.active || !verifyPassword(password, u.password_hash)) {
     throw new AppError(401, "ログインIDまたはパスワードが正しくありません。");
   }
