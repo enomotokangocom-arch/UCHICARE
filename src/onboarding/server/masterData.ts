@@ -111,6 +111,14 @@ export const SERVICES: ServiceSeed[] = [
     dept: { houmon: "required", kyotaku: "required" },
   },
   {
+    code: "sqe_elearning", name: "SQE eラーニング", account_type: "individual", needs_issuance: 1, requires_email: 1,
+    issuer_label: "榎本(代表)", owner_mode: "enomoto",
+    account_note: "受講者の登録は現在榎本が行っています。登録の権限を移管したら、管理設定で発行担当者と担当区分を変更してください。",
+    procedure: "1. 確定したメールアドレスで、榎本へSQE eラーニングの受講者登録を依頼する(権限移管後は新しい担当者へ)\n2. 登録後、発行されたID(ログインID)を記録する(パスワードは記録しない)\n3. iPhone・iPadでログインし、受講画面が開けることを確認する",
+    completion_criteria: "受講者として登録され、iPhone・iPadそれぞれでログインして受講画面が開ける。", standard_days: 7,
+    dept: { houmon: "required", kyotaku: "required" },
+  },
+  {
     code: "gsheets", name: "Googleスプレッドシート", account_type: "company_google", needs_issuance: 0, requires_email: 0,
     issuer_label: null, owner_mode: "unset",
     account_note: "会社Googleアカウントを使用します(アカウント名は管理設定「会社Googleアカウント」参照)。",

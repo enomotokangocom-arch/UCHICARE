@@ -6,6 +6,7 @@ import { installBackend } from "./backend";
 import { getLocation, getPath, navigate, subscribe } from "./shims/router";
 import { SCHEMA_SQL } from "../src/onboarding/server/schema";
 import { seedDemo } from "../src/onboarding/server/demo";
+import { seedMaster } from "../src/onboarding/server/seed";
 
 import OnboardingLayout from "../src/app/onboarding/layout";
 import Dashboard from "../src/app/onboarding/page";
@@ -90,6 +91,7 @@ async function main() {
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec(SCHEMA_SQL);
   if (fresh) seedDemo(db as never);
+  else seedMaster(db as never); // 後から追加した標準サービスを反映
 
   const persist = () => {
     try { localStorage.setItem(STORE_KEY, toB64(db.raw.export())); } catch { /* 容量不足・保存不可 */ }

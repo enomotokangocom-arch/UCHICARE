@@ -36,7 +36,7 @@ export function seedDemo(db: DB) {
   // 役割が確定している発行担当のみ、デモ用ユーザーを割り当て(本番では管理者が設定)
   run(db, "UPDATE services SET issuer_user_id = ? WHERE code IN ('ibow','lineworks')", jimu);
   run(db, "UPDATE services SET issuer_user_id = ? WHERE code = 'zest'", sekinin);
-  run(db, "UPDATE services SET issuer_user_id = ? WHERE code = 'enursing'", enomoto);
+  run(db, "UPDATE services SET issuer_user_id = ? WHERE code IN ('enursing','sqe_elearning')", enomoto);
 
   const actor = loadActor(db, admin)!;
   const jt = (name: string) => get<{ id: number }>(db, "SELECT id FROM job_types WHERE name = ?", name)?.id ?? null;

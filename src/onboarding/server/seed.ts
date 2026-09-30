@@ -3,8 +3,47 @@ import { hashPassword } from "./core";
 import { DEFAULT_SETTINGS, DEPARTMENTS, JOB_TYPES, SERVICES, TEMPLATES } from "./masterData";
 
 /** マスタデータ(部門・サービス・標準手順・設定)を投入します。既に投入済みなら何もしません。 */
+const ensured = new WeakSet<object>();
+
+/**
+ * 後から標準に追加したサービス(例: SQE eラーニング)を、既存のデータベースにも追加します。
+ * コードで判定するため、管理者が名前や設定を変えたサービスや、無効にしたサービスは変更しません。
+ */
+function ensureNewServices(db: DB) {
+  if (ensured.has(db)) return;
+  ensured.add(db);
+  const missing = SERVICES.map((s, i) => ({ s, i })).filter(({ s }) => !get(db, "SELECT 1 FROM services WHERE code = ?", s.code));
+  if (!missing.length) return;
+  const deptId = (code: string) => get<{ id: number }>(db, "SELECT id FROM departments WHERE code = ?", code)?.id;
+  tx(db, () => {
+    for (const { s, i } of missing) {
+      const r = run(
+        db,
+        `INSERT INTO services (code, name, placement, placement_confirmed, url, app_store_url, account_type, account_note,
+          needs_issuance, requires_email, issuer_label, owner_mode, procedure, completion_criteria, standard_days, sort, updated_at)
+         VALUES (?,?, 'unset', 0, NULL, NULL, ?,?,?,?,?,?,?,?,?,?,?)`,
+        s.code, s.name, s.account_type, s.account_note, s.needs_issuance, s.requires_email, s.issuer_label,
+        s.owner_mode, s.procedure, s.completion_criteria, s.standard_days, (i + 1) * 10 - 5, nowIso(),
+      );
+      const sid = Number(r.lastInsertRowid);
+      for (const code of ["houmon", "kyotaku"] as const) {
+        const d = deptId(code);
+        if (d) run(db, "INSERT OR IGNORE INTO department_services VALUES (?,?,?)", d, sid, s.dept[code]);
+      }
+      run(
+        db,
+        "INSERT INTO audit_logs (at, user_id, user_name, action, entity, entity_id, hire_id, detail) VALUES (?,NULL,'システム','標準サービスを追加','service',?,NULL,?)",
+        nowIso(), sid, JSON.stringify({ service: s.name }),
+      );
+    }
+  });
+}
+
 export function seedMaster(db: DB) {
-  if (get(db, "SELECT 1 FROM departments LIMIT 1")) return;
+  if (get(db, "SELECT 1 FROM departments LIMIT 1")) {
+    ensureNewServices(db);
+    return;
+  }
   const now = nowIso();
   tx(db, () => {
     for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {

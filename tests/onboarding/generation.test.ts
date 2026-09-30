@@ -30,14 +30,37 @@ test("居宅介護支援の入職者には iBOW が生成されない", () => {
   assert.ok(!requestCodes(ctx, h).includes("ibow"));
 });
 
-test("どちらの部門にも ZEST・eNursing の発行依頼が生成される", () => {
+test("どちらの部門にも ZEST・eNursing・SQE eラーニングの発行依頼が生成される", () => {
   const ctx = setup();
   for (const dept of ["houmon", "kyotaku"] as const) {
     const h = newHire(ctx, dept);
     const reqs = requestCodes(ctx, h);
     assert.ok(reqs.includes("zest"), `${dept}: ZEST`);
     assert.ok(reqs.includes("enursing"), `${dept}: eNursing`);
+    assert.ok(reqs.includes("sqe_elearning"), `${dept}: SQE eラーニング`);
   }
+});
+
+test("SQE eラーニングの登録は榎本対応として表示される", async () => {
+  const { dashboard } = await import("../../src/onboarding/server/hires");
+  const ctx = setup();
+  newHire(ctx, "houmon");
+  const titles = dashboard(ctx.db, ctx.admin).enomotoTasks.map((t) => String(t.title));
+  assert.ok(titles.some((t) => t.includes("SQE eラーニング")));
+});
+
+test("既存のデータベースにも後から追加した標準サービスが追加される", async () => {
+  const { seedMaster } = await import("../../src/onboarding/server/seed");
+  const { openDb } = await import("../../src/onboarding/server/db");
+  const ctx = setup();
+  // 追加前の状態を再現
+  ctx.db.exec("DELETE FROM department_services WHERE service_id = (SELECT id FROM services WHERE code = 'sqe_elearning'); DELETE FROM services WHERE code = 'sqe_elearning';");
+  ctx.db.close();
+  const db = openDb(ctx.dbPath);
+  seedMaster(db);
+  const s = get<{ id: number; owner_mode: string }>(db, "SELECT id, owner_mode FROM services WHERE code = 'sqe_elearning'")!;
+  assert.equal(s.owner_mode, "enomoto");
+  assert.equal(all(db, "SELECT * FROM department_services WHERE service_id = ? AND requirement = 'required'", s.id).length, 2);
 });
 
 test("標準チェックリスト14項目が順番どおりに生成され、配置方式未確定の確認作業も追加される", () => {

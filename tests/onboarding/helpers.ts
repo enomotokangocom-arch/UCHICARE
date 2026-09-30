@@ -39,7 +39,7 @@ export function setup(): Ctx {
   };
   db.prepare("UPDATE services SET issuer_user_id = ? WHERE code IN ('ibow','lineworks')").run(ctx.jimu.id);
   db.prepare("UPDATE services SET issuer_user_id = ? WHERE code = 'zest'").run(ctx.sekinin.id);
-  db.prepare("UPDATE services SET issuer_user_id = ? WHERE code = 'enursing'").run(ctx.enomoto.id);
+  db.prepare("UPDATE services SET issuer_user_id = ? WHERE code IN ('enursing','sqe_elearning')").run(ctx.enomoto.id);
   return ctx;
 }
 
