@@ -3,17 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { KpiCard } from "@/components/KpiCard";
 import { BranchTable } from "@/components/ceo/BranchTable";
+import { BusinessLineTable } from "@/components/ceo/BusinessLineTable";
 import { CompanyHealthGauge } from "@/components/ceo/CompanyHealthGauge";
 import { DataSourcePanel } from "@/components/ceo/DataSourcePanel";
 import { DecisionCard } from "@/components/ceo/DecisionCard";
 import { ExplainModal } from "@/components/ceo/ExplainModal";
 import { ProcessedList } from "@/components/ceo/ProcessedList";
-import { CEO_CONFIG } from "@/lib/ceo/config";
+import { computeCompanyAggregate } from "@/lib/ceo/companyAggregate";
 import { computeCompanyHealthScore } from "@/lib/ceo/companyScore";
-import { latestPerBranch } from "@/lib/ceo/decisionEngine";
-import { forecastCompanyProfit, forecastCompanyRevenue } from "@/lib/ceo/forecastEngine";
-import { CEO_TODAY, MOCK_REFERRAL_SOURCE_POOL_SIZE } from "@/lib/ceo/mockData";
-import { branchUtilization } from "@/lib/ceo/productivityEngine";
+import { CEO_CONFIG } from "@/lib/ceo/config";
+import { latestPerBranch, latestPerOffice } from "@/lib/ceo/decisionEngine";
+import { CEO_TODAY } from "@/lib/ceo/mockData";
 import { branchSeries, computeHiringPlan, computeRequiredSales } from "@/lib/ceo/salesEngine";
 import { deriveCeoDecisions, useCeoStore } from "@/lib/ceo/store";
 
@@ -53,7 +53,8 @@ export default function CeoDashboardPage() {
       <div className="mx-auto max-w-3xl px-6 py-10">
         <h1 className="text-xl font-bold text-slate-900">Uchi AI CEO</h1>
         <p className="mt-1 text-sm text-slate-500">
-          訪問看護事業の経営データを監視し、今日判断すべきことだけを提示する経営OSです。まずはデータを読み込んでください。
+          Uchi careグループ(訪問看護・訪問介護Uchi Wel・居宅介護支援・通所介護UCHINOWA)の経営データを監視し、
+          今日判断すべきことだけを提示する経営OSです。まずはデータを読み込んでください。
         </p>
         <div className="mt-6">
           <DataSourcePanel />
@@ -62,14 +63,27 @@ export default function CeoDashboardPage() {
     );
   }
 
-  const latest = latestPerBranch(dataset.branchMetrics);
-  const companyRevenue = forecastCompanyRevenue(latest);
-  const companyProfit = forecastCompanyProfit(latest);
-  const healthScore = computeCompanyHealthScore(latest, [...topDecisions, ...monitoredDecisions]);
+  const latest = latestPerBranch(dataset.branchMetrics); // 訪問看護3拠点 + 訪問介護(Uchi Wel)1拠点
+  const cmLatest = latestPerOffice(dataset.careManagementMetrics);
+  const dsLatest = latestPerOffice(dataset.dayServiceMetrics);
+  const aggregate = computeCompanyAggregate(latest, cmLatest, dsLatest);
+  const healthScore = computeCompanyHealthScore({
+    forecastRevenue: aggregate.forecastRevenue,
+    revenueBudget: aggregate.revenueBudget,
+    forecastProfit: aggregate.forecastProfit,
+    profitBudget: aggregate.profitBudget,
+    utilizationRates: aggregate.utilizationRates,
+    decisions: [...topDecisions, ...monitoredDecisions],
+  });
 
+  const companyGapRatio = aggregate.revenueBudget !== 0 ? (aggregate.forecastRevenue - aggregate.revenueBudget) / aggregate.revenueBudget : 0;
   const avgUtilization =
-    latest.reduce((acc, m) => acc + branchUtilization(m).utilizationRate, 0) / Math.max(1, latest.length);
+    aggregate.utilizationRates.length > 0
+      ? aggregate.utilizationRates.reduce((a, b) => a + b, 0) / aggregate.utilizationRates.length
+      : 0;
 
+  // 必要新規利用者数・必要営業量・必要採用人数は、訪問時間ベースの事業(訪問看護・訪問介護Uchi Wel)に
+  // 限定して算出する(居宅介護支援・通所介護はPhase 0では対象外。08-risks-and-roadmap.md参照)。
   const requiredSalesPerBranch = latest.map((m) => computeRequiredSales(m));
   const totalRequiredNewPatients = requiredSalesPerBranch.reduce((a, r) => a + r.requiredNewPatients, 0);
   const totalRequiredSalesActivity = requiredSalesPerBranch.reduce((a, r) => a + r.requiredSalesActivity, 0);
@@ -79,15 +93,16 @@ export default function CeoDashboardPage() {
     return acc + computeHiringPlan(series, CEO_TODAY).requiredFte;
   }, 0);
 
+  const totalLocations = latest.length + cmLatest.length + dsLatest.length;
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Uchi AI CEO ダッシュボード</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {CEO_CONFIG.organizationName} ・ 基準日 {TODAY_LABEL} ・ 3拠点 / 看護師{" "}
-            {latest.reduce((a, m) => a + m.nurseCount, 0)}名 / 利用者{" "}
-            {latest.reduce((a, m) => a + m.currentPatients, 0)}名 / 営業先(母集団) {MOCK_REFERRAL_SOURCE_POOL_SIZE}件
+            {CEO_CONFIG.organizationName} ・ 基準日 {TODAY_LABEL} ・ 4事業ライン(訪問看護・訪問介護Uchi Wel・居宅介護支援・
+            通所介護UCHINOWA) ・ 拠点/事業所 {totalLocations}件
           </p>
         </div>
         <p className="text-xs text-slate-400">
@@ -101,41 +116,40 @@ export default function CeoDashboardPage() {
         <div className="grid grid-cols-2 gap-4 lg:col-span-3 lg:grid-cols-3">
           <KpiCard
             title="月末売上予測(全社)"
-            value={`${Math.round(companyRevenue.forecastRevenue / 10000).toLocaleString()}`}
+            value={`${Math.round(aggregate.forecastRevenue / 10000).toLocaleString()}`}
             unit="万円"
-            subtext={`計画比 ${(companyRevenue.gapRatio * 100).toFixed(1)}% / 達成確率 ${(companyRevenue.achievementProbability * 100).toFixed(0)}%`}
-            accentColor={companyRevenue.severity === "red" ? "#e11d48" : companyRevenue.severity === "yellow" ? "#d97706" : "#0f172a"}
+            subtext={`計画比 ${(companyGapRatio * 100).toFixed(1)}% ・ 4事業ライン合算`}
+            accentColor={companyGapRatio <= -0.05 ? "#e11d48" : companyGapRatio <= -0.03 ? "#d97706" : "#0f172a"}
           />
           <KpiCard
             title="月末利益予測(全社)"
-            value={`${Math.round(companyProfit.forecastProfit / 10000).toLocaleString()}`}
+            value={`${Math.round(aggregate.forecastProfit / 10000).toLocaleString()}`}
             unit="万円"
-            subtext={`計画 ${Math.round(companyProfit.profitBudget / 10000).toLocaleString()}万円`}
-            accentColor={companyProfit.severity === "red" ? "#e11d48" : companyProfit.severity === "yellow" ? "#d97706" : "#0f172a"}
+            subtext={`計画 ${Math.round(aggregate.profitBudget / 10000).toLocaleString()}万円`}
           />
           <KpiCard
             title="平均稼働率"
             value={(avgUtilization * 100).toFixed(1)}
             unit="%"
-            subtext={`目標 ${(CEO_CONFIG.utilization.targetRate * 100).toFixed(0)}%`}
+            subtext="訪問看護・訪問介護・通所介護の平均"
           />
           <KpiCard
             title="必要新規利用者数"
             value={totalRequiredNewPatients.toFixed(1)}
             unit="名"
-            subtext="今月の売上Gapを埋めるために必要な人数"
+            subtext="訪問看護・訪問介護の売上Gapを埋めるために必要な人数"
           />
           <KpiCard
             title="必要営業量"
             value={Math.round(totalRequiredSalesActivity).toLocaleString()}
             unit="件/月"
-            subtext="必要新規利用者数から逆算"
+            subtext="必要新規利用者数から逆算(訪問看護・訪問介護)"
           />
           <KpiCard
             title="必要採用人数"
             value={totalRequiredFte.toFixed(2)}
             unit="FTE"
-            subtext="90日以内の供給不足予測(全拠点合算)"
+            subtext="90日以内の供給不足予測(訪問看護・訪問介護)"
           />
         </div>
       </div>
@@ -168,10 +182,15 @@ export default function CeoDashboardPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3">
-          <h2 className="text-sm font-semibold text-slate-800">拠点別サマリー</h2>
+          <h2 className="text-sm font-semibold text-slate-800">訪問看護・訪問介護(Uchi Wel) 拠点別サマリー</h2>
           <p className="mt-0.5 text-xs text-slate-500">直近月の売上・利益予測と稼働率</p>
           <div className="mt-3">
             <BranchTable metrics={latest} />
+          </div>
+          <h2 className="mt-6 text-sm font-semibold text-slate-800">居宅介護支援・通所介護(UCHINOWA)</h2>
+          <p className="mt-0.5 text-xs text-slate-500">ケース数/稼働率ベースの事業ライン</p>
+          <div className="mt-3">
+            <BusinessLineTable careManagement={cmLatest} dayService={dsLatest} />
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">

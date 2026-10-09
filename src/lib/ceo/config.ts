@@ -43,6 +43,19 @@ export const CEO_CONFIG = {
     fallbackSalesToReferralCvr: 0.15,
   },
 
+  careManagement: {
+    // ケアマネジャー1人あたり担当件数の目安(逓減制等を踏まえた目標値)と、それに対する比率閾値
+    targetCaseloadPerFte: 35,
+    yellowCaseloadRatio: 1.1,
+    redCaseloadRatio: 1.25,
+  },
+
+  dayService: {
+    targetUtilization: 0.85,
+    yellowUtilization: 0.75,
+    redUtilization: 0.65,
+  },
+
   companyScore: {
     revenueWeight: 35,
     profitWeight: 25,
@@ -59,6 +72,8 @@ export const CEO_CONFIG = {
       required_new_patients: 0.6,
       required_sales_activity: 0.5,
       required_hiring: 0.85,
+      care_manager_caseload: 0.5,
+      branch_utilization: 0.4,
     } as Record<string, number>,
   },
 
@@ -69,6 +84,8 @@ export const CEO_CONFIG = {
     required_new_patients: "L2",
     required_sales_activity: "L2",
     required_hiring: "L2", // 採用最終判断そのものはhuman_only。ここは「採用開始を検討すべき」という提案レベル
+    care_manager_caseload: "L2",
+    branch_utilization: "L2",
   } as Record<string, string>,
 
   maxTopDecisions: 5,

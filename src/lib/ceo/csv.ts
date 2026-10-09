@@ -1,6 +1,6 @@
 import { BranchMonthlyMetric, CeoDataset, NurseProductivityRecord } from "./types";
 
-const BRANCH_METRIC_COLUMNS: (keyof BranchMonthlyMetric)[] = [
+const BRANCH_METRIC_COLUMNS: (keyof Omit<BranchMonthlyMetric, "businessLine">)[] = [
   "branch",
   "month",
   "daysElapsed",
@@ -125,7 +125,15 @@ function toRecords<T extends object>(
 }
 
 export function parseBranchMetricsCsv(text: string): BranchMonthlyMetric[] {
-  return toRecords<BranchMonthlyMetric>(text, BRANCH_METRIC_COLUMNS, NUMERIC_BRANCH_FIELDS, "拠点別月次データ");
+  // CSVアップロードはPhase 0時点では訪問看護(visiting_nurse)のスキーマのみを対象とする。
+  // 訪問介護(Uchi Wel)・居宅介護支援・通所介護はサンプルデータ(モック)経由でのみ提供する。
+  const rows = toRecords<Omit<BranchMonthlyMetric, "businessLine">>(
+    text,
+    BRANCH_METRIC_COLUMNS,
+    NUMERIC_BRANCH_FIELDS,
+    "拠点別月次データ"
+  );
+  return rows.map((row) => ({ ...row, businessLine: "visiting_nurse" as const }));
 }
 
 export function parseNurseProductivityCsv(text: string): NurseProductivityRecord[] {
@@ -149,7 +157,11 @@ function toCsv<T extends object>(rows: T[], columns: (keyof T)[]): string {
 }
 
 export function branchMetricsToCsv(rows: BranchMonthlyMetric[]): string {
-  return toCsv(rows, BRANCH_METRIC_COLUMNS);
+  // CSVスキーマは訪問看護(visiting_nurse)のみを対象とするため、サンプル出力もそれに限定する。
+  return toCsv(
+    rows.filter((r) => r.businessLine === "visiting_nurse"),
+    BRANCH_METRIC_COLUMNS
+  );
 }
 
 export function nurseProductivityToCsv(rows: NurseProductivityRecord[]): string {

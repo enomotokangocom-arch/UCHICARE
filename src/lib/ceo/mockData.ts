@@ -1,4 +1,15 @@
-import { BRANCHES, BranchMonthlyMetric, BranchName, CeoDataset, NurseProductivityRecord } from "./types";
+import { CEO_CONFIG } from "./config";
+import {
+  BRANCHES,
+  BranchMonthlyMetric,
+  CARE_MANAGEMENT_OFFICES,
+  CareManagementMonthlyMetric,
+  CeoDataset,
+  DAY_SERVICE_OFFICES,
+  DayServiceMonthlyMetric,
+  HOME_HELP_OFFICES,
+  NurseProductivityRecord,
+} from "./types";
 
 /**
  * 決定的疑似乱数生成器(mulberry32)。SSR/CSRで同じ値を出すため Math.random は使わない。
@@ -21,10 +32,10 @@ const MONTH_COUNT = 12;
 const REVENUE_PER_VISIT_HOUR = 7500;
 const TARGET_UTILIZATION = 0.8;
 
-/** 母集団としての営業先(紹介元)数。100〜200件の想定(Phase0では拠点別集計にのみ反映)。 */
+/** 母集団としての営業先(紹介元)数。100〜200件の想定(訪問看護の拠点別集計にのみ反映)。 */
 export const MOCK_REFERRAL_SOURCE_POOL_SIZE = 148;
 
-interface BranchBaseline {
+interface LocationBaseline {
   targetPatients: number;
   nurseCount: number;
   hoursPerNurse: number;
@@ -39,9 +50,12 @@ interface BranchBaseline {
   variableCostRatio: number;
   fixedCostRatio: number;
   avgRevenuePerPatient: number;
+  /** 訪問1時間あたり単価。訪問看護より訪問介護(Uchi Wel)の方が低い想定。 */
+  revenuePerVisitHour: number;
 }
 
-const BRANCH_BASELINE: Record<BranchName, BranchBaseline> = {
+/** 訪問看護(3拠点)+訪問介護(Uchi Wel、1拠点)。どちらも訪問時間ベースの収益モデルを共有する。 */
+const LOCATION_BASELINE: Record<string, LocationBaseline> = {
   仙台北: {
     targetPatients: 105,
     nurseCount: 11,
@@ -57,6 +71,7 @@ const BRANCH_BASELINE: Record<BranchName, BranchBaseline> = {
     variableCostRatio: 0.09,
     fixedCostRatio: 0.14,
     avgRevenuePerPatient: 91000,
+    revenuePerVisitHour: REVENUE_PER_VISIT_HOUR,
   },
   仙台東: {
     targetPatients: 100,
@@ -73,8 +88,9 @@ const BRANCH_BASELINE: Record<BranchName, BranchBaseline> = {
     variableCostRatio: 0.1,
     fixedCostRatio: 0.15,
     avgRevenuePerPatient: 90000,
+    revenuePerVisitHour: REVENUE_PER_VISIT_HOUR,
   },
-  宮城野: {
+  鶴ヶ谷: {
     targetPatients: 95,
     nurseCount: 9,
     hoursPerNurse: 150,
@@ -89,6 +105,24 @@ const BRANCH_BASELINE: Record<BranchName, BranchBaseline> = {
     variableCostRatio: 0.09,
     fixedCostRatio: 0.14,
     avgRevenuePerPatient: 89000,
+    revenuePerVisitHour: REVENUE_PER_VISIT_HOUR,
+  },
+  "Uchi Wel 仙台": {
+    targetPatients: 65,
+    nurseCount: 8,
+    hoursPerNurse: 135,
+    baseNewPatients: 3,
+    baseDischarged: 2,
+    baseHospitalized: 0,
+    baseResumed: 1,
+    baseSalesActivities: 10,
+    baseReferrals: 5,
+    baseContracts: 3,
+    laborCostRatio: 0.58,
+    variableCostRatio: 0.08,
+    fixedCostRatio: 0.13,
+    avgRevenuePerPatient: 46000,
+    revenuePerVisitHour: 3460,
   },
 };
 
@@ -117,15 +151,25 @@ function sendaiHigashiAnomaly(monthsAgo: number) {
   return { utilizationDelta: 0, dischargedExtra: 0, salesRatio: 1 };
 }
 
-/** 宮城野は利用者増加ペースに人員が追いつかず、稼働率が上がりすぎて90日後に供給不足になるシナリオ。 */
-function miyaginoAnomaly(monthsAgo: number) {
+/** 鶴ヶ谷は利用者増加ペースに人員が追いつかず、稼働率が上がりすぎて90日後に供給不足になるシナリオ。 */
+function tsurugayaAnomaly(monthsAgo: number) {
   if (monthsAgo <= 2) return { utilizationDelta: 0.1, newPatientsExtra: 3 };
   if (monthsAgo <= 5) return { utilizationDelta: 0.05, newPatientsExtra: 2 };
   return { utilizationDelta: 0, newPatientsExtra: 0 };
 }
 
-function generateBranchSeries(branch: BranchName, rng: () => number): BranchMonthlyMetric[] {
-  const baseline = BRANCH_BASELINE[branch];
+/** Uchi Welは直近2ヶ月で軽度の稼働率低下(ヘルパーの新規採用の立ち上がり待ち)。 */
+function uchiWelAnomaly(monthsAgo: number) {
+  if (monthsAgo <= 1) return { utilizationDelta: -0.07 };
+  return { utilizationDelta: 0 };
+}
+
+function generateBranchSeries(
+  branch: string,
+  businessLine: "visiting_nurse" | "home_help",
+  rng: () => number
+): BranchMonthlyMetric[] {
+  const baseline = LOCATION_BASELINE[branch];
   const months = getCeoMonthSequence();
   const records: BranchMonthlyMetric[] = [];
   let patients = baseline.targetPatients - 6;
@@ -153,10 +197,13 @@ function generateBranchSeries(branch: BranchName, rng: () => number): BranchMont
       dischargedPatients += anomaly.dischargedExtra;
       salesRatio = anomaly.salesRatio;
     }
-    if (branch === "宮城野") {
-      const anomaly = miyaginoAnomaly(monthsAgo);
+    if (branch === "鶴ヶ谷") {
+      const anomaly = tsurugayaAnomaly(monthsAgo);
       utilization += anomaly.utilizationDelta;
       newPatients += anomaly.newPatientsExtra;
+    }
+    if (branch === "Uchi Wel 仙台") {
+      utilization += uchiWelAnomaly(monthsAgo).utilizationDelta;
     }
 
     newPatients = Math.max(0, newPatients);
@@ -169,19 +216,22 @@ function generateBranchSeries(branch: BranchName, rng: () => number): BranchMont
 
     const avgRevenuePerPatient = Math.round(baseline.avgRevenuePerPatient * (0.98 + rng() * 0.04));
 
-    const revenueActualMtd = Math.round(visitHours * REVENUE_PER_VISIT_HOUR * (0.98 + rng() * 0.06));
+    const revenueActualMtd = Math.round(visitHours * baseline.revenuePerVisitHour * (0.98 + rng() * 0.06));
     const revenueBudget = Math.round(baseline.targetPatients * avgRevenuePerPatient);
 
     const laborCost = Math.round(revenueBudget * baseline.laborCostRatio * (0.97 + rng() * 0.06));
     const variableCost = Math.round(revenueBudget * baseline.variableCostRatio * (0.95 + rng() * 0.1));
     const fixedCost = Math.round(revenueBudget * baseline.fixedCostRatio);
-    const profitBudget = Math.round(revenueBudget - revenueBudget * (baseline.laborCostRatio + baseline.variableCostRatio + baseline.fixedCostRatio));
+    const profitBudget = Math.round(
+      revenueBudget - revenueBudget * (baseline.laborCostRatio + baseline.variableCostRatio + baseline.fixedCostRatio)
+    );
 
     const salesActivities = Math.max(1, Math.round(baseline.baseSalesActivities * salesRatio + (rng() - 0.5) * 3));
     const referrals = Math.max(0, Math.round(baseline.baseReferrals * salesRatio + (rng() - 0.5) * 1.5));
     const contracts = Math.max(0, Math.min(referrals, Math.round(baseline.baseContracts * salesRatio + (rng() - 0.5) * 1)));
 
     records.push({
+      businessLine,
       branch,
       month: month.key,
       daysElapsed: elapsed,
@@ -212,7 +262,14 @@ function generateBranchSeries(branch: BranchName, rng: () => number): BranchMont
   return records;
 }
 
-function generateNurseRecords(branch: BranchName, rng: () => number, month: string, count: number): NurseProductivityRecord[] {
+function generateNurseRecords(
+  branch: string,
+  rng: () => number,
+  month: string,
+  count: number,
+  roleLabel: string,
+  revenuePerVisitHour: number
+): NurseProductivityRecord[] {
   const records: NurseProductivityRecord[] = [];
   for (let i = 1; i <= count; i += 1) {
     const workHours = Math.round(140 + (rng() - 0.5) * 20);
@@ -225,10 +282,10 @@ function generateNurseRecords(branch: BranchName, rng: () => number, month: stri
     const travelHours = Math.round((visitProvidedHours / travelEfficiency) * (1 - travelEfficiency));
     const visitCount = Math.max(1, Math.round(visitProvidedHours / (1.1 + rng() * 0.3)));
     const workDays = Math.round(18 + (rng() - 0.5) * 4);
-    const revenue = Math.round(visitProvidedHours * REVENUE_PER_VISIT_HOUR * (0.95 + rng() * 0.1));
+    const revenue = Math.round(visitProvidedHours * revenuePerVisitHour * (0.95 + rng() * 0.1));
 
     records.push({
-      nurse: `${branch}-看護師${String(i).padStart(2, "0")}`,
+      nurse: `${branch}-${roleLabel}${String(i).padStart(2, "0")}`,
       branch,
       month,
       visitProvidedHours,
@@ -242,11 +299,131 @@ function generateNurseRecords(branch: BranchName, rng: () => number, month: stri
   return records;
 }
 
+/** 居宅介護支援(ケアマネ事業)の12ヶ月分モックデータ。直近でケアマネ1人あたり担当件数が
+ * 目安を上回り続けるケースロード過多シナリオを含む。 */
+function generateCareManagementSeries(office: string, rng: () => number): CareManagementMonthlyMetric[] {
+  const months = getCeoMonthSequence();
+  const records: CareManagementMonthlyMetric[] = [];
+  const careManagerCount = 3;
+  const targetCaseloadPerFte = CEO_CONFIG.careManagement.targetCaseloadPerFte;
+  const avgFeePerCase = 10500;
+  let currentCases = 100;
+
+  months.forEach((month, index) => {
+    const monthsAgo = MONTH_COUNT - 1 - index;
+    const isCurrent = monthsAgo === 0;
+    const din = daysInMonth(month.date);
+    const elapsed = isCurrent ? Math.min(CEO_TODAY.getDate(), din) : din;
+
+    // 直近4ヶ月は新規受け入れが終了件数を上回り、ケースロードが悪化していくシナリオ
+    const overloadPhase = monthsAgo <= 3;
+    const newCases = Math.max(0, Math.round((overloadPhase ? 8 : 3) + (rng() - 0.5) * 2));
+    const lostCases = Math.max(0, Math.round((overloadPhase ? 1 : 3) + (rng() - 0.5) * 1.5));
+
+    const revenueBudget = Math.round(careManagerCount * targetCaseloadPerFte * avgFeePerCase);
+    const laborCost = Math.round(revenueBudget * 0.62 * (0.97 + rng() * 0.06));
+    const fixedCost = Math.round(revenueBudget * 0.18);
+    const profitBudget = Math.round(revenueBudget - revenueBudget * (0.62 + 0.18));
+
+    records.push({
+      businessLine: "care_management",
+      office,
+      month: month.key,
+      daysElapsed: elapsed,
+      daysInMonth: din,
+      currentCases,
+      newCases,
+      lostCases,
+      careManagerCount,
+      targetCaseloadPerFte,
+      avgFeePerCase: Math.round(avgFeePerCase * (0.99 + rng() * 0.02)),
+      revenueBudget,
+      profitBudget,
+      laborCost,
+      fixedCost,
+    });
+
+    currentCases = Math.max(0, currentCases + newCases - lostCases);
+  });
+
+  return records;
+}
+
+/** 通所介護(UCHINOWA)の12ヶ月分モックデータ。直近で稼働率が目標を下回り続ける
+ * 定員割れシナリオを含む。 */
+function generateDayServiceSeries(office: string, rng: () => number): DayServiceMonthlyMetric[] {
+  const months = getCeoMonthSequence();
+  const records: DayServiceMonthlyMetric[] = [];
+  const capacityPerDay = 25;
+  const avgFeePerAttendance = 8500;
+  const targetUtilization = CEO_CONFIG.dayService.targetUtilization;
+  let currentUsers = 44;
+
+  months.forEach((month, index) => {
+    const monthsAgo = MONTH_COUNT - 1 - index;
+    const isCurrent = monthsAgo === 0;
+    const din = daysInMonth(month.date);
+    const elapsed = isCurrent ? Math.min(CEO_TODAY.getDate(), din) : din;
+    const operatingDays = din >= 30 ? 25 : 23;
+    const operatingDaysElapsed = isCurrent ? Math.round((operatingDays * elapsed) / din) : operatingDays;
+
+    const underUtilizationPhase = monthsAgo <= 2;
+    const newUsers = Math.max(0, Math.round(2 + (rng() - 0.5) * 2));
+    const endUsers = Math.max(0, Math.round((underUtilizationPhase ? 4 : 2) + (rng() - 0.5) * 1.5));
+
+    const utilization = underUtilizationPhase ? 0.68 + (rng() - 0.5) * 0.05 : 0.86 + (rng() - 0.5) * 0.06;
+    const attendanceMtd = Math.round(capacityPerDay * operatingDaysElapsed * Math.min(0.97, Math.max(0.4, utilization)));
+
+    const revenueBudget = Math.round(capacityPerDay * operatingDays * targetUtilization * avgFeePerAttendance);
+    const laborCost = Math.round(revenueBudget * 0.5 * (0.97 + rng() * 0.06));
+    const variableCost = Math.round(revenueBudget * 0.12 * (0.95 + rng() * 0.1));
+    const fixedCost = Math.round(revenueBudget * 0.18);
+    const profitBudget = Math.round(revenueBudget - revenueBudget * (0.5 + 0.12 + 0.18));
+
+    records.push({
+      businessLine: "day_service",
+      office,
+      month: month.key,
+      daysElapsed: elapsed,
+      daysInMonth: din,
+      operatingDays,
+      capacityPerDay,
+      attendanceMtd,
+      currentUsers,
+      newUsers,
+      endUsers,
+      avgFeePerAttendance: Math.round(avgFeePerAttendance * (0.99 + rng() * 0.02)),
+      revenueBudget,
+      profitBudget,
+      laborCost,
+      variableCost,
+      fixedCost,
+    });
+
+    currentUsers = Math.max(0, currentUsers + newUsers - endUsers);
+  });
+
+  return records;
+}
+
 export function generateMockCeoDataset(): CeoDataset {
   const rng = mulberry32(20260904);
   const branchMetrics: BranchMonthlyMetric[] = [];
   BRANCHES.forEach((branch) => {
-    branchMetrics.push(...generateBranchSeries(branch, rng));
+    branchMetrics.push(...generateBranchSeries(branch, "visiting_nurse", rng));
+  });
+  HOME_HELP_OFFICES.forEach((office) => {
+    branchMetrics.push(...generateBranchSeries(office, "home_help", rng));
+  });
+
+  const careManagementMetrics: CareManagementMonthlyMetric[] = [];
+  CARE_MANAGEMENT_OFFICES.forEach((office) => {
+    careManagementMetrics.push(...generateCareManagementSeries(office, rng));
+  });
+
+  const dayServiceMetrics: DayServiceMonthlyMetric[] = [];
+  DAY_SERVICE_OFFICES.forEach((office) => {
+    dayServiceMetrics.push(...generateDayServiceSeries(office, rng));
   });
 
   const months = getCeoMonthSequence();
@@ -255,13 +432,22 @@ export function generateMockCeoDataset(): CeoDataset {
 
   const nurseProductivity: NurseProductivityRecord[] = [];
   BRANCHES.forEach((branch) => {
-    const baseline = BRANCH_BASELINE[branch];
-    nurseProductivity.push(...generateNurseRecords(branch, rng, currentMonth, baseline.nurseCount));
-    nurseProductivity.push(...generateNurseRecords(branch, rng, previousMonth, baseline.nurseCount));
+    const count = LOCATION_BASELINE[branch].nurseCount;
+    const rate = LOCATION_BASELINE[branch].revenuePerVisitHour;
+    nurseProductivity.push(...generateNurseRecords(branch, rng, currentMonth, count, "看護師", rate));
+    nurseProductivity.push(...generateNurseRecords(branch, rng, previousMonth, count, "看護師", rate));
+  });
+  HOME_HELP_OFFICES.forEach((office) => {
+    const count = LOCATION_BASELINE[office].nurseCount;
+    const rate = LOCATION_BASELINE[office].revenuePerVisitHour;
+    nurseProductivity.push(...generateNurseRecords(office, rng, currentMonth, count, "ヘルパー", rate));
+    nurseProductivity.push(...generateNurseRecords(office, rng, previousMonth, count, "ヘルパー", rate));
   });
 
   return {
     branchMetrics,
+    careManagementMetrics,
+    dayServiceMetrics,
     nurseProductivity,
     loadedAt: new Date().toISOString(),
     source: "mock",

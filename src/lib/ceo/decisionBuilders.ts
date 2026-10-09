@@ -1,14 +1,17 @@
 import { CEO_CONFIG } from "./config";
+import { forecastCareManagementProfit, forecastCareManagementRevenue } from "./careManagementEngine";
+import { forecastDayServiceProfit, forecastDayServiceRevenue } from "./dayServiceEngine";
 import { approvalLevelFor, baseDecision, priorityScore, yen } from "./decisionHelpers";
 import {
   ProfitForecastResult,
   RevenueForecastResult,
   forecastBranchProfit,
   forecastBranchRevenue,
+  severityFromGapRatio,
 } from "./forecastEngine";
 import { scoreAllNurses } from "./productivityEngine";
 import { computeHiringPlan, computeRequiredSales } from "./salesEngine";
-import { BranchMonthlyMetric, Decision, DecisionType, Severity } from "./types";
+import { BranchMonthlyMetric, CareManagementMonthlyMetric, DayServiceMonthlyMetric, Decision, DecisionType, Severity } from "./types";
 
 export function buildRevenueDecision(
   m: BranchMonthlyMetric,
@@ -284,6 +287,282 @@ export function buildUtilizationDecision(m: BranchMonthlyMetric, rate: number, s
       formula: "UtilizationRate = 訪問時間 / 訪問提供可能時間",
       mainFactors: [{ label: "稼働率", contribution: Math.round(rate * 100) }],
       alternatives: ["空き訪問枠への新規利用者割当", "営業活動の強化"],
+    },
+  };
+}
+
+export function buildCareManagementRevenueDecision(m: CareManagementMonthlyMetric, now: string): Decision {
+  const f = forecastCareManagementRevenue(m);
+  const decisionType: DecisionType = "revenue_forecast";
+  return {
+    ...baseDecision(now, decisionType, "office", m.office, m.office),
+    title: `${m.office} 月末売上予測`,
+    currentValue: f.forecastRevenue,
+    targetValue: f.revenueBudget,
+    unit: "円",
+    gap: f.gap,
+    severity: f.severity,
+    probability: 0.65,
+    recommendedAction:
+      f.gap < 0
+        ? `保有ケース数見込み ${f.forecastCases}件(目標 ${m.careManagerCount * m.targetCaseloadPerFte}件相当)では売上Gap ${yen(Math.abs(f.gap))} が発生する見込みです。新規ケース受け入れ・紹介元との連携強化を検討してください。`
+        : "計画を上回る見込みです。",
+    reasoningSummary: `新規ケース ${m.newCases}件・終了ケース ${m.lostCases}件を反映した月末保有ケース数見込みは ${f.forecastCases}件。1件あたり月額報酬 ${yen(m.avgFeePerCase)} を乗じた売上予測は ${yen(f.forecastRevenue)}(計画比 ${(f.gapRatio * 100).toFixed(1)}%)です。`,
+    expectedImpact: `保有ケース数見込み ${f.forecastCases}件`,
+    confidenceScore: 0.7,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({ gap: f.gap, reference: f.revenueBudget, severity: f.severity, probability: 0.65, decisionType }),
+    explain: {
+      dataUsed: ["保有ケース数", "新規ケース数", "終了ケース数", "1件あたり月額報酬(居宅介護支援費)"],
+      formula: "ForecastRevenue = (CurrentCases + NewCases - LostCases) × AvgFeePerCase",
+      mainFactors: [
+        { label: "新規ケース", contribution: m.newCases * m.avgFeePerCase },
+        { label: "終了ケース", contribution: -m.lostCases * m.avgFeePerCase },
+      ],
+      alternatives: ["地域包括支援センター・医療機関への営業強化", "他事業所からのケース移管受け入れ"],
+    },
+  };
+}
+
+export function buildCareManagementProfitDecision(m: CareManagementMonthlyMetric, now: string): Decision {
+  const f = forecastCareManagementProfit(m);
+  const decisionType: DecisionType = "profit_forecast";
+  return {
+    ...baseDecision(now, decisionType, "office", m.office, m.office),
+    title: `${m.office} 月末利益予測`,
+    currentValue: f.forecastProfit,
+    targetValue: f.profitBudget,
+    unit: "円",
+    gap: f.gap,
+    severity: f.severity,
+    probability: 0.65,
+    recommendedAction: f.gap < 0 ? `利益Gap ${yen(Math.abs(f.gap))}。人件費・固定費に対しケース数が不足しています。` : "計画利益を上回る見込みです。",
+    reasoningSummary: `売上予測 ${yen(f.forecastRevenue)} から人件費 ${yen(f.laborCost)}・固定費 ${yen(f.fixedCost)} を控除した利益予測は ${yen(f.forecastProfit)} です(計画 ${yen(f.profitBudget)})。`,
+    expectedImpact: `利益Gap ${yen(f.gap)}`,
+    confidenceScore: 0.65,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({ gap: f.gap, reference: f.profitBudget, severity: f.severity, probability: 0.65, decisionType }),
+    explain: {
+      dataUsed: ["居宅介護支援の売上予測", "人件費", "固定費", "計画利益"],
+      formula: "ForecastProfit = ForecastRevenue - LaborCost - FixedCost",
+      mainFactors: [
+        { label: "売上要因", contribution: f.forecastRevenue - f.profitBudget - f.laborCost - f.fixedCost },
+        { label: "人件費", contribution: -f.laborCost },
+      ],
+      alternatives: ["ケアマネジャーの増員・配置見直し", "固定費の見直し"],
+    },
+  };
+}
+
+/** ケアマネジャー1人あたり担当件数の過多を検知する(逓減制等を踏まえた目安に対する比率)。 */
+export function buildCaseloadDecision(m: CareManagementMonthlyMetric, now: string): Decision | null {
+  const f = forecastCareManagementRevenue(m);
+  if (f.caseloadSeverity === "green") return null;
+
+  const decisionType: DecisionType = "care_manager_caseload";
+  return {
+    ...baseDecision(now, decisionType, "office", m.office, m.office),
+    title: `${m.office} ケアマネジャー担当件数の過多`,
+    currentValue: f.caseloadPerFte,
+    targetValue: m.targetCaseloadPerFte,
+    unit: "件/人",
+    gap: Math.round((f.caseloadPerFte - m.targetCaseloadPerFte) * 10) / 10,
+    severity: f.caseloadSeverity,
+    probability: 0.6,
+    recommendedAction: `1人あたり担当件数が目安(${m.targetCaseloadPerFte}件)を${((f.caseloadRatio - 1) * 100).toFixed(0)}%上回っています。新規ケースの受け入れペースの調整、またはケアマネジャーの増員を検討してください。`,
+    reasoningSummary: `保有ケース数見込み ${f.forecastCases}件 ÷ ケアマネジャー ${m.careManagerCount}名 = 1人あたり ${f.caseloadPerFte}件(目安 ${m.targetCaseloadPerFte}件)。過重労働・支援品質低下のリスクとして扱います(個人の評価ではありません)。`,
+    expectedImpact: "増員または受け入れペース調整により、ケアマネジャー1人あたりの負荷を適正化",
+    confidenceScore: 0.6,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({
+      gap: f.caseloadPerFte - m.targetCaseloadPerFte,
+      reference: m.targetCaseloadPerFte,
+      severity: f.caseloadSeverity,
+      probability: 0.6,
+      decisionType,
+    }),
+    explain: {
+      dataUsed: ["保有ケース数見込み", "ケアマネジャー人数", "1人あたり担当件数の目安"],
+      formula: "CaseloadPerFte = ForecastCases / CareManagerCount",
+      mainFactors: [{ label: "1人あたり担当件数", contribution: Math.round(f.caseloadPerFte * 10) / 10 }],
+      alternatives: ["ケアマネジャーの増員", "新規ケース受け入れペースの調整", "他事業所への一部移管"],
+    },
+  };
+}
+
+export function buildDayServiceRevenueDecision(m: DayServiceMonthlyMetric, now: string): Decision {
+  const f = forecastDayServiceRevenue(m);
+  const decisionType: DecisionType = "revenue_forecast";
+  return {
+    ...baseDecision(now, decisionType, "office", m.office, m.office),
+    title: `${m.office} 月末売上予測`,
+    currentValue: f.forecastRevenue,
+    targetValue: f.revenueBudget,
+    unit: "円",
+    gap: f.gap,
+    severity: f.severity,
+    probability: 0.65,
+    recommendedAction:
+      f.gap < 0
+        ? `稼働率 ${(f.utilizationRate * 100).toFixed(1)}% のままでは売上Gap ${yen(Math.abs(f.gap))} が発生する見込みです。新規利用者の受け入れ・稼働率改善を検討してください。`
+        : "計画を上回る見込みです。",
+    reasoningSummary: `確定延べ利用者数 ${f.confirmedAttendance}人 に残営業日の想定利用者数 ${f.scheduledAttendance}人 を加えた月末延べ利用見込みは ${f.forecastAttendance}人。平均単価 ${yen(m.avgFeePerAttendance)} を乗じた売上予測は ${yen(f.forecastRevenue)}(計画比 ${(f.gapRatio * 100).toFixed(1)}%)です。`,
+    expectedImpact: `月末稼働率見込み ${(f.utilizationRate * 100).toFixed(1)}%`,
+    confidenceScore: 0.7,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({ gap: f.gap, reference: f.revenueBudget, severity: f.severity, probability: 0.65, decisionType }),
+    explain: {
+      dataUsed: ["MTD延べ利用者数", "1日あたり定員", "営業日数", "平均単価"],
+      formula: "ForecastRevenue = (ConfirmedAttendance + ScheduledAttendance) × AvgFeePerAttendance",
+      mainFactors: [
+        { label: "確定延べ利用者数", contribution: f.confirmedAttendance * m.avgFeePerAttendance },
+        { label: "残営業日の想定利用者数", contribution: f.scheduledAttendance * m.avgFeePerAttendance },
+      ],
+      alternatives: ["送迎エリアの拡大", "空き枠の新規利用者への割当", "ケアマネジャーへの空き枠案内"],
+    },
+  };
+}
+
+export function buildDayServiceProfitDecision(m: DayServiceMonthlyMetric, now: string): Decision {
+  const f = forecastDayServiceProfit(m);
+  const decisionType: DecisionType = "profit_forecast";
+  return {
+    ...baseDecision(now, decisionType, "office", m.office, m.office),
+    title: `${m.office} 月末利益予測`,
+    currentValue: f.forecastProfit,
+    targetValue: f.profitBudget,
+    unit: "円",
+    gap: f.gap,
+    severity: f.severity,
+    probability: 0.65,
+    recommendedAction: f.gap < 0 ? `利益Gap ${yen(Math.abs(f.gap))}。稼働率不足によるコスト吸収不足が主要因です。` : "計画利益を上回る見込みです。",
+    reasoningSummary: `売上予測 ${yen(f.forecastRevenue)} から人件費 ${yen(f.laborCost)}・変動費 ${yen(f.variableCost)}・固定費 ${yen(f.fixedCost)} を控除した利益予測は ${yen(f.forecastProfit)} です(計画 ${yen(f.profitBudget)})。`,
+    expectedImpact: `利益Gap ${yen(f.gap)}`,
+    confidenceScore: 0.65,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({ gap: f.gap, reference: f.profitBudget, severity: f.severity, probability: 0.65, decisionType }),
+    explain: {
+      dataUsed: ["通所介護の売上予測", "人件費", "変動費", "固定費", "計画利益"],
+      formula: "ForecastProfit = ForecastRevenue - LaborCost - VariableCost - FixedCost",
+      mainFactors: [
+        { label: "売上要因", contribution: f.forecastRevenue - f.profitBudget - f.laborCost - f.variableCost - f.fixedCost },
+        { label: "人件費", contribution: -f.laborCost },
+      ],
+      alternatives: ["稼働率改善による売上増", "人員配置・シフトの見直し"],
+    },
+  };
+}
+
+export function buildDayServiceUtilizationDecision(m: DayServiceMonthlyMetric, now: string): Decision | null {
+  const f = forecastDayServiceRevenue(m);
+  if (f.utilizationSeverity === "green") return null;
+
+  const decisionType: DecisionType = "branch_utilization";
+  return {
+    ...baseDecision(now, decisionType, "office", m.office, m.office),
+    title: `${m.office} 稼働率低下`,
+    currentValue: Math.round(f.utilizationRate * 1000) / 10,
+    targetValue: Math.round(CEO_CONFIG.dayService.targetUtilization * 1000) / 10,
+    unit: "%",
+    gap: Math.round((f.utilizationRate - CEO_CONFIG.dayService.targetUtilization) * 1000) / 10,
+    severity: f.utilizationSeverity,
+    probability: 0.7,
+    recommendedAction: "空き枠の新規利用者への割当、ケアマネジャーへの空き枠案内など稼働率改善策を検討してください。",
+    reasoningSummary: `稼働率(延べ利用者数/受入可能延べ人数)が ${(f.utilizationRate * 100).toFixed(1)}% で、目標 ${(CEO_CONFIG.dayService.targetUtilization * 100).toFixed(0)}% を下回っています。`,
+    expectedImpact: "稼働率改善により固定費の回収率が向上します。",
+    confidenceScore: 0.7,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({
+      gap: f.utilizationRate - CEO_CONFIG.dayService.targetUtilization,
+      reference: 1,
+      severity: f.utilizationSeverity,
+      probability: 0.7,
+      decisionType,
+    }),
+    explain: {
+      dataUsed: ["MTD延べ利用者数", "1日あたり定員", "営業日数"],
+      formula: "UtilizationRate = MTD延べ利用者数 / (1日あたり定員 × MTD営業日数)",
+      mainFactors: [{ label: "稼働率", contribution: Math.round(f.utilizationRate * 100) }],
+      alternatives: ["空き枠への新規利用者割当", "ケアマネジャーへの空き枠案内", "送迎エリアの拡大"],
+    },
+  };
+}
+
+export interface BusinessLineTotal {
+  label: string;
+  forecastValue: number;
+  budget: number;
+}
+
+/** 事業ライン別の売上予測を合算した、Uchi careグループ全社の月末売上予測Decision。 */
+export function buildCompanyRevenueDecision(parts: BusinessLineTotal[], now: string): Decision {
+  const forecastRevenue = parts.reduce((a, p) => a + p.forecastValue, 0);
+  const revenueBudget = parts.reduce((a, p) => a + p.budget, 0);
+  const gap = forecastRevenue - revenueBudget;
+  const gapRatio = revenueBudget !== 0 ? gap / revenueBudget : 0;
+  const severity = severityFromGapRatio(gapRatio);
+  const achievementProbability = Math.min(0.95, Math.max(0.05, 0.5 + gapRatio * 5));
+  const decisionType: DecisionType = "revenue_forecast";
+
+  return {
+    ...baseDecision(now, decisionType, "company", "company", "全社(Uchi careグループ)"),
+    title: "全社 月末売上予測",
+    currentValue: forecastRevenue,
+    targetValue: revenueBudget,
+    unit: "円",
+    gap,
+    severity,
+    probability: achievementProbability,
+    recommendedAction:
+      gap < 0
+        ? `全社売上Gap ${yen(Math.abs(gap))}。事業ライン別の内訳を確認し、未達幅の大きい事業へ経営資源を再配分してください。`
+        : "全社で計画を上回る見込みです。",
+    reasoningSummary: `訪問看護・訪問介護(Uchi Wel)・居宅介護支援・通所介護(UCHINOWA)の4事業ラインを合算した全社の月末売上予測は ${yen(forecastRevenue)}(計画比 ${(gapRatio * 100).toFixed(1)}%)です。`,
+    expectedImpact: `月末達成確率 ${(achievementProbability * 100).toFixed(0)}%`,
+    confidenceScore: 0.75,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({ gap, reference: revenueBudget, severity, probability: achievementProbability, decisionType }),
+    explain: {
+      dataUsed: ["事業ライン別 月末売上予測(4事業ライン合算)"],
+      formula: "全社ForecastRevenue = Σ 事業ライン別ForecastRevenue",
+      mainFactors: parts.map((p) => ({ label: p.label, contribution: p.forecastValue - p.budget })),
+      alternatives: ["未達幅の大きい事業ラインへ経営資源を再配分する"],
+    },
+  };
+}
+
+/** 事業ライン別の利益予測を合算した、Uchi careグループ全社の月末利益予測Decision。 */
+export function buildCompanyProfitDecision(parts: BusinessLineTotal[], now: string): Decision {
+  const forecastProfit = parts.reduce((a, p) => a + p.forecastValue, 0);
+  const profitBudget = parts.reduce((a, p) => a + p.budget, 0);
+  const gap = forecastProfit - profitBudget;
+  const gapRatio = profitBudget !== 0 ? gap / Math.abs(profitBudget) : 0;
+  const severity = severityFromGapRatio(gapRatio);
+  const decisionType: DecisionType = "profit_forecast";
+
+  return {
+    ...baseDecision(now, decisionType, "company", "company", "全社(Uchi careグループ)"),
+    title: "全社 月末利益予測",
+    currentValue: forecastProfit,
+    targetValue: profitBudget,
+    unit: "円",
+    gap,
+    severity,
+    probability: 0.7,
+    recommendedAction:
+      gap < 0
+        ? `全社利益Gap ${yen(Math.abs(gap))}。事業ライン別の内訳を確認し、要因の大きい事業から是正してください。`
+        : "全社で計画利益を上回る見込みです。",
+    reasoningSummary: `訪問看護・訪問介護(Uchi Wel)・居宅介護支援・通所介護(UCHINOWA)の4事業ラインを合算した全社の月末利益予測は ${yen(forecastProfit)}(計画 ${yen(profitBudget)})です。`,
+    expectedImpact: `利益Gap ${yen(gap)}`,
+    confidenceScore: 0.7,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({ gap, reference: profitBudget, severity, probability: 0.7, decisionType }),
+    explain: {
+      dataUsed: ["事業ライン別 月末利益予測(4事業ライン合算)"],
+      formula: "全社ForecastProfit = Σ 事業ライン別ForecastProfit",
+      mainFactors: parts.map((p) => ({ label: p.label, contribution: p.forecastValue - p.budget })),
+      alternatives: ["利益Gapが大きい事業ラインのコスト構造を個別に見直す"],
     },
   };
 }

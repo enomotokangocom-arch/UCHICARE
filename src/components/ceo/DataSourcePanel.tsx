@@ -76,6 +76,9 @@ export function DataSourcePanel() {
 
       <div className="mt-4 border-t border-slate-100 pt-3">
         <p className="text-xs font-semibold text-slate-600">CSVをアップロードする</p>
+        <p className="mt-0.5 text-xs text-slate-400">
+          Phase 0時点ではCSVは訪問看護・訪問介護(Uchi Wel)のスキーマのみ対応です。居宅介護支援・通所介護(UCHINOWA)はサンプルデータ経由でのみ提供します。
+        </p>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-xs text-slate-500">
             拠点別月次データ (monthly_branch_metrics.csv)

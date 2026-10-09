@@ -1,25 +1,39 @@
 import { CEO_CONFIG } from "./config";
+import { computeCompanyAggregate } from "./companyAggregate";
 import {
+  buildCaseloadDecision,
+  buildCareManagementProfitDecision,
+  buildCareManagementRevenueDecision,
+  buildCompanyProfitDecision,
+  buildCompanyRevenueDecision,
+  buildDayServiceProfitDecision,
+  buildDayServiceRevenueDecision,
+  buildDayServiceUtilizationDecision,
   buildHiringDecision,
   buildProductivityDecision,
   buildProfitDecision,
-  buildProfitDecisionFromForecast,
   buildRequiredSalesDecision,
   buildRevenueDecision,
-  buildRevenueDecisionFromForecast,
   buildUtilizationDecision,
 } from "./decisionBuilders";
 import { severityRank } from "./decisionHelpers";
-import { forecastCompanyProfit, forecastCompanyRevenue } from "./forecastEngine";
 import { branchUtilization, scoreAllNurses } from "./productivityEngine";
 import { branchSeries } from "./salesEngine";
-import { BRANCHES, BranchMonthlyMetric, CeoDataset, Decision } from "./types";
+import { BranchMonthlyMetric, CeoDataset, Decision } from "./types";
 
+function latestByKey<T extends { month: string }>(items: T[], keyOf: (item: T) => string): T[] {
+  const currentMonth = items.reduce((max, i) => (i.month > max ? i.month : max), "");
+  const keys = Array.from(new Set(items.map(keyOf)));
+  return keys.map((k) => items.find((i) => keyOf(i) === k && i.month === currentMonth)).filter((i): i is T => Boolean(i));
+}
+
+/** dataset内に実在する拠点名から、各拠点の最新月のレコードを取り出す(訪問看護+訪問介護Uchi Welを含む)。 */
 export function latestPerBranch(metrics: BranchMonthlyMetric[]): BranchMonthlyMetric[] {
-  const currentMonth = metrics.reduce((max, m) => (m.month > max ? m.month : max), "");
-  return BRANCHES.map((b) => metrics.find((m) => m.branch === b && m.month === currentMonth)).filter(
-    (m): m is BranchMonthlyMetric => Boolean(m)
-  );
+  return latestByKey(metrics, (m) => m.branch);
+}
+
+export function latestPerOffice<T extends { month: string; office: string }>(metrics: T[]): T[] {
+  return latestByKey(metrics, (m) => m.office);
 }
 
 export interface DecisionBuildResult {
@@ -32,19 +46,23 @@ export interface DecisionBuildResult {
   allDecisions: Decision[];
 }
 
-/** 全Decisionルールを評価し、優先順位付けして返す(Decision Engineのエントリポイント)。 */
+/** 全Decisionルールを評価し、優先順位付けして返す(Decision Engineのエントリポイント)。4事業ライン
+ * (訪問看護/訪問介護Uchi Wel/居宅介護支援/通所介護UCHINOWA)すべてを横断して1つのリストにまとめる。 */
 export function buildDecisions(dataset: CeoDataset, today: Date = new Date()): DecisionBuildResult {
   const now = today.toISOString();
-  const latest = latestPerBranch(dataset.branchMetrics);
+  const latest = latestPerBranch(dataset.branchMetrics); // 訪問看護3拠点 + 訪問介護(Uchi Wel)1拠点
+  const cmLatest = latestPerOffice(dataset.careManagementMetrics); // 居宅介護支援
+  const dsLatest = latestPerOffice(dataset.dayServiceMetrics); // 通所介護(UCHINOWA)
   const nurseScores = scoreAllNurses(dataset.nurseProductivity.filter((r) => r.month === latest[0]?.month));
 
   const decisions: Decision[] = [];
 
-  const companyRevenue = forecastCompanyRevenue(latest);
-  const companyProfit = forecastCompanyProfit(latest);
-  decisions.push(buildRevenueDecisionFromForecast(companyRevenue, "company", "company", "全社", now));
-  decisions.push(buildProfitDecisionFromForecast(companyProfit, "company", "company", "全社", now));
+  // 全社集計(4事業ライン横断)
+  const aggregate = computeCompanyAggregate(latest, cmLatest, dsLatest);
+  decisions.push(buildCompanyRevenueDecision(aggregate.revenueParts, now));
+  decisions.push(buildCompanyProfitDecision(aggregate.profitParts, now));
 
+  // 訪問看護 + 訪問介護(Uchi Wel): 訪問時間ベースの収益モデルを共有するため同じルールを適用
   latest.forEach((m) => {
     const revenueDecision = buildRevenueDecision(m, "branch", m.branch, m.branch, now);
     if (revenueDecision.severity !== "green") decisions.push(revenueDecision);
@@ -66,6 +84,30 @@ export function buildDecisions(dataset: CeoDataset, today: Date = new Date()): D
     const series = branchSeries(dataset.branchMetrics, m.branch);
     const hiringDecision = buildHiringDecision(series, now, today);
     if (hiringDecision) decisions.push(hiringDecision);
+  });
+
+  // 居宅介護支援(ケース数ベース)
+  cmLatest.forEach((m) => {
+    const revenueDecision = buildCareManagementRevenueDecision(m, now);
+    if (revenueDecision.severity !== "green") decisions.push(revenueDecision);
+
+    const profitDecision = buildCareManagementProfitDecision(m, now);
+    if (profitDecision.severity !== "green") decisions.push(profitDecision);
+
+    const caseloadDecision = buildCaseloadDecision(m, now);
+    if (caseloadDecision) decisions.push(caseloadDecision);
+  });
+
+  // 通所介護UCHINOWA(キャパシティ/稼働率ベース)
+  dsLatest.forEach((m) => {
+    const revenueDecision = buildDayServiceRevenueDecision(m, now);
+    if (revenueDecision.severity !== "green") decisions.push(revenueDecision);
+
+    const profitDecision = buildDayServiceProfitDecision(m, now);
+    if (profitDecision.severity !== "green") decisions.push(profitDecision);
+
+    const utilizationDecision = buildDayServiceUtilizationDecision(m, now);
+    if (utilizationDecision) decisions.push(utilizationDecision);
   });
 
   const sorted = [...decisions].sort((a, b) => {

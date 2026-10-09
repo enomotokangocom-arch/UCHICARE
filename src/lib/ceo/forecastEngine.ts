@@ -36,7 +36,7 @@ export interface ProfitForecastResult {
   severity: Severity;
 }
 
-function severityFromGapRatio(gapRatio: number): Severity {
+export function severityFromGapRatio(gapRatio: number): Severity {
   if (gapRatio <= -CEO_CONFIG.revenue.redGapRatio) return "red";
   if (gapRatio <= -CEO_CONFIG.revenue.yellowGapRatio) return "yellow";
   return "green";
