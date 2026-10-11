@@ -33,18 +33,19 @@ export type DecisionType =
   | "referral_source_ranking"
   | "workload_risk"
   | "recruitment_timing"
-  | "care_manager_caseload";
+  | "care_manager_caseload"
+  | "contract_churn_risk";
 
 /**
- * Uchi careグループの事業ライン。訪問看護(既存)に加え、同じ訪問時間ベースの
- * 訪問介護(Uchi Wel)、ケース数ベースの居宅介護支援、利用枠ベースの通所介護(UCHINOWA)を持つ。
+ * Uchi careグループの事業ライン。訪問看護(既存)に加え、法人契約ベースの健康経営サービス(Uchi Well)、
+ * ケース数ベースの居宅介護支援、利用枠ベースの通所介護(UCHINOWA)を持つ。
  * 事業ラインごとに収益モデル・KPIが異なるため、型を分けている(02-data-model.md参照)。
  */
-export type BusinessLine = "visiting_nurse" | "home_help" | "care_management" | "day_service";
+export type BusinessLine = "visiting_nurse" | "corporate_health" | "care_management" | "day_service";
 
 export const BUSINESS_LINE_LABEL: Record<BusinessLine, string> = {
   visiting_nurse: "訪問看護",
-  home_help: "訪問介護(Uchi Wel)",
+  corporate_health: "健康経営サービス(Uchi Well)",
   care_management: "居宅介護支援",
   day_service: "通所介護(UCHINOWA)",
 };
@@ -53,8 +54,8 @@ export const BUSINESS_LINE_LABEL: Record<BusinessLine, string> = {
 export const BRANCHES = ["仙台北", "仙台東", "鶴ヶ谷"] as const;
 export type BranchName = (typeof BRANCHES)[number];
 
-/** 訪問介護(Uchi Wel)の拠点名。訪問看護と同じ訪問時間ベースのモデルを共有する。 */
-export const HOME_HELP_OFFICES = ["Uchi Wel 仙台"] as const;
+/** 健康経営サービス(Uchi Well)の事業所名。法人契約ベースのtoBサービスのため、訪問看護とは別のモデルを持つ。 */
+export const CORPORATE_HEALTH_OFFICES = ["Uchi Well"] as const;
 
 /** 居宅介護支援の事業所名。 */
 export const CARE_MANAGEMENT_OFFICES = ["Uchi care 居宅介護支援事業所"] as const;
@@ -62,13 +63,9 @@ export const CARE_MANAGEMENT_OFFICES = ["Uchi care 居宅介護支援事業所"]
 /** 通所介護(UCHINOWA)の事業所名。 */
 export const DAY_SERVICE_OFFICES = ["UCHINOWA"] as const;
 
-/**
- * 拠点(branches) × financial_transactions × budgets × visits × patient_status_events の月次集計。
- * 訪問看護(visiting_nurse)と訪問介護(home_help)は、どちらも「訪問時間 × 単価」の収益モデルを
- * 共有するためこの型を共用する(businessLineで区別)。
- */
+/** 拠点(branches) × financial_transactions × budgets × visits × patient_status_events の月次集計(訪問看護)。 */
 export interface BranchMonthlyMetric {
-  businessLine: "visiting_nurse" | "home_help";
+  businessLine: "visiting_nurse";
   branch: string;
   month: string; // "YYYY-MM"
   daysElapsed: number;
@@ -91,6 +88,29 @@ export interface BranchMonthlyMetric {
   salesActivities: number;
   referrals: number;
   contracts: number;
+}
+
+/**
+ * 健康経営サービス(Uchi Well)の月次集計。法人顧客との月額/年額契約がベースのtoB SaaS/
+ * コンサルティング型モデルのため、「契約社数 × 1社あたり契約単価」で収益が決まる。
+ * 解約(チャーン)がもう1つの重要KPI。
+ */
+export interface CorporateHealthMonthlyMetric {
+  businessLine: "corporate_health";
+  office: string;
+  month: string;
+  daysElapsed: number;
+  daysInMonth: number;
+  currentContracts: number; // 月初時点の契約社数
+  newContracts: number;
+  lostContracts: number; // 解約
+  avgContractFeePerMonth: number; // 1社あたり月額契約単価
+  salesActivities: number; // 法人営業の商談件数
+  revenueBudget: number;
+  profitBudget: number;
+  laborCost: number;
+  variableCost: number;
+  fixedCost: number;
 }
 
 /**
@@ -156,6 +176,7 @@ export interface NurseProductivityRecord {
 
 export interface CeoDataset {
   branchMetrics: BranchMonthlyMetric[];
+  corporateHealthMetrics: CorporateHealthMonthlyMetric[];
   careManagementMetrics: CareManagementMonthlyMetric[];
   dayServiceMetrics: DayServiceMonthlyMetric[];
   nurseProductivity: NurseProductivityRecord[];

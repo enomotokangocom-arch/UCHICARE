@@ -4,8 +4,11 @@ import {
   buildCaseloadDecision,
   buildCareManagementProfitDecision,
   buildCareManagementRevenueDecision,
+  buildChurnRiskDecision,
   buildCompanyProfitDecision,
   buildCompanyRevenueDecision,
+  buildCorporateHealthProfitDecision,
+  buildCorporateHealthRevenueDecision,
   buildDayServiceProfitDecision,
   buildDayServiceRevenueDecision,
   buildDayServiceUtilizationDecision,
@@ -27,7 +30,7 @@ function latestByKey<T extends { month: string }>(items: T[], keyOf: (item: T) =
   return keys.map((k) => items.find((i) => keyOf(i) === k && i.month === currentMonth)).filter((i): i is T => Boolean(i));
 }
 
-/** dataset内に実在する拠点名から、各拠点の最新月のレコードを取り出す(訪問看護+訪問介護Uchi Welを含む)。 */
+/** dataset内に実在する拠点名から、各拠点の最新月のレコードを取り出す(訪問看護)。 */
 export function latestPerBranch(metrics: BranchMonthlyMetric[]): BranchMonthlyMetric[] {
   return latestByKey(metrics, (m) => m.branch);
 }
@@ -47,10 +50,11 @@ export interface DecisionBuildResult {
 }
 
 /** 全Decisionルールを評価し、優先順位付けして返す(Decision Engineのエントリポイント)。4事業ライン
- * (訪問看護/訪問介護Uchi Wel/居宅介護支援/通所介護UCHINOWA)すべてを横断して1つのリストにまとめる。 */
+ * (訪問看護/健康経営Uchi Well/居宅介護支援/通所介護UCHINOWA)すべてを横断して1つのリストにまとめる。 */
 export function buildDecisions(dataset: CeoDataset, today: Date = new Date()): DecisionBuildResult {
   const now = today.toISOString();
-  const latest = latestPerBranch(dataset.branchMetrics); // 訪問看護3拠点 + 訪問介護(Uchi Wel)1拠点
+  const latest = latestPerBranch(dataset.branchMetrics); // 訪問看護3拠点
+  const chLatest = latestPerOffice(dataset.corporateHealthMetrics); // 健康経営サービス(Uchi Well)
   const cmLatest = latestPerOffice(dataset.careManagementMetrics); // 居宅介護支援
   const dsLatest = latestPerOffice(dataset.dayServiceMetrics); // 通所介護(UCHINOWA)
   const nurseScores = scoreAllNurses(dataset.nurseProductivity.filter((r) => r.month === latest[0]?.month));
@@ -58,11 +62,11 @@ export function buildDecisions(dataset: CeoDataset, today: Date = new Date()): D
   const decisions: Decision[] = [];
 
   // 全社集計(4事業ライン横断)
-  const aggregate = computeCompanyAggregate(latest, cmLatest, dsLatest);
+  const aggregate = computeCompanyAggregate(latest, chLatest, cmLatest, dsLatest);
   decisions.push(buildCompanyRevenueDecision(aggregate.revenueParts, now));
   decisions.push(buildCompanyProfitDecision(aggregate.profitParts, now));
 
-  // 訪問看護 + 訪問介護(Uchi Wel): 訪問時間ベースの収益モデルを共有するため同じルールを適用
+  // 訪問看護(訪問時間ベース)
   latest.forEach((m) => {
     const revenueDecision = buildRevenueDecision(m, "branch", m.branch, m.branch, now);
     if (revenueDecision.severity !== "green") decisions.push(revenueDecision);
@@ -84,6 +88,18 @@ export function buildDecisions(dataset: CeoDataset, today: Date = new Date()): D
     const series = branchSeries(dataset.branchMetrics, m.branch);
     const hiringDecision = buildHiringDecision(series, now, today);
     if (hiringDecision) decisions.push(hiringDecision);
+  });
+
+  // 健康経営サービス(Uchi Well)(法人契約ベース)
+  chLatest.forEach((m) => {
+    const revenueDecision = buildCorporateHealthRevenueDecision(m, now);
+    if (revenueDecision.severity !== "green") decisions.push(revenueDecision);
+
+    const profitDecision = buildCorporateHealthProfitDecision(m, now);
+    if (profitDecision.severity !== "green") decisions.push(profitDecision);
+
+    const churnDecision = buildChurnRiskDecision(m, now);
+    if (churnDecision) decisions.push(churnDecision);
   });
 
   // 居宅介護支援(ケース数ベース)

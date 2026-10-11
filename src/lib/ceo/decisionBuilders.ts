@@ -1,5 +1,6 @@
 import { CEO_CONFIG } from "./config";
 import { forecastCareManagementProfit, forecastCareManagementRevenue } from "./careManagementEngine";
+import { forecastCorporateHealthProfit, forecastCorporateHealthRevenue } from "./corporateHealthEngine";
 import { forecastDayServiceProfit, forecastDayServiceRevenue } from "./dayServiceEngine";
 import { approvalLevelFor, baseDecision, priorityScore, yen } from "./decisionHelpers";
 import {
@@ -11,7 +12,15 @@ import {
 } from "./forecastEngine";
 import { scoreAllNurses } from "./productivityEngine";
 import { computeHiringPlan, computeRequiredSales } from "./salesEngine";
-import { BranchMonthlyMetric, CareManagementMonthlyMetric, DayServiceMonthlyMetric, Decision, DecisionType, Severity } from "./types";
+import {
+  BranchMonthlyMetric,
+  CareManagementMonthlyMetric,
+  CorporateHealthMonthlyMetric,
+  DayServiceMonthlyMetric,
+  Decision,
+  DecisionType,
+  Severity,
+} from "./types";
 
 export function buildRevenueDecision(
   m: BranchMonthlyMetric,
@@ -390,6 +399,105 @@ export function buildCaseloadDecision(m: CareManagementMonthlyMetric, now: strin
   };
 }
 
+export function buildCorporateHealthRevenueDecision(m: CorporateHealthMonthlyMetric, now: string): Decision {
+  const f = forecastCorporateHealthRevenue(m);
+  const decisionType: DecisionType = "revenue_forecast";
+  return {
+    ...baseDecision(now, decisionType, "office", m.office, m.office),
+    title: `${m.office} 月末売上予測`,
+    currentValue: f.forecastRevenue,
+    targetValue: f.revenueBudget,
+    unit: "円",
+    gap: f.gap,
+    severity: f.severity,
+    probability: 0.65,
+    recommendedAction:
+      f.gap < 0
+        ? `契約社数見込み ${f.forecastContracts}社では売上Gap ${yen(Math.abs(f.gap))} が発生する見込みです。新規法人契約の獲得・解約の抑止を検討してください。`
+        : "計画を上回る見込みです。",
+    reasoningSummary: `新規契約 ${m.newContracts}社・解約 ${m.lostContracts}社を反映した月末契約社数見込みは ${f.forecastContracts}社。1社あたり月額契約単価 ${yen(m.avgContractFeePerMonth)} を乗じた売上予測は ${yen(f.forecastRevenue)}(計画比 ${(f.gapRatio * 100).toFixed(1)}%)です。`,
+    expectedImpact: `契約社数見込み ${f.forecastContracts}社`,
+    confidenceScore: 0.7,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({ gap: f.gap, reference: f.revenueBudget, severity: f.severity, probability: 0.65, decisionType }),
+    explain: {
+      dataUsed: ["契約社数", "新規契約数", "解約数", "1社あたり月額契約単価"],
+      formula: "ForecastRevenue = (CurrentContracts + NewContracts - LostContracts) × AvgContractFeePerMonth",
+      mainFactors: [
+        { label: "新規契約", contribution: m.newContracts * m.avgContractFeePerMonth },
+        { label: "解約", contribution: -m.lostContracts * m.avgContractFeePerMonth },
+      ],
+      alternatives: ["既存契約企業へのアップセル提案", "紹介・代理店経由の新規開拓強化"],
+    },
+  };
+}
+
+export function buildCorporateHealthProfitDecision(m: CorporateHealthMonthlyMetric, now: string): Decision {
+  const f = forecastCorporateHealthProfit(m);
+  const decisionType: DecisionType = "profit_forecast";
+  return {
+    ...baseDecision(now, decisionType, "office", m.office, m.office),
+    title: `${m.office} 月末利益予測`,
+    currentValue: f.forecastProfit,
+    targetValue: f.profitBudget,
+    unit: "円",
+    gap: f.gap,
+    severity: f.severity,
+    probability: 0.65,
+    recommendedAction: f.gap < 0 ? `利益Gap ${yen(Math.abs(f.gap))}。契約社数の不足または解約がコスト吸収を圧迫しています。` : "計画利益を上回る見込みです。",
+    reasoningSummary: `売上予測 ${yen(f.forecastRevenue)} から人件費 ${yen(f.laborCost)}・変動費 ${yen(f.variableCost)}・固定費 ${yen(f.fixedCost)} を控除した利益予測は ${yen(f.forecastProfit)} です(計画 ${yen(f.profitBudget)})。`,
+    expectedImpact: `利益Gap ${yen(f.gap)}`,
+    confidenceScore: 0.65,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({ gap: f.gap, reference: f.profitBudget, severity: f.severity, probability: 0.65, decisionType }),
+    explain: {
+      dataUsed: ["健康経営サービスの売上予測", "人件費", "変動費", "固定費", "計画利益"],
+      formula: "ForecastProfit = ForecastRevenue - LaborCost - VariableCost - FixedCost",
+      mainFactors: [
+        { label: "売上要因", contribution: f.forecastRevenue - f.profitBudget - f.laborCost - f.variableCost - f.fixedCost },
+        { label: "人件費", contribution: -f.laborCost },
+      ],
+      alternatives: ["カスタマーサクセス体制の強化", "固定費の見直し"],
+    },
+  };
+}
+
+/** 法人契約の解約(チャーン)率の上昇を検知する(toB SaaS/コンサル型事業特有のリスク)。 */
+export function buildChurnRiskDecision(m: CorporateHealthMonthlyMetric, now: string): Decision | null {
+  const f = forecastCorporateHealthRevenue(m);
+  if (f.churnSeverity === "green") return null;
+
+  const decisionType: DecisionType = "contract_churn_risk";
+  return {
+    ...baseDecision(now, decisionType, "office", m.office, m.office),
+    title: `${m.office} 法人契約の解約率上昇`,
+    currentValue: Math.round(f.churnRatio * 1000) / 10,
+    targetValue: Math.round(CEO_CONFIG.corporateHealth.yellowChurnRatio * 1000) / 10,
+    unit: "%",
+    gap: Math.round((f.churnRatio - CEO_CONFIG.corporateHealth.yellowChurnRatio) * 1000) / 10,
+    severity: f.churnSeverity,
+    probability: 0.6,
+    recommendedAction: `当月の解約率が ${(f.churnRatio * 100).toFixed(1)}% と目安(${(CEO_CONFIG.corporateHealth.yellowChurnRatio * 100).toFixed(0)}%)を上回っています。解約理由のヒアリング、カスタマーサクセスの強化を検討してください。`,
+    reasoningSummary: `解約社数 ${m.lostContracts}社 ÷ 契約社数 ${m.currentContracts}社 = 解約率 ${(f.churnRatio * 100).toFixed(1)}%。toB契約ビジネスでは解約率の悪化は将来収益の先行指標となります。`,
+    expectedImpact: "解約抑止により契約社数・将来収益の安定化が見込まれます。",
+    confidenceScore: 0.6,
+    requiredApprovalLevel: approvalLevelFor(decisionType),
+    priorityScore: priorityScore({
+      gap: f.churnRatio - CEO_CONFIG.corporateHealth.yellowChurnRatio,
+      reference: 1,
+      severity: f.churnSeverity,
+      probability: 0.6,
+      decisionType,
+    }),
+    explain: {
+      dataUsed: ["契約社数", "解約社数"],
+      formula: "ChurnRatio = LostContracts / CurrentContracts",
+      mainFactors: [{ label: "解約率", contribution: Math.round(f.churnRatio * 100) }],
+      alternatives: ["解約理由のヒアリング", "カスタマーサクセス体制の強化", "契約更新前のフォロー強化"],
+    },
+  };
+}
+
 export function buildDayServiceRevenueDecision(m: DayServiceMonthlyMetric, now: string): Decision {
   const f = forecastDayServiceRevenue(m);
   const decisionType: DecisionType = "revenue_forecast";
@@ -517,7 +625,7 @@ export function buildCompanyRevenueDecision(parts: BusinessLineTotal[], now: str
       gap < 0
         ? `全社売上Gap ${yen(Math.abs(gap))}。事業ライン別の内訳を確認し、未達幅の大きい事業へ経営資源を再配分してください。`
         : "全社で計画を上回る見込みです。",
-    reasoningSummary: `訪問看護・訪問介護(Uchi Wel)・居宅介護支援・通所介護(UCHINOWA)の4事業ラインを合算した全社の月末売上予測は ${yen(forecastRevenue)}(計画比 ${(gapRatio * 100).toFixed(1)}%)です。`,
+    reasoningSummary: `訪問看護・健康経営Uchi Well・居宅介護支援・通所介護(UCHINOWA)の4事業ラインを合算した全社の月末売上予測は ${yen(forecastRevenue)}(計画比 ${(gapRatio * 100).toFixed(1)}%)です。`,
     expectedImpact: `月末達成確率 ${(achievementProbability * 100).toFixed(0)}%`,
     confidenceScore: 0.75,
     requiredApprovalLevel: approvalLevelFor(decisionType),
@@ -553,7 +661,7 @@ export function buildCompanyProfitDecision(parts: BusinessLineTotal[], now: stri
       gap < 0
         ? `全社利益Gap ${yen(Math.abs(gap))}。事業ライン別の内訳を確認し、要因の大きい事業から是正してください。`
         : "全社で計画利益を上回る見込みです。",
-    reasoningSummary: `訪問看護・訪問介護(Uchi Wel)・居宅介護支援・通所介護(UCHINOWA)の4事業ラインを合算した全社の月末利益予測は ${yen(forecastProfit)}(計画 ${yen(profitBudget)})です。`,
+    reasoningSummary: `訪問看護・健康経営Uchi Well・居宅介護支援・通所介護(UCHINOWA)の4事業ラインを合算した全社の月末利益予測は ${yen(forecastProfit)}(計画 ${yen(profitBudget)})です。`,
     expectedImpact: `利益Gap ${yen(gap)}`,
     confidenceScore: 0.7,
     requiredApprovalLevel: approvalLevelFor(decisionType),

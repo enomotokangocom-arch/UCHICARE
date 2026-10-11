@@ -56,6 +56,12 @@ export const CEO_CONFIG = {
     redUtilization: 0.65,
   },
 
+  corporateHealth: {
+    // 月次解約率(lostContracts / currentContracts)に対する閾値
+    yellowChurnRatio: 0.08,
+    redChurnRatio: 0.15,
+  },
+
   companyScore: {
     revenueWeight: 35,
     profitWeight: 25,
@@ -74,6 +80,7 @@ export const CEO_CONFIG = {
       required_hiring: 0.85,
       care_manager_caseload: 0.5,
       branch_utilization: 0.4,
+      contract_churn_risk: 0.55,
     } as Record<string, number>,
   },
 
@@ -86,6 +93,7 @@ export const CEO_CONFIG = {
     required_hiring: "L2", // 採用最終判断そのものはhuman_only。ここは「採用開始を検討すべき」という提案レベル
     care_manager_caseload: "L2",
     branch_utilization: "L2",
+    contract_churn_risk: "L2",
   } as Record<string, string>,
 
   maxTopDecisions: 5,

@@ -43,7 +43,7 @@ Uchi careグループは4つの事業ラインを持つ(詳細は `01-architectu
 | 事業ライン | 拠点/事業所(Phase 0モック) | 収益モデル |
 |---|---|---|
 | 訪問看護 (`visiting_nurse`) | 仙台北・仙台東・鶴ヶ谷(3拠点) | 訪問時間 × 単価 |
-| 訪問介護(Uchi Wel) (`home_help`) | Uchi Wel 仙台(1拠点) | 訪問時間 × 単価(訪問看護と同じ型を共有) |
+| 健康経営サービス(Uchi Well) (`corporate_health`) | Uchi Well(1事業所) | 契約社数 × 1社あたり月額契約単価(法人契約ベース) |
 | 居宅介護支援 (`care_management`) | Uchi care 居宅介護支援事業所(1事業所) | 保有ケース数 × 1件あたり月額報酬 |
 | 通所介護(UCHINOWA) (`day_service`) | UCHINOWA(1事業所) | 受入可能延べ人数に対する稼働率 |
 
@@ -51,7 +51,7 @@ Uchi careグループは4つの事業ラインを持つ(詳細は `01-architectu
 
 ## 対象20意思決定と実装フェーズ
 
-`03-decision-engine.md` の一覧を参照。Phase 0 では以下6項目を実装する(訪問看護・訪問介護は同じルールを共有し、
+`03-decision-engine.md` の一覧を参照。Phase 0 では以下6項目を実装する(健康経営Uchi Well・
 居宅介護支援・通所介護にはそれぞれの収益モデルに合わせたルールを個別に追加している)。
 
 1. 月末売上予測 (`revenue_forecast`)

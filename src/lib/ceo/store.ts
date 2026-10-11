@@ -57,7 +57,8 @@ export const useCeoStore = create<CeoState>()(
           const nurseProductivity = parseNurseProductivityCsv(nurseCsvText);
           const dataset: CeoDataset = {
             branchMetrics,
-            // 居宅介護支援・通所介護はPhase 0時点ではCSVスキーマ未対応(モックデータ経由のみ)。
+            // 健康経営(Uchi Well)・居宅介護支援・通所介護はPhase 0時点ではCSVスキーマ未対応(モックデータ経由のみ)。
+            corporateHealthMetrics: [],
             careManagementMetrics: [],
             dayServiceMetrics: [],
             nurseProductivity,

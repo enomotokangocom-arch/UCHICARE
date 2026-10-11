@@ -45,9 +45,9 @@ Row Level Security(RLS)を `organization_id` で全テーブルに適用し、�
 
 Phase 0はDBを持たないため、CSV/モックデータから直接生成される軽量な型を用いる。
 将来のテーブルとの対応関係をコメントで明示する。Uchi careグループは4つの事業ライン(`BusinessLine`)を持ち、
-収益モデルが同じ訪問看護(`visiting_nurse`)・訪問介護Uchi Wel(`home_help`)は `BranchMonthlyMetric` を共用し、
-ケース数ベースの居宅介護支援(`care_management`)・キャパシティベースの通所介護UCHINOWA(`day_service`)は
-それぞれ専用の型を持つ。
+訪問時間ベースの訪問看護(`visiting_nurse`)は `BranchMonthlyMetric` を、法人契約ベースの健康経営サービス
+Uchi Well(`corporate_health`)は `CorporateHealthMonthlyMetric` を、ケース数ベースの居宅介護支援
+(`care_management`)・キャパシティベースの通所介護UCHINOWA(`day_service`)はそれぞれ専用の型を持つ。
 
 ### `BranchMonthlyMetric`(branches × financial_transactions × budgets × visits × patient_status_events の月次集計に相当)
 

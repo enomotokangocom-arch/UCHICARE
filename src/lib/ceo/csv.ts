@@ -126,7 +126,7 @@ function toRecords<T extends object>(
 
 export function parseBranchMetricsCsv(text: string): BranchMonthlyMetric[] {
   // CSVアップロードはPhase 0時点では訪問看護(visiting_nurse)のスキーマのみを対象とする。
-  // 訪問介護(Uchi Wel)・居宅介護支援・通所介護はサンプルデータ(モック)経由でのみ提供する。
+  // 健康経営Uchi Well・居宅介護支援・通所介護はサンプルデータ(モック)経由でのみ提供する。
   const rows = toRecords<Omit<BranchMonthlyMetric, "businessLine">>(
     text,
     BRANCH_METRIC_COLUMNS,

@@ -53,7 +53,7 @@ export default function CeoDashboardPage() {
       <div className="mx-auto max-w-3xl px-6 py-10">
         <h1 className="text-xl font-bold text-slate-900">Uchi AI CEO</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Uchi careグループ(訪問看護・訪問介護Uchi Wel・居宅介護支援・通所介護UCHINOWA)の経営データを監視し、
+          Uchi careグループ(訪問看護・健康経営Uchi Well・居宅介護支援・通所介護UCHINOWA)の経営データを監視し、
           今日判断すべきことだけを提示する経営OSです。まずはデータを読み込んでください。
         </p>
         <div className="mt-6">
@@ -63,10 +63,11 @@ export default function CeoDashboardPage() {
     );
   }
 
-  const latest = latestPerBranch(dataset.branchMetrics); // 訪問看護3拠点 + 訪問介護(Uchi Wel)1拠点
+  const latest = latestPerBranch(dataset.branchMetrics); // 訪問看護3拠点
+  const chLatest = latestPerOffice(dataset.corporateHealthMetrics);
   const cmLatest = latestPerOffice(dataset.careManagementMetrics);
   const dsLatest = latestPerOffice(dataset.dayServiceMetrics);
-  const aggregate = computeCompanyAggregate(latest, cmLatest, dsLatest);
+  const aggregate = computeCompanyAggregate(latest, chLatest, cmLatest, dsLatest);
   const healthScore = computeCompanyHealthScore({
     forecastRevenue: aggregate.forecastRevenue,
     revenueBudget: aggregate.revenueBudget,
@@ -82,8 +83,8 @@ export default function CeoDashboardPage() {
       ? aggregate.utilizationRates.reduce((a, b) => a + b, 0) / aggregate.utilizationRates.length
       : 0;
 
-  // 必要新規利用者数・必要営業量・必要採用人数は、訪問時間ベースの事業(訪問看護・訪問介護Uchi Wel)に
-  // 限定して算出する(居宅介護支援・通所介護はPhase 0では対象外。08-risks-and-roadmap.md参照)。
+  // 必要新規利用者数・必要営業量・必要採用人数は、訪問時間ベースの事業(訪問看護)に
+  // 限定して算出する(健康経営Uchi Well・居宅介護支援・通所介護はPhase 0では対象外。08-risks-and-roadmap.md参照)。
   const requiredSalesPerBranch = latest.map((m) => computeRequiredSales(m));
   const totalRequiredNewPatients = requiredSalesPerBranch.reduce((a, r) => a + r.requiredNewPatients, 0);
   const totalRequiredSalesActivity = requiredSalesPerBranch.reduce((a, r) => a + r.requiredSalesActivity, 0);
@@ -93,7 +94,7 @@ export default function CeoDashboardPage() {
     return acc + computeHiringPlan(series, CEO_TODAY).requiredFte;
   }, 0);
 
-  const totalLocations = latest.length + cmLatest.length + dsLatest.length;
+  const totalLocations = latest.length + chLatest.length + cmLatest.length + dsLatest.length;
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
@@ -101,7 +102,7 @@ export default function CeoDashboardPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-900">Uchi AI CEO ダッシュボード</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {CEO_CONFIG.organizationName} ・ 基準日 {TODAY_LABEL} ・ 4事業ライン(訪問看護・訪問介護Uchi Wel・居宅介護支援・
+            {CEO_CONFIG.organizationName} ・ 基準日 {TODAY_LABEL} ・ 4事業ライン(訪問看護・健康経営Uchi Well・居宅介護支援・
             通所介護UCHINOWA) ・ 拠点/事業所 {totalLocations}件
           </p>
         </div>
@@ -131,25 +132,25 @@ export default function CeoDashboardPage() {
             title="平均稼働率"
             value={(avgUtilization * 100).toFixed(1)}
             unit="%"
-            subtext="訪問看護・訪問介護・通所介護の平均"
+            subtext="訪問看護・通所介護の平均"
           />
           <KpiCard
             title="必要新規利用者数"
             value={totalRequiredNewPatients.toFixed(1)}
             unit="名"
-            subtext="訪問看護・訪問介護の売上Gapを埋めるために必要な人数"
+            subtext="訪問看護の売上Gapを埋めるために必要な人数"
           />
           <KpiCard
             title="必要営業量"
             value={Math.round(totalRequiredSalesActivity).toLocaleString()}
             unit="件/月"
-            subtext="必要新規利用者数から逆算(訪問看護・訪問介護)"
+            subtext="必要新規利用者数から逆算(訪問看護)"
           />
           <KpiCard
             title="必要採用人数"
             value={totalRequiredFte.toFixed(2)}
             unit="FTE"
-            subtext="90日以内の供給不足予測(訪問看護・訪問介護)"
+            subtext="90日以内の供給不足予測(訪問看護)"
           />
         </div>
       </div>
@@ -182,15 +183,15 @@ export default function CeoDashboardPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3">
-          <h2 className="text-sm font-semibold text-slate-800">訪問看護・訪問介護(Uchi Wel) 拠点別サマリー</h2>
+          <h2 className="text-sm font-semibold text-slate-800">訪問看護 拠点別サマリー</h2>
           <p className="mt-0.5 text-xs text-slate-500">直近月の売上・利益予測と稼働率</p>
           <div className="mt-3">
             <BranchTable metrics={latest} />
           </div>
-          <h2 className="mt-6 text-sm font-semibold text-slate-800">居宅介護支援・通所介護(UCHINOWA)</h2>
-          <p className="mt-0.5 text-xs text-slate-500">ケース数/稼働率ベースの事業ライン</p>
+          <h2 className="mt-6 text-sm font-semibold text-slate-800">健康経営Uchi Well・居宅介護支援・通所介護(UCHINOWA)</h2>
+          <p className="mt-0.5 text-xs text-slate-500">契約社数/ケース数/稼働率ベースの事業ライン</p>
           <div className="mt-3">
-            <BusinessLineTable careManagement={cmLatest} dayService={dsLatest} />
+            <BusinessLineTable corporateHealth={chLatest} careManagement={cmLatest} dayService={dsLatest} />
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">

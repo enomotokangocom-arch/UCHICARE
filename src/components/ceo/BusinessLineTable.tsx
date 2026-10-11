@@ -1,6 +1,7 @@
 import { forecastCareManagementRevenue } from "@/lib/ceo/careManagementEngine";
+import { forecastCorporateHealthRevenue } from "@/lib/ceo/corporateHealthEngine";
 import { forecastDayServiceRevenue } from "@/lib/ceo/dayServiceEngine";
-import { CareManagementMonthlyMetric, DayServiceMonthlyMetric } from "@/lib/ceo/types";
+import { CareManagementMonthlyMetric, CorporateHealthMonthlyMetric, DayServiceMonthlyMetric } from "@/lib/ceo/types";
 import { SeverityBadge } from "./SeverityBadge";
 
 function worstOf(...severities: ("green" | "yellow" | "red")[]): "green" | "yellow" | "red" {
@@ -9,16 +10,30 @@ function worstOf(...severities: ("green" | "yellow" | "red")[]): "green" | "yell
   return "green";
 }
 
-/** 居宅介護支援(ケース数ベース)・通所介護(キャパシティベース)など、訪問看護とは
- * 収益モデルが異なる事業ラインをまとめて表示する汎用テーブル。 */
+/** 健康経営Uchi Well(契約社数ベース)・居宅介護支援(ケース数ベース)・通所介護(キャパシティベース)など、
+ * 訪問看護とは収益モデルが異なる事業ラインをまとめて表示する汎用テーブル。 */
 export function BusinessLineTable({
+  corporateHealth,
   careManagement,
   dayService,
 }: {
+  corporateHealth: CorporateHealthMonthlyMetric[];
   careManagement: CareManagementMonthlyMetric[];
   dayService: DayServiceMonthlyMetric[];
 }) {
   const rows = [
+    ...corporateHealth.map((m) => {
+      const f = forecastCorporateHealthRevenue(m);
+      return {
+        key: `ch-${m.office}`,
+        label: m.office,
+        forecastRevenue: f.forecastRevenue,
+        gapRatio: f.gapRatio,
+        kpiLabel: "解約率",
+        kpiValue: `${(f.churnRatio * 100).toFixed(1)}%(契約${f.forecastContracts}社)`,
+        severity: worstOf(f.severity, f.churnSeverity),
+      };
+    }),
     ...careManagement.map((m) => {
       const f = forecastCareManagementRevenue(m);
       return {

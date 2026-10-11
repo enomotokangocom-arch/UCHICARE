@@ -10,7 +10,7 @@ export interface CompanyScoreInput {
   revenueBudget: number;
   forecastProfit: number;
   profitBudget: number;
-  /** 訪問看護・訪問介護(Uchi Wel)・通所介護(UCHINOWA)の稼働率をまとめて渡す(居宅介護支援は稼働率の概念を持たないため含めない)。 */
+  /** 訪問看護・通所介護(UCHINOWA)の稼働率をまとめて渡す(健康経営Uchi Well・居宅介護支援は稼働率の概念を持たないため含めない)。 */
   utilizationRates: number[];
   decisions: Decision[];
 }
