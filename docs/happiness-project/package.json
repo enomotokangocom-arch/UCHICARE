@@ -1,0 +1,12 @@
+{
+  "name": "happiness-project-docs",
+  "private": true,
+  "description": "人と組織の幸せプロジェクト 企画書（PDF生成用ソース）",
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "@fontsource/noto-sans-jp": "5.3.1",
+    "@fontsource/zen-maru-gothic": "5.3.1",
+    "playwright-core": "1.64.0"
+  }
+}
