@@ -1,0 +1,847 @@
+<title>エルゴノミクス現地評価ノート</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Kaku+Gothic+Antique:wght@500;700;900&display=swap">
+<style>
+/* Layout: field notebook — visit header, four working tabs (基本情報 / 部門評価 / 個人評価 / 分析), item cards stacked one column for tablet use */
+:root {
+  --paper: #f5f7f4;
+  --sheet: #ffffff;
+  --ink: #1c2a26;
+  --ink-soft: #4d5d58;
+  --ink-faint: #7a8a84;
+  --rule: #d5ddd8;
+  --rule-strong: #a9b8b1;
+  --accent: #1f6b55;
+  --accent-ink: #ffffff;
+  --accent-wash: #e3efe9;
+  --head-bg: #e9eeeb;
+  --warn-ink: #8a4b00;
+  --warn-wash: #fdf0dc;
+  /* rating status colors (fixed in both themes; always paired with symbol + label) */
+  --st-good: #0ca30c;
+  --st-partial: #fab219;
+  --st-improve: #ec835a;
+  --st-urgent: #d03b3b;
+  --st-unk: #9aa5a1;
+  --st-na: transparent;
+  --f-display: "Zen Kaku Gothic Antique", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --f-body: "BIZ UDPGothic", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121816; --sheet: #182320; --ink: #e2ebe7; --ink-soft: #a3b3ad; --ink-faint: #7f918a;
+    --rule: #2b3934; --rule-strong: #43564f; --accent: #6cc4a4; --accent-ink: #0f1d18; --accent-wash: #1d3a31;
+    --head-bg: #1f2c28; --warn-ink: #f3b46b; --warn-wash: #3a2a17; --st-unk: #5f6d68; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #121816; --sheet: #182320; --ink: #e2ebe7; --ink-soft: #a3b3ad; --ink-faint: #7f918a;
+  --rule: #2b3934; --rule-strong: #43564f; --accent: #6cc4a4; --accent-ink: #0f1d18; --accent-wash: #1d3a31;
+  --head-bg: #1f2c28; --warn-ink: #f3b46b; --warn-wash: #3a2a17; --st-unk: #5f6d68; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; line-height: 1.35; }
+h2 { font-size: 21px; font-weight: 900; margin: 28px 0 10px; }
+h3 { font-size: 16px; font-weight: 700; margin: 20px 0 8px; }
+p { margin: 6px 0; }
+.muted { color: var(--ink-soft); font-size: 13px; }
+.small { font-size: 12.5px; }
+
+/* top bar */
+.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; padding-block: 22px 12px; border-bottom: 3px solid var(--ink); }
+.top .brand { font-family: var(--f-display); font-weight: 900; font-size: 22px; }
+.top .brand small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .14em; color: var(--accent); }
+.save { font-size: 12.5px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 6px; }
+.save::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--st-unk); }
+.save[data-s="saved"]::before { background: var(--st-good); }
+.save[data-s="saving"]::before { background: var(--st-partial); }
+.save[data-s="error"]::before, .save[data-s="local"]::before { background: var(--st-urgent); }
+.banner { margin: 12px 0; padding: 10px 14px; border-radius: 6px; background: var(--warn-wash); color: var(--warn-ink); font-size: 13.5px; }
+
+/* buttons */
+.btn { border: 1px solid var(--rule-strong); background: var(--sheet); border-radius: 6px; padding: 7px 14px; font-size: 14px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--accent); padding-inline: 6px; }
+.btn.danger { color: var(--st-urgent); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* visit list */
+.visits { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 14px; }
+.vcard { text-align: left; border: 1px solid var(--rule-strong); background: var(--sheet); border-radius: 8px; padding: 14px 16px; display: grid; gap: 4px; min-width: 0; }
+.vcard:hover { border-color: var(--accent); }
+.vcard .t { font-weight: 700; font-size: 15.5px; overflow-wrap: anywhere; }
+.vcard .m { font-size: 12.5px; color: var(--ink-soft); }
+.empty { border: 1.5px dashed var(--rule-strong); border-radius: 10px; padding: 28px 20px; margin-top: 18px; display: grid; gap: 10px; justify-items: start; background: var(--sheet); }
+.empty h2 { margin: 0; }
+
+/* tabs */
+.vhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 14px; }
+.vhead .name { font-family: var(--f-display); font-weight: 900; font-size: 20px; overflow-wrap: anywhere; min-width: 0; }
+.sampletag { font-size: 11.5px; font-weight: 700; color: var(--warn-ink); background: var(--warn-wash); padding: 1px 8px; border-radius: 999px; }
+.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--paper); display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--rule-strong); margin-top: 10px; }
+.tabs button { flex: none; border: 0; background: none; padding: 10px 14px; font-weight: 700; color: var(--ink-soft); border-bottom: 3px solid transparent; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* forms */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 16px; }
+label.f { display: grid; gap: 3px; font-size: 13px; color: var(--ink-soft); min-width: 0; }
+label.f input, label.f select, label.f textarea, textarea.note, select.mini {
+  border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--sheet); padding: 7px 10px; font-size: 14.5px; color: var(--ink); width: 100%; min-width: 0;
+}
+textarea { resize: vertical; min-height: 64px; line-height: 1.6; }
+fieldset { border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px 14px; margin: 14px 0; background: var(--sheet); min-width: 0; }
+legend { font-weight: 700; padding: 0 6px; font-size: 14px; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.checks label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
+
+/* unit selector */
+.unitbar { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0 6px; align-items: center; }
+.chip { border: 1px solid var(--rule-strong); background: var(--sheet); border-radius: 999px; padding: 4px 12px; font-size: 13.5px; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.progress { font-size: 12.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+/* item cards */
+.domainhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 22px 0 6px; border-bottom: 1px solid var(--rule-strong); padding-bottom: 4px; }
+.domainhead h3 { margin: 0; }
+.card { background: var(--sheet); border: 1px solid var(--rule); border-left: 5px solid var(--rule); border-radius: 8px; padding: 12px 14px; margin: 8px 0; display: grid; gap: 8px; min-width: 0; }
+.card[data-r="good"] { border-left-color: var(--st-good); }
+.card[data-r="partial"] { border-left-color: var(--st-partial); }
+.card[data-r="improve"] { border-left-color: var(--st-improve); }
+.card[data-r="urgent"] { border-left-color: var(--st-urgent); }
+.card[data-r="unk"] { border-left-color: var(--st-unk); }
+.card[data-r="na"] { border-left-style: dashed; }
+.chead { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.cid { font-family: var(--f-display); font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
+.ctitle { font-weight: 700; flex: 1 1 200px; min-width: 0; }
+.kb { font-size: 11.5px; border: 1px solid var(--rule-strong); border-radius: 4px; padding: 0 6px; color: var(--ink-soft); white-space: nowrap; }
+.star { color: #b8860b; }
+details.ref summary { cursor: pointer; font-size: 13px; color: var(--accent); }
+details.ref dl { margin: 6px 0 0; display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 4px 10px; font-size: 13px; }
+details.ref dt { color: var(--ink-soft); font-weight: 700; }
+details.ref dd { margin: 0; white-space: pre-line; }
+
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; }
+.seg label > span { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--rule-strong); border-radius: 6px; padding: 5px 10px; font-size: 13.5px; background: var(--sheet); cursor: pointer; user-select: none; }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seg input:checked + span { font-weight: 700; border-width: 2px; padding: 4px 9px; }
+.seg input[value="good"]:checked + span { border-color: var(--st-good); background: color-mix(in srgb, var(--st-good) 16%, var(--sheet)); }
+.seg input[value="partial"]:checked + span { border-color: var(--st-partial); background: color-mix(in srgb, var(--st-partial) 22%, var(--sheet)); }
+.seg input[value="improve"]:checked + span { border-color: var(--st-improve); background: color-mix(in srgb, var(--st-improve) 22%, var(--sheet)); }
+.seg input[value="urgent"]:checked + span { border-color: var(--st-urgent); background: color-mix(in srgb, var(--st-urgent) 18%, var(--sheet)); }
+.seg input[value="na"]:checked + span, .seg input[value="unk"]:checked + span { border-color: var(--ink-soft); background: var(--head-bg); }
+.sym { font-weight: 900; width: 1.1em; text-align: center; }
+
+.factors { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; background: var(--head-bg); border-radius: 6px; padding: 8px 10px; }
+.factors label { display: grid; gap: 2px; font-size: 12.5px; color: var(--ink-soft); }
+.prio { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+.pbadge { display: inline-block; min-width: 4.6em; text-align: center; border-radius: 4px; padding: 0 6px; font-size: 12.5px; font-weight: 700; color: #fff; }
+.pbadge.p1 { background: var(--st-urgent); }
+.pbadge.p2 { background: #b8571f; }
+.pbadge.p3 { background: #7a6a2a; }
+.warnline { color: var(--warn-ink); font-size: 12.5px; }
+.sharebox { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+
+/* analysis */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+.tile { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; display: grid; gap: 2px; }
+.tile .k { font-size: 12px; color: var(--ink-soft); }
+.tile .v { font-family: var(--f-display); font-weight: 900; font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.tile.alert .v { color: var(--st-urgent); }
+.alertbox { border: 2px solid var(--st-urgent); border-radius: 8px; padding: 10px 14px; background: color-mix(in srgb, var(--st-urgent) 7%, var(--sheet)); margin: 10px 0; }
+.alertbox h3 { margin: 0 0 4px; color: var(--st-urgent); }
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--sheet); margin: 10px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 1.55; }
+th, td { text-align: left; vertical-align: top; padding: 7px 9px; border-bottom: 1px solid var(--rule); }
+thead th { background: var(--head-bg); font-weight: 700; white-space: nowrap; font-size: 12.5px; }
+tbody tr:last-child td { border-bottom: 0; }
+table.plan { min-width: 900px; }
+td.pre { white-space: pre-line; }
+
+.map { display: grid; gap: 14px; margin-top: 10px; }
+.maprow { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.maprow .u { font-weight: 700; margin-bottom: 6px; overflow-wrap: anywhere; }
+.mapdomains { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.mapdomain { display: grid; gap: 3px; }
+.mapdomain .dn { font-size: 11.5px; color: var(--ink-soft); }
+.cells { display: flex; gap: 2px; }
+.cell { width: 30px; height: 30px; border-radius: 4px; display: grid; place-items: center; font-size: 11px; font-weight: 700; position: relative; border: 0; padding: 0; background: var(--head-bg); color: var(--ink-soft); }
+.cell[data-r="good"] { background: var(--st-good); color: #fff; }
+.cell[data-r="partial"] { background: var(--st-partial); color: #2a1d00; }
+.cell[data-r="improve"] { background: var(--st-improve); color: #2a1206; }
+.cell[data-r="urgent"] { background: var(--st-urgent); color: #fff; }
+.cell[data-r="unk"] { background: repeating-linear-gradient(45deg, var(--st-unk) 0 3px, var(--head-bg) 3px 6px); color: var(--ink); }
+.cell[data-r="na"] { background: transparent; border: 1px dashed var(--rule-strong); color: var(--ink-faint); }
+.cell[data-r=""] { background: transparent; border: 1px solid var(--rule); color: var(--ink-faint); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend .cell { width: 18px; height: 18px; font-size: 10px; }
+.tip { position: fixed; z-index: 20; max-width: 300px; background: var(--ink); color: var(--paper); font-size: 12.5px; line-height: 1.5; padding: 7px 10px; border-radius: 6px; pointer-events: none; }
+.list { display: grid; gap: 6px; margin: 8px 0; padding: 0; list-style: none; }
+.list li { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 12px; font-size: 13.5px; overflow-wrap: anywhere; }
+.list li b { font-family: var(--f-display); }
+.aiout { white-space: pre-wrap; background: var(--sheet); border: 1px solid var(--rule-strong); border-radius: 8px; padding: 14px 16px; font-size: 14px; line-height: 1.75; max-height: 70vh; overflow: auto; }
+.export { display: grid; gap: 8px; }
+textarea.copy { width: 100%; min-height: 160px; font-size: 12.5px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--sheet); padding: 8px; }
+.confirm { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) { .card { transition: border-color .15s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><small>ERGONOMICS FIELD NOTE</small>エルゴノミクス現地評価ノート</div>
+    <span class="save" id="save" data-s="idle">接続中…</span>
+  </header>
+  <div id="banner" class="banner" hidden></div>
+  <main id="app">
+    <section class="empty">
+      <h2>訪問記録を読み込んでいます</h2>
+      <p class="muted">部門・代表作業ごとに評価を入力し、優先順位・重大懸念・改善案を自動で整理します。記録はあなただけが見られる領域に保存されます。</p>
+    </section>
+  </main>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(function () {
+'use strict';
+var ITEMS = {"standard": [{"id": "A1", "domain": "作業姿勢・動作", "title": "前かがみ・中腰・体のひねりを伴う作業", "facts": "・前かがみ/中腰/ひねりが生じる作業場面とその原因(床置き、低い作業面、狭い空間、物の配置)\n・1回の持続時間、1時間あたりの回数\n・従事人数", "method": "観察(数サイクル)、聞き取り", "criteria": "良好:前かがみ・ひねりは時々・短時間で、作業面の高さや配置で避ける工夫がある\n一部改善:特定の場面・一部の作業者で繰り返し生じる\n要改善:作業者の多くが毎日、繰り返しまたは持続して行っている", "impact": "腰部への負担の蓄積、疲労、腰痛の訴えにつながるおそれ", "improve": "床置きをやめ台・棚に置く/作業面の高さ調整/物の向き・配置を変えてひねりを減らす/作業順序の見直し", "kubun": "指", "short": true}, {"id": "A2", "domain": "作業姿勢・動作", "title": "腕を肩より上げる・手首を曲げた状態での作業", "facts": "・腕を肩より高く上げる、手を体から遠くに伸ばす、手首を強く曲げる場面\n・その原因(棚の高さ、設備配置、工具の形状)\n・頻度と持続時間", "method": "観察、聞き取り", "criteria": "良好:そのような姿勢は時々・短時間\n一部改善:特定の作業・物品で繰り返し生じる\n要改善:作業の主要部分で繰り返し・持続して生じる", "impact": "肩・首・腕・手首への負担、疲労", "improve": "頻用品を肩より下・腰より上へ移す/踏み台より昇降台・高さ調整/工具の形状変更", "kubun": "推", "short": false}, {"id": "A3", "domain": "作業姿勢・動作", "title": "同じ姿勢(座りっぱなし・立ちっぱなし)の継続", "facts": "・同一姿勢が続く連続時間(作業の切れ目まで)\n・姿勢を変えられる設備や仕組み(立ち座り兼用台、椅子、足置き、ローテーション、小休止)\n・立ち作業での床材・マット", "method": "観察、聞き取り、作業スケジュール確認", "criteria": "良好:作業の区切りや仕組みにより、同一姿勢が長く続かない\n一部改善:仕組みはあるが繁忙時や一部の作業で守られない\n要改善:姿勢を変える機会や設備がなく、長時間同じ姿勢が続く", "impact": "首・肩・腰・下肢の疲労、血流の滞り、集中力の低下", "improve": "作業の区切りでの小休止・姿勢変換のルール化/立ち座り兼用の設備/作業ローテーション/疲労軽減マット", "kubun": "指", "short": true}, {"id": "A4", "domain": "作業姿勢・動作", "title": "同じ動作の反復と手指・腕の力の入れ方", "facts": "・同じ動作の1サイクル時間と1時間あたりの回数\n・強く握る・つまむ・ひねる・押し込む動作の有無\n・手工具の振動・反動の有無\n・作業者が自分でペースや作業を変えられるか", "method": "観察(サイクル計測)、聞き取り", "criteria": "良好:反復はあるが作業の変化や小休止があり、強い力は不要\n一部改善:反復または強い力のどちらかが目立つ\n要改善:短いサイクルの反復に強い力が加わり、作業の変化もない", "impact": "手指・手首・前腕・肩の負担、疲労", "improve": "治具・電動工具の導入/作業の組み合わせ(ジョブローテーション)/部材・梱包の改良で力を減らす", "kubun": "推", "short": false}, {"id": "B1", "domain": "持ち上げ・運搬・力", "title": "人力で扱う物の重さ・形・取扱い位置", "facts": "・扱う物の重さ(表示・計量)、大きさ、持ちやすさ(取っ手の有無)\n・持ち上げ開始と終了の高さ(床・腰・肩)\n・運搬距離、1日の回数、2人作業の有無\n・重量の表示の有無", "method": "観察、計量または表示・伝票確認、聞き取り", "criteria": "良好:重量物は補助具または2人以上で扱い、床からの持ち上げや長距離の手運びがほとんどない\n一部改善:一部の荷・場面で重量物を1人で床から扱う\n要改善:重量物の1人での持ち上げ・運搬が日常的。重量が把握されていない\n※指針・規則の重量目安は第9章を参照し、目安を超える場合は「要改善」以上", "impact": "腰部の急性・慢性の負担、落下・転倒によるけが", "improve": "重量の表示/小分け・荷姿の変更/持ち上げ開始位置を腰の高さに/2人作業のルール化/台車・リフタの導入", "kubun": "指(女性・年少者は法)", "short": true}, {"id": "B2", "domain": "持ち上げ・運搬・力", "title": "補助具・福祉用具の配置と実際の使用", "facts": "・台車・リフト・リフタ・昇降台・福祉用具などの有無と台数\n・保管場所から作業場所までの距離、取り出しやすさ\n・故障・不足の有無、点検記録\n・観察中に実際に使われていたか。使われない場合の理由(遠い・狭い・時間がかかる・使い方が分からない)", "method": "観察、設備・点検記録確認、聞き取り", "criteria": "良好:必要な場所に必要数があり、観察中も実際に使われている\n一部改善:あるが数が不足、または一部の場面で使われていない\n要改善:ない、または故障・保管場所の問題でほとんど使われていない", "impact": "人力作業の増加による腰部負担、けが", "improve": "保管場所を作業場所の近くへ/台数追加/使用を前提とした作業時間の設定/使い方の教育/点検ルール", "kubun": "指", "short": true}, {"id": "B3", "domain": "持ち上げ・運搬・力", "title": "押す・引く作業(台車・カート・扉・設備)", "facts": "・押し出し時の重さ、キャスターの状態、段差・傾斜・床の材質\n・ハンドルの高さ・形\n・1日の距離・回数", "method": "観察、試行(評価者が実際に押してみる)、聞き取り", "criteria": "良好:キャスター・床・経路が整い、無理なく動かせる\n一部改善:特定の経路(段差・スロープ・エレベーター前)で負担が大きい\n要改善:台車等の不具合や経路の問題で、日常的に強い力が必要", "impact": "肩・腰への負担、転倒・衝突", "improve": "キャスターの点検・交換/積載量の上限設定/段差解消・経路変更/電動アシストの検討", "kubun": "推", "short": false}, {"id": "C1", "domain": "設備・道具", "title": "作業面(作業台・机・ベッド等)の高さ", "facts": "・作業面の高さと、調整機能の有無\n・共用設備の場合、使う人に合わせて調整されているか(調整方法が分かるか、調整の時間があるか)\n・作業内容(精密・軽作業・力作業)と高さの関係", "method": "観察、計測(メジャー)、聞き取り", "criteria": "良好:高さ調整ができ、実際に使う人・作業に合わせて調整されている\n一部改善:調整機能はあるが使われていない、または一部の作業者に合わない\n要改善:調整できず、作業の多くで前かがみや腕の持ち上げが生じている", "impact": "首・肩・腰の負担", "improve": "昇降式作業台/台の下駄履き・足台/作業ごとの高さ設定の表示/調整方法の掲示", "kubun": "指", "short": true}, {"id": "C2", "domain": "設備・道具", "title": "椅子(座り作業がある場合)", "facts": "・座面高さ・背もたれ・ひじ掛けの調整機能と破損の有無\n・足裏が床(または足台)に着いているか\n・机下に足を入れる空間があるか(物でふさがっていないか)", "method": "観察、設備確認、聞き取り", "criteria": "良好:調整機能があり、使う人に合わせて調整され、足元の空間がある\n一部改善:調整されていない席や、足元に物がある席が一部ある\n要改善:調整できない・破損した椅子が多い、または足元の空間がない", "impact": "腰・首・肩・下肢の負担", "improve": "椅子の調整方法の掲示・説明/破損椅子の交換/足台の配置/足元の物の撤去", "kubun": "指", "short": false}, {"id": "C3", "domain": "設備・道具", "title": "ディスプレイ・表示器・書類の位置と見やすさ", "facts": "・画面の高さ(上端と目の高さの関係)、距離、正面か横か\n・ノートPCの単体使用、複数画面の配置\n・書類を見ながらの入力の有無と書類台\n・画面への映り込み・まぶしさ\n・表示器・計器の高さ・文字の大きさ(製造・物流等)", "method": "観察、計測(距離)、聞き取り", "criteria": "良好:画面・表示が正面にあり、首を大きく曲げずに見える高さ・距離。映り込みがない\n一部改善:一部の席・端末で高さや距離が合わない、または映り込みがある\n要改善:多くの席で首を曲げる・ひねる配置、または見づらさが常態化", "impact": "首・肩・目の疲労、読み間違い", "improve": "モニターアーム・台/外付けキーボード・マウス/配置替え/書類台/ブラインド・照明の位置調整", "kubun": "指", "short": true}, {"id": "C4", "domain": "設備・道具", "title": "工具・機器・端末の状態と使いやすさ", "facts": "・頻用の工具・機器・端末(ハンディ端末、PC、計量器など)の破損・不具合\n・手の大きさや利き手に合わない形状か\n・不具合の報告と修理の流れ、修理までの期間", "method": "観察、設備・点検記録確認、聞き取り", "criteria": "良好:不具合がなく、不具合時の報告・修理の流れが決まっている\n一部改善:一部に不具合や使いにくい道具があるが、改善の動きがある\n要改善:不具合のある道具が使い続けられている、または報告しても直らない", "impact": "余分な力・無理な姿勢、作業効率の低下、けが", "improve": "点検表の運用/予備品の確保/形状の異なる工具の用意/不具合報告の仕組み", "kubun": "推", "short": false}, {"id": "C5", "domain": "設備・道具", "title": "物品・部材の配置とリーチ", "facts": "・頻繁に取る物の置き場所(床・腰・肩より上・奥)\n・取り出しのために踏み台・前かがみ・腕を伸ばす動作が必要か\n・置き場所の表示", "method": "観察、聞き取り", "criteria": "良好:頻用品が腰〜胸の高さ・手前に置かれ、表示がある\n一部改善:一部の頻用品が床・棚上段・奥にある\n要改善:頻用品の多くが取りにくい位置にあり、無理な姿勢が繰り返される", "impact": "腰・肩の負担、探す時間、転倒(踏み台)", "improve": "頻度順の配置替え(よく使う物ほど手前・中段)/定位置表示/棚の高さ変更", "kubun": "推", "short": true}, {"id": "D1", "domain": "作業環境", "title": "通路・床面・段差", "facts": "・通路幅の確保、物の仮置き\n・床の濡れ・油・粉じん、滑りやすい材質\n・段差・配線・マットのめくれ\n・階段の手すり、段差の表示", "method": "観察、巡回", "criteria": "良好:通路が確保され、滑り・つまずきの原因が見当たらない\n一部改善:一部の場所・時間帯(清掃後、荷受け時など)に滑り・つまずきの原因がある\n要改善:通路の仮置きや床の問題が常態化している\n優先対応:非常口・避難通路の閉塞、転落のおそれ", "impact": "転倒・つまずき・衝突によるけが", "improve": "仮置き場所の指定/配線の整理/防滑材・マットの固定/段差の表示/清掃後の乾燥ルール", "kubun": "法(通路・床面)", "short": true}, {"id": "D2", "domain": "作業環境", "title": "照明(明るさ・まぶしさ)", "facts": "・作業面の明るさ(照度計で測定、または企業の測定記録)\n・暗い場所・影ができる場所、まぶしさ・映り込み\n・照明の故障・ちらつき", "method": "測定または記録確認、観察、聞き取り", "criteria": "良好:法令の基準を満たし、作業に必要な明るさがあり、まぶしさがない\n一部改善:一部の場所に暗さ・影・まぶしさがある\n要改善:作業面が暗い、または法令の基準を下回る", "impact": "見誤り・つまずき、目の疲れ、不自然な姿勢(のぞき込み)", "improve": "照明の増設・交換・位置変更/局所照明/ブラインド/照度の定期測定", "kubun": "法(照度)", "short": false}, {"id": "D3", "domain": "作業環境", "title": "温度・湿度・暑熱・寒冷・換気", "facts": "・室温・湿度(測定または記録)、空調の有無と偏り\n・暑熱作業の有無とWBGTの把握\n・暑熱作業時の報告体制・悪化防止手順の有無と周知方法\n・寒冷・すきま風・冷気の吹出し\n・換気の状態", "method": "測定または記録確認、資料確認(熱中症対策手順)、聞き取り", "criteria": "良好:温湿度が管理され、暑熱作業がある場合は報告体制・手順が定められ周知されている\n一部改善:一部の場所・季節で暑さ寒さが問題になるが対策を検討している\n要改善:温熱環境の問題が放置されている\n優先対応:暑熱作業があるのに報告体制・悪化防止手順がない", "impact": "熱中症、体調不良、集中力の低下", "improve": "WBGTの把握/休憩場所・水分補給の確保/送風・遮熱/作業時間帯の調整/報告体制と手順の整備・周知", "kubun": "法・努(第9章)", "short": true}, {"id": "D4", "domain": "作業環境", "title": "騒音", "facts": "・会話が困難な程度の騒音の有無(大声でないと1m先の人と話せない等)\n・騒音源、ばく露時間、騒音測定記録\n・聴覚保護具の配備と着用状況", "method": "観察、測定または記録確認、聞き取り", "criteria": "良好:著しい騒音がない、または騒音源対策と測定・保護具の運用がある\n一部改善:一部の工程で騒音が大きいが対策を検討中\n要改善:会話困難な騒音が続くのに、測定・対策・保護具の運用がない", "impact": "聴覚への影響、指示の聞き間違い、疲労", "improve": "騒音源の対策(防振・囲い)/作業場所の分離/測定/聴覚保護具の配備と着用", "kubun": "指", "short": false}, {"id": "D5", "domain": "作業環境", "title": "作業空間の広さと整理整頓", "facts": "・作業者が体の向きを変えたり、物を置いたりできる空間\n・不要物・在庫の滞留、置き場所の表示\n・動線(行ったり来たり、すれ違い、交差)", "method": "観察、配置図確認", "criteria": "良好:作業空間が確保され、置き場所が決まり、動線が短い\n一部改善:一部に狭さ・滞留・遠回りがある\n要改善:狭さや物の滞留により、無理な姿勢や遠回りが日常的", "impact": "無理な姿勢、衝突・転倒、探す時間の増加", "improve": "不要物の撤去(定期)/定位置化/レイアウト変更/動線の一方通行化", "kubun": "推", "short": false}, {"id": "E1", "domain": "作業設計", "title": "作業量・作業ペースの決まり方", "facts": "・作業量・ペースを決めているもの(ライン速度、出荷締め時刻、利用者のスケジュール、ノルマ等)\n・作業者が順序やペースを調整できる余地\n・遅れたときの対応(応援、締め時刻の調整)", "method": "聞き取り(管理者・従業員)、観察、資料確認(作業計画)", "criteria": "良好:作業量の見通しがあり、遅れた時の調整方法が決まっている\n一部改善:繁忙時に限りペースの調整が難しい\n要改善:ペースを自分で調整できず、遅れが常態化している", "impact": "急ぎ動作による無理な姿勢・けが、ミス、疲労", "improve": "作業量の平準化/締め時刻・配置人数の見直し/遅れたときの判断ルール", "kubun": "推", "short": true}, {"id": "E2", "domain": "作業設計", "title": "休憩・小休止の取りやすさ", "facts": "・休憩時間の規定と実際(取れているか、交代要員がいるか)\n・作業中の小休止・姿勢を変える時間の取り方\n・休憩場所の有無と環境(座れる、暑熱・寒冷から離れられる)", "method": "聞き取り、資料確認(勤務表・就業規則の休憩規定)、観察", "criteria": "良好:休憩が規定どおり取れ、作業中の小休止の仕組みもある\n一部改善:繁忙時や一部のシフトで休憩がずれる・短くなる\n要改善:休憩が日常的に取れない、または休憩場所がない", "impact": "疲労の蓄積、集中力の低下、ミス・けが", "improve": "交代で休憩を取る仕組み/小休止のタイミングを作業計画に組み込む/休憩場所の整備", "kubun": "法(休憩時間)", "short": true}, {"id": "E3", "domain": "作業設計", "title": "繁忙時間帯・勤務時間の偏り", "facts": "・繁忙な時間帯・曜日・季節と、その時の人員\n・残業・連続勤務・夜勤の状況(部門の集計値)\n・欠員時の補充方法", "method": "聞き取り(管理者)、資料確認(部門単位の勤務集計)", "criteria": "良好:繁忙時の人員配置・応援の仕組みがあり、時間外労働の偏りが管理されている\n一部改善:特定の時期・シフトで負担が偏る\n要改善:繁忙・欠員時の負担が特定の人やシフトに集中し、対策がない", "impact": "疲労の蓄積、急ぎ作業によるけが・ミス", "improve": "繁忙時の応援体制/シフトの見直し/業務の前倒し・平準化", "kubun": "推(労働時間管理は法)", "short": false}, {"id": "F1", "domain": "認知的負担", "title": "手順・表示・情報の分かりやすさ", "facts": "・作業手順書・掲示・表示(ラベル、色分け、置き場所表示)の有無と最新性\n・似た物・似た表示の取り違えの起きやすさ\n・新人・応援者が一人で手順を確認できるか", "method": "資料確認、観察、聞き取り", "criteria": "良好:最新の手順・表示があり、似た物の区別が工夫されている\n一部改善:手順書はあるが古い・現場で見られない、または一部に紛らわしい表示がある\n要改善:手順が口頭のみで人により異なる、取り違えが繰り返し起きている", "impact": "ミス・手戻り、確認のための無理な姿勢・移動、心理的負担", "improve": "写真入り手順書を作業場所に掲示/表示の色・形の区別/手順の標準化", "kubun": "推", "short": true}, {"id": "F2", "domain": "認知的負担", "title": "割り込み・同時並行・記憶に頼る作業", "facts": "・作業中の割り込み(電話・呼び出し・問い合わせ)の頻度\n・複数の作業を同時に進める必要\n・覚えておく必要のある情報(番号・指示)をメモや画面で確認できるか\n・確認作業(ダブルチェック等)の仕組み", "method": "観察(割り込み回数)、聞き取り", "criteria": "良好:割り込みが整理され、必要な情報を見て確認できる\n一部改善:特定の時間帯に割り込みが集中する\n要改善:割り込み・同時並行が常態化し、記憶に頼る作業が多い", "impact": "ミス・確認漏れ、疲労、作業時間の延長", "improve": "問い合わせ窓口の一本化/集中作業の時間帯設定/チェックリスト・画面表示で記憶負担を減らす", "kubun": "推", "short": false}, {"id": "G1", "domain": "組織的条件", "title": "不具合・ヒヤリハットの報告と対応", "facts": "・報告の方法(用紙・システム・口頭)と、報告先が決まっているか\n・過去1年の報告件数(集計)と対応された例\n・報告後に結果が現場へ返されているか", "method": "資料確認、聞き取り", "criteria": "良好:報告の仕組みがあり、対応結果が現場に返されている\n一部改善:仕組みはあるが報告が少ない、または対応結果が返されない\n要改善:報告の仕組みがない、または報告しても対応されない", "impact": "同じ危険の繰り返し、けが", "improve": "報告様式の簡素化/朝礼等での共有/対応結果の掲示", "kubun": "推(安全衛生委員会等は法)", "short": true}, {"id": "G2", "domain": "組織的条件", "title": "応援・役割分担・2人作業の体制", "facts": "・重い・危険な作業で応援を頼む方法と実際(呼べば来るか)\n・役割分担の明確さ(誰が何をするか)\n・一人作業の場面と連絡手段", "method": "聞き取り、観察", "criteria": "良好:応援の頼み方が決まっており、実際に応援が得られている\n一部改善:繁忙時・夜間などに応援が得にくい\n要改善:応援を頼む仕組みがなく、無理を一人で行う状況が常態化", "impact": "無理な一人作業によるけが、負担の偏り", "improve": "応援要請のルール化(合図・連絡手段)/2人作業とする作業の明示/一人作業時の連絡手段", "kubun": "推", "short": false}, {"id": "G3", "domain": "組織的条件", "title": "作業改善の提案と教育", "facts": "・作業の改善提案の方法と、実施された例\n・作業方法・補助具の使い方の教育(対象・内容・時期、新人・異動者・応援者向け)\n・教育内容が現場の設備・手順と一致しているか", "method": "資料確認(教育記録・提案記録)、聞き取り", "criteria": "良好:提案の仕組みと実施例があり、作業に即した教育が新人・異動時に行われている\n一部改善:どちらか一方のみ、または形式的\n要改善:提案の仕組みも作業に即した教育もない", "impact": "改善の停滞、作業方法のばらつき", "improve": "改善提案の小さな仕組み(ボード・定例会議)/補助具の使い方の実地教育/教育記録", "kubun": "指(雇入れ時教育等は法)", "short": false}], "addon": [{"id": "X-OF1", "job": "事務・情報機器作業", "domain": "作業設計", "title": "情報機器作業の連続時間と作業休止", "facts": "・入力・画面作業の連続時間と、作業休止・小休止の取り方\n・作業内容の拘束性(入力専門か、他業務と混在か)", "method": "聞き取り、勤務・業務分担の確認", "criteria": "良好:連続作業の合間に作業休止・小休止が取れる仕組みがある\n一部改善:繁忙時に連続作業が長くなる\n要改善:長時間の連続作業が常態化し、休止の仕組みがない", "impact": "目・首・肩の疲労", "improve": "業務の組み合わせ/作業休止のタイミングを決める/タイマー等の活用", "kubun": "指", "short": false}, {"id": "X-OF2", "job": "事務・情報機器作業", "domain": "設備・道具", "title": "ノートPC・テレワーク・フリーアドレス環境", "facts": "・ノートPC単体での長時間作業の有無\n・外付けモニター・キーボード等の貸与状況\n・テレワーク時の作業環境の確認方法(チェックリスト等)\n・フリーアドレス席の机・椅子の調整可否", "method": "聞き取り、規程・貸与記録確認、観察", "criteria": "良好:周辺機器の貸与や環境確認の仕組みがある\n一部改善:制度はあるが利用が少ない\n要改善:ノートPC単体での長時間作業が多く、支援がない", "impact": "首・肩・腰の負担", "improve": "周辺機器の貸与/テレワーク環境チェックリストの配布/調整方法の周知", "kubun": "指", "short": false}, {"id": "X-MF1", "job": "製造", "domain": "設備・道具", "title": "機械の安全装置・操作位置", "facts": "・挟まれ・巻き込まれのおそれのある箇所の覆い・安全装置の有無と作動\n・操作盤・非常停止ボタンの位置(手が届くか、無理な姿勢にならないか)\n・段取り替え・清掃・トラブル対応時の手順(停止・表示)", "method": "観察、資料確認(手順書・点検記録)、聞き取り", "criteria": "良好:覆い・安全装置が機能し、非停止での手入れが行われない手順と運用がある\n一部改善:手順はあるがトラブル時に守られない場面がある\n要改善:覆い・安全装置の不備\n優先対応:運転中の機械への手の差し入れが常態化", "impact": "挟まれ・巻き込まれによる重いけが", "improve": "覆い・インターロックの整備/停止手順の徹底と表示/操作位置の変更 ※機械安全の専門家へ相談", "kubun": "法", "short": false}, {"id": "X-MF2", "job": "製造", "domain": "作業設計", "title": "ライン作業のサイクルと工程間のバランス", "facts": "・タクトタイム・サイクルタイムと作業内容の量\n・工程による負担の偏り、ローテーションの有無\n・ライン停止・遅れ時の対応ルール", "method": "観察(サイクル計測)、資料確認、聞き取り", "criteria": "良好:工程間の負担差が把握され、ローテーション等で調整されている\n一部改善:特定工程の負担が大きいが調整を検討中\n要改善:特定工程に負担が集中し、遅れの対応ルールもない", "impact": "反復による手腕・肩の負担、ミス", "improve": "工程の再配分/ローテーション/治具の導入", "kubun": "推", "short": false}, {"id": "X-LG1", "job": "物流・倉庫", "domain": "持ち上げ・運搬・力", "title": "ピッキング・積み付けの高さと荷姿", "facts": "・棚・パレットの最下段・最上段からの取り出し頻度\n・ケースの重量表示・取っ手の有無\n・パレット積み付け時の高さ(床付近・肩より上)", "method": "観察、計量・表示確認、聞き取り", "criteria": "良好:重い物・頻出品が腰〜胸の高さに配置され、重量表示がある\n一部改善:一部の重量物が最下段・最上段にある\n要改善:重量物の床・高所からの取り出しが日常的", "impact": "腰・肩の負担、落下", "improve": "ロケーションの見直し(重量・頻度順)/パレット昇降機/重量表示の依頼(荷主)", "kubun": "指", "short": false}, {"id": "X-LG2", "job": "物流・倉庫", "domain": "作業環境", "title": "フォークリフト等と歩行者の動線", "facts": "・歩行者通路の区分・表示\n・交差点・死角の対策(ミラー、一時停止表示)\n・荷役エリアへの立入ルール", "method": "観察、配置図確認", "criteria": "良好:歩行者と車両の動線が分離・表示されている\n一部改善:一部の交差・死角に対策がない\n要改善:動線が混在している\n優先対応:死角での接触ヒヤリが繰り返されている", "impact": "接触・衝突による重いけが", "improve": "通路の区分表示/ミラー・警告灯/動線の一方通行化/立入ルール", "kubun": "法(通路等)・推", "short": false}, {"id": "X-CR1", "job": "医療・介護", "domain": "持ち上げ・運搬・力", "title": "移乗・体位変換の方法と福祉用具", "facts": "・移乗・体位変換の場面で使われている方法(人力の抱え上げ、2人介助、スライディングボード・シート、リフト等)\n・福祉用具の台数・配置・故障の有無\n・利用者ごとの移乗方法が記載・共有されているか", "method": "観察、記録確認(ケア計画の移乗方法欄等・個人情報は見ない)、聞き取り", "criteria": "良好:利用者の状態に応じた福祉用具が使われ、方法が共有されている\n一部改善:用具はあるが夜間・繁忙時などに使われない\n要改善:人力の抱え上げが日常的\n優先対応:福祉用具を使えない状況での抱え上げが常態化", "impact": "腰部への大きな負担、利用者・職員双方の転倒", "improve": "福祉用具の追加・配置見直し/ノーリフティングの方針化/移乗方法の共有ルール/実地研修 ※療法士等へ相談", "kubun": "指", "short": false}, {"id": "X-CR2", "job": "医療・介護", "domain": "設備・道具", "title": "ベッド・浴室・トイレ等の作業空間と高さ", "facts": "・ベッドの高さ調整機能と、ケア時に調整されているか\n・浴室・トイレなどの介助スペース、前かがみが避けられない場所\n・夜勤時の照明・一人での対応範囲", "method": "観察、聞き取り", "criteria": "良好:ベッド高さが作業時に調整され、介助スペースが確保されている\n一部改善:特定の場所(浴室等)で前かがみが避けられない\n要改善:高さ調整されないまま介助することが多い", "impact": "腰部負担、転倒", "improve": "ケア前の高さ調整の習慣化/介助スペースの確保/補助具の導入", "kubun": "指", "short": false}, {"id": "X-SL1", "job": "営業・運転・外回り", "domain": "作業設計", "title": "車両の運転と荷物の積み下ろし", "facts": "・1回の連続運転時間と休憩の取り方\n・車両からの積み下ろし時の姿勢(荷室の奥、低い位置)\n・訪問先での運搬手段(台車の有無)", "method": "聞き取り、運行・訪問計画の確認、車両の観察", "criteria": "良好:連続運転の区切りが計画され、積み下ろしの補助具がある\n一部改善:繁忙時に休憩が取れない、または一部の荷で負担が大きい\n要改善:長時間の連続運転と手での積み下ろしが常態化", "impact": "腰部負担、疲労による事故", "improve": "訪問計画への休憩組み込み/荷室の積み方・台車の携行/車両の座席調整", "kubun": "指", "short": false}, {"id": "X-SV1", "job": "小売・飲食・サービス", "domain": "作業姿勢・動作", "title": "長時間の立ち作業とレジ・調理台の高さ", "facts": "・立ち作業の連続時間と座れる機会\n・レジ・カウンター・調理台・シンクの高さと前かがみ\n・床の濡れ・油(厨房)\n・顧客対応の割り込みと作業の中断", "method": "観察、聞き取り", "criteria": "良好:作業面の高さが合い、交代・小休止の仕組みがある\n一部改善:特定の時間帯・場所で立ちっぱなし・前かがみが続く\n要改善:長時間の立ちっぱなしと低い作業面での作業が常態化", "impact": "下肢・腰の負担、転倒", "improve": "立ち座り兼用の椅子/疲労軽減マット/作業台の高さ調整/交代のルール", "kubun": "推", "short": false}], "individual": [{"id": "P1", "domain": "設備・道具", "title": "作業面の高さが本人に合っているか", "facts": "・作業時の肘の高さと作業面の高さの関係(立位・座位)\n・作業中の前かがみ・肩のすくみ\n・調整機能の有無と、本人が調整方法を知っているか", "method": "観察、計測、試行", "criteria": "適合:前かがみや肩のすくみなく作業できる\n一部調整:調整機能や台の追加で解消できる\n要調整:調整範囲外で、設備の変更が必要", "unitRef": "C1"}, {"id": "P2", "domain": "設備・道具", "title": "椅子と足元(座り作業がある場合)", "facts": "・座面高さ、足裏の接地、背もたれの位置\n・机下の空間", "method": "観察、試行", "criteria": "適合:調整された状態で足裏が接地し、背もたれが使える\n一部調整:調整や足台で解消\n要調整:椅子の交換・机の変更が必要", "unitRef": "C2"}, {"id": "P3", "domain": "設備・道具", "title": "画面・表示・書類の位置", "facts": "・画面上端と目の高さの関係、視距離、正面か\n・眼鏡等の使用時に首を反らす・前に出す動作がないか(眼鏡の種類は記録しない)\n・映り込み", "method": "観察、計測、試行", "criteria": "適合:首を大きく曲げずに見える\n一部調整:位置・角度の調整で解消\n要調整:周辺機器(アーム、外付け機器)の追加が必要", "unitRef": "C3"}, {"id": "P4", "domain": "設備・道具", "title": "よく使う物・道具の位置と使いやすさ", "facts": "・頻用品の高さ・奥行き、本人の利き手側にあるか\n・道具の握りやすさ、不具合", "method": "観察、聞き取り", "criteria": "適合:頻用品が手前・中段にあり、道具に不具合がない\n一部調整:配置替えで解消\n要調整:道具の交換・棚の変更が必要", "unitRef": "C4・C5"}, {"id": "P5", "domain": "作業姿勢・動作", "title": "担当作業で生じる無理な姿勢", "facts": "・前かがみ・ひねり・腕の挙上・手首の屈曲が生じる場面と回数・時間\n・その原因(設備・配置・荷姿・時間の制約)", "method": "観察(数サイクル)", "criteria": "適合:無理な姿勢は時々・短時間\n一部調整:原因が特定でき、配置等で減らせる\n要調整:作業・設備の変更が必要", "unitRef": "A1・A2"}, {"id": "P6", "domain": "持ち上げ・運搬・力", "title": "本人が扱う物の重さと取扱い方法", "facts": "・扱う物の重さ、開始・終了の高さ、回数\n・補助具・2人作業を使える状況か、使えない理由", "method": "観察、計量・表示確認、聞き取り", "criteria": "適合:補助具・2人作業が使え、床からの持ち上げがほとんどない\n一部調整:補助具の配置や手順の変更で解消\n要調整:補助具の導入・担当の見直しが必要\n※法令・指針の重量目安(第9章)を超える場合は要調整以上", "unitRef": "B1・B2"}, {"id": "P7", "domain": "作業姿勢・動作", "title": "同一姿勢・反復の続き方", "facts": "・本人の勤務での同一姿勢・反復作業の連続時間\n・姿勢を変える・小休止を取る機会", "method": "聞き取り、観察", "criteria": "適合:作業の区切りで姿勢を変えられる\n一部調整:小休止の取り方の工夫で解消\n要調整:作業の組み合わせ・担当の見直しが必要", "unitRef": "A3・A4"}, {"id": "P8", "domain": "作業設計", "title": "休憩・応援・割り込みの状況(本人の勤務帯)", "facts": "・休憩が取れているか、応援を頼めるか\n・作業中の割り込みの頻度", "method": "聞き取り", "criteria": "適合:休憩・応援が得られ、割り込みが作業を妨げていない\n一部調整:特定の時間帯に問題がある\n要調整:日常的に休憩・応援が得られない", "unitRef": "E1・E2・F2・G2"}, {"id": "P9", "domain": "作業環境", "title": "本人の作業場所の環境", "facts": "・作業場所の明るさ・まぶしさ、暑さ寒さ・空調の風、騒音、足元(配線・段差)", "method": "観察、測定、聞き取り", "criteria": "適合:気になる点がない\n一部調整:席の向き・局所照明・配線整理等で解消\n要調整:設備の変更や席の移動が必要", "unitRef": "D1〜D4"}, {"id": "P10", "domain": "作業設計", "title": "作業上の配慮事項の反映(産業医等から示されている場合のみ)", "facts": "・本人同意のうえで受け取った作業上の配慮事項(診断名は受け取らない)\n・それが現在の作業・設備で実行できているか", "method": "聞き取り、観察", "criteria": "適合:配慮事項が作業・設備に反映されている\n一部調整:一部の場面(繁忙時等)で反映されない\n要調整:現在の作業・設備では反映できない\n※該当しない場合は「該当なし」", "unitRef": "—"}]};
+var DOMAINS = ['作業姿勢・動作', '持ち上げ・運搬・力', '設備・道具', '作業環境', '作業設計', '認知的負担', '組織的条件'];
+var JOBS = ['事務・情報機器作業', '製造', '物流・倉庫', '医療・介護', '営業・運転・外回り', '小売・飲食・サービス'];
+var R_UNIT = [
+  { v: 'good', s: '◎', l: '良好' }, { v: 'partial', s: '○', l: '一部改善' }, { v: 'improve', s: '△', l: '要改善' },
+  { v: 'urgent', s: '!', l: '優先対応' }, { v: 'na', s: '—', l: '該当なし' }, { v: 'unk', s: '?', l: '未確認' }
+];
+var R_PERSON = [
+  { v: 'good', s: '◎', l: '適合' }, { v: 'partial', s: '○', l: '一部調整' }, { v: 'improve', s: '△', l: '要調整' },
+  { v: 'urgent', s: '!', l: '優先対応' }, { v: 'na', s: '—', l: '該当なし' }, { v: 'unk', s: '?', l: '未確認' }
+];
+var LEVELS = ['大', '中', '小'];
+var LEVEL_HELP = {
+  sev: { '大': '重いけが・休業のおそれ/法令上の義務に関わる', '中': '痛み・疲労の蓄積、ミス・手戻り', '小': '不便・不快にとどまる' },
+  exp: { '大': '作業時間の大半・毎日何度も', '中': '毎日あるが一部の時間', '小': '週数回以下・繁忙時のみ' },
+  scope: { '大': '部門の多くの作業者', '中': '特定の班・シフト', '小': '少数(1〜2名程度)' }
+};
+var itemById = {};
+ITEMS.standard.concat(ITEMS.addon).forEach(function (it) { itemById[it.id] = it; });
+var pById = {};
+ITEMS.individual.forEach(function (it) { pById[it.id] = it; });
+
+var S = { db: null, uid: null, visits: {}, cur: null, tab: 'info', unit: 0, person: 0, onlyShort: false, onlyEmpty: false,
+          dirty: {}, saving: {}, again: {}, sample: null, downloads: null, aiBusy: false, aiCtl: null };
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function today() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function rlabel(v, person) { var a = person ? R_PERSON : R_UNIT; for (var i = 0; i < a.length; i++) if (a[i].v === v) return a[i]; return null; }
+function visit() { return S.cur ? S.visits[S.cur] : null; }
+
+/* ---------- persistence ---------- */
+function setSave(s, text) { var el = $('save'); el.dataset.s = s; el.textContent = text; }
+function banner(text) { var b = $('banner'); if (text) { b.textContent = text; b.hidden = false; } else b.hidden = true; }
+
+var timers = {};
+function touch(id) {
+  id = id || S.cur; if (!id) return;
+  S.visits[id].updatedAt = new Date().toISOString();
+  S.dirty[id] = true;
+  if (!S.db) { setSave('local', 'この画面では保存されません'); return; }
+  setSave('saving', '保存待ち…');
+  clearTimeout(timers[id]);
+  timers[id] = setTimeout(function () { flush(id); }, 900);
+}
+function flush(id) {
+  if (!S.db || !S.visits[id]) return;
+  if (S.saving[id]) { S.again[id] = true; return; }
+  S.saving[id] = true; S.dirty[id] = false;
+  setSave('saving', '保存中…');
+  var data = JSON.parse(JSON.stringify(S.visits[id]));
+  S.db.collection('data/users/' + S.uid).doc(id).set(data).then(function () {
+    S.saving[id] = false;
+    if (S.again[id] || S.dirty[id]) { S.again[id] = false; flush(id); return; }
+    setSave('saved', '保存済み ' + new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }));
+  }).catch(function (e) {
+    S.saving[id] = false; S.dirty[id] = true;
+    setSave('error', '保存できませんでした');
+    banner('保存に失敗しました(' + (e && e.code || 'error') + ')。' + (e && e.code === 'quota_exceeded' ? '保存容量の上限です。不要な訪問記録を削除してください。' : '通信状態を確認し、もう一度入力すると再保存します。'));
+  });
+}
+function removeVisit(id) {
+  delete S.visits[id];
+  if (S.db) S.db.collection('data/users/' + S.uid).doc(id).delete().catch(function () { banner('削除に失敗しました。もう一度お試しください。'); });
+}
+
+function boot() {
+  if (!window.claude || !window.claude.use) { offline(); return; }
+  var to = setTimeout(offline, 11000);
+  Promise.all([window.claude.use('user'), window.claude.use('db')]).then(function (r) {
+    clearTimeout(to);
+    var user = r[0], db = r[1];
+    if (!user || !db) { offline(); return; }
+    return user.id().then(function (id) {
+      if (!id) { offline(); return; }
+      S.uid = id; S.db = db;
+      setSave('saved', '接続済み');
+      db.collection('data/users/' + id).onSnapshot(function (snap) {
+        snap.docs.forEach(function (d) {
+          if (S.dirty[d.id] || S.saving[d.id] || d.metadata.hasPendingWrites) return;
+          var v = d.data(); if (v && v.units) S.visits[d.id] = v;
+        });
+        var ids = snap.docs.map(function (d) { return d.id; });
+        Object.keys(S.visits).forEach(function (k) { if (ids.indexOf(k) < 0 && !S.dirty[k] && !S.saving[k]) delete S.visits[k]; });
+        if (!S.cur || S.tab === 'analysis') render();
+        else if (!S.visits[S.cur]) { S.cur = null; render(); }
+      }, function (e) { setSave('error', '読み込みエラー'); banner('記録の読み込みに失敗しました(' + (e && e.code) + ')。ページを開き直してください。'); });
+    });
+  }).catch(offline);
+  window.claude.use('sample').then(function (s) { S.sample = s; if (S.tab === 'analysis') render(); });
+  window.claude.use('downloads').then(function (d) { S.downloads = d; if (S.tab === 'analysis') render(); });
+}
+function offline() {
+  if (S.db) return;
+  setSave('local', '保存なし(閲覧モード)');
+  banner('このビューでは記録を保存できません(サインインしていない、またはプレビュー表示)。入力は試せますが、ページを閉じると消えます。');
+  render();
+}
+
+/* ---------- model helpers ---------- */
+function newUnit() { return { id: uid(), dept: '', task: '', place: '', time: '', shift: '', workers: '', observation: '', hearing: '', docs: '', memo: '', jobs: [], ratings: {} }; }
+function newVisit() {
+  return { company: '', site: '', date: today(), assessors: '', purpose: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+           sample: false, units: [newUnit()], people: [], aiText: '' };
+}
+function unitItems(u) {
+  var list = ITEMS.standard.slice();
+  ITEMS.addon.forEach(function (it) { if (u.jobs.indexOf(it.job) >= 0) list.push(it); });
+  return list;
+}
+function unitName(u, i) { var n = [u.dept, u.task].filter(Boolean).join(' / '); return n || ('評価単位 ' + (i + 1)); }
+function priority(rt) {
+  if (!rt) return null;
+  if (rt.r === 'urgent') return 1;
+  if (rt.r !== 'improve') return null;
+  var s = rt.sev, e = rt.exp, c = rt.scope;
+  if (!s) return 3;
+  if (s === '大' && (e === '大' || c === '大')) return 1;
+  if (s === '大') return 2;
+  if (s === '中' && (e === '大' || c === '大')) return 2;
+  return 3;
+}
+function factorsMissing(rt) { return rt && (rt.r === 'improve') && (!rt.sev || !rt.exp || !rt.scope); }
+function isLaw(it) { return /法|努/.test(it.kubun || ''); }
+
+/* ---------- rendering ---------- */
+function render() {
+  var app = $('app');
+  if (!S.cur || !visit()) { S.cur = null; app.innerHTML = renderList(); return; }
+  var v = visit();
+  var tabs = [['info', '基本情報'], ['units', '部門・作業の評価'], ['people', '個人の評価'], ['analysis', '分析とフィードバック']];
+  var h = '<div class="vhead"><button class="btn ghost" data-act="home">← 訪問一覧</button>' +
+    '<span class="name">' + esc(v.company || '名称未設定の訪問') + (v.site ? ' ' + esc(v.site) : '') + '</span>' +
+    (v.sample ? '<span class="sampletag">記入例</span>' : '') + '<span class="muted">' + esc(v.date || '') + '</span></div>';
+  h += '<nav class="tabs" role="tablist">' + tabs.map(function (t) {
+    return '<button role="tab" data-act="tab" data-v="' + t[0] + '" aria-selected="' + (S.tab === t[0]) + '">' + t[1] + '</button>';
+  }).join('') + '</nav>';
+  if (S.tab === 'info') h += renderInfo(v);
+  if (S.tab === 'units') h += renderUnits(v);
+  if (S.tab === 'people') h += renderPeople(v);
+  if (S.tab === 'analysis') h += renderAnalysis(v);
+  app.innerHTML = h;
+}
+
+function renderList() {
+  var ids = Object.keys(S.visits).sort(function (a, b) { return (S.visits[b].updatedAt || '').localeCompare(S.visits[a].updatedAt || ''); });
+  var h = '<h2>訪問記録</h2><div class="row"><button class="btn primary" data-act="new">新しい訪問を作成</button>' +
+    '<button class="btn" data-act="sample">記入例を作成して試す</button></div>';
+  if (!ids.length) {
+    h += '<section class="empty"><h2>まだ訪問記録はありません</h2>' +
+      '<p>「新しい訪問を作成」から企業名・評価単位(部門 × 代表作業)を登録し、項目ごとに評価を選んでください。入力すると「分析とフィードバック」に優先順位・重大懸念・改善案が自動で表示されます。</p>' +
+      '<p class="muted">使い方を先に見たい場合は「記入例を作成して試す」を押すと、物流センターを想定した記入例(架空のデータ)が作られます。</p></section>';
+    return h;
+  }
+  h += '<div class="visits">' + ids.map(function (id) {
+    var v = S.visits[id]; var n = 0, done = 0, urgent = 0;
+    v.units.forEach(function (u) { unitItems(u).forEach(function (it) { n++; var rt = u.ratings[it.id]; if (rt && rt.r) done++; if (rt && rt.r === 'urgent') urgent++; }); });
+    return '<button class="vcard" data-act="open" data-v="' + id + '"><span class="t">' + esc(v.company || '名称未設定の訪問') + ' ' + esc(v.site || '') + (v.sample ? ' <span class="sampletag">記入例</span>' : '') + '</span>' +
+      '<span class="m">' + esc(v.date || '') + ' ・ 評価単位 ' + v.units.length + ' ・ 個人 ' + (v.people || []).length + '名</span>' +
+      '<span class="m">入力 ' + done + ' / ' + n + ' 項目' + (urgent ? ' ・ <b style="color:var(--st-urgent)">優先対応 ' + urgent + '件</b>' : '') + '</span></button>';
+  }).join('') + '</div>';
+  return h;
+}
+
+function field(label, path, val, type, ph) {
+  var id = 'f_' + path.replace(/\W/g, '_');
+  if (type === 'area') return '<label class="f" for="' + id + '">' + label + '<textarea id="' + id + '" data-path="' + path + '" placeholder="' + esc(ph || '') + '">' + esc(val) + '</textarea></label>';
+  return '<label class="f" for="' + id + '">' + label + '<input id="' + id + '" type="' + (type || 'text') + '" data-path="' + path + '" value="' + esc(val) + '" placeholder="' + esc(ph || '') + '"></label>';
+}
+
+function renderInfo(v) {
+  var h = '<h2>訪問の基本情報</h2><div class="grid2">' +
+    field('企業名', 'company', v.company, 'text', '例:○○株式会社') +
+    field('事業場・拠点', 'site', v.site, 'text', '例:△△物流センター') +
+    field('訪問日', 'date', v.date, 'date') +
+    field('評価者(職種)', 'assessors', v.assessors, 'text', '例:保健師1名、理学療法士1名') + '</div>' +
+    '<div class="grid2" style="margin-top:10px">' + field('訪問の目的・企業からの依頼内容', 'purpose', v.purpose, 'area', '例:出荷部門の腰部負担の改善策を検討したい') + '</div>' +
+    '<fieldset><legend>実施前の確認</legend><div class="checks">' +
+    ['目的が個人の採点ではないことを企業に説明した', '撮影の可否と条件を確認した', '評価結果を人事評価に使わないことを合意した', '個人評価を行う場合の共有範囲を合意した'].map(function (t, i) {
+      var k = 'pre' + i; var on = v.pre && v.pre[k];
+      return '<label><input type="checkbox" data-path="pre.' + k + '" ' + (on ? 'checked' : '') + '> ' + t + '</label>';
+    }).join('') + '</div></fieldset>' +
+    '<h3>評価単位(部門 × 代表作業)</h3><ul class="list">' + v.units.map(function (u, i) {
+      return '<li>' + esc(unitName(u, i)) + (u.place ? ' ・ ' + esc(u.place) : '') + (u.time ? ' ・ ' + esc(u.time) : '') + '</li>';
+    }).join('') + '</ul><div class="row"><button class="btn" data-act="tab" data-v="units">部門・作業の評価へ進む</button></div>' +
+    '<h3>この訪問記録の削除</h3><div class="row" id="delrow"><button class="btn danger" data-act="askdel">この訪問記録を削除</button></div>';
+  return h;
+}
+
+function renderUnits(v) {
+  var u = v.units[S.unit] || v.units[0]; if (!u) { v.units.push(newUnit()); u = v.units[0]; }
+  S.unit = v.units.indexOf(u);
+  var items = unitItems(u);
+  var done = items.filter(function (it) { var rt = u.ratings[it.id]; return rt && rt.r; }).length;
+  var p = 'units.' + S.unit + '.';
+  var h = '<div class="unitbar">' + v.units.map(function (x, i) {
+    return '<button class="chip" data-act="unit" data-v="' + i + '" aria-pressed="' + (i === S.unit) + '">' + esc(unitName(x, i)) + '</button>';
+  }).join('') + '<button class="btn ghost" data-act="addunit">+ 評価単位を追加</button></div>';
+  h += '<details class="ref" ' + (u.dept || u.task ? '' : 'open') + '><summary>評価単位の情報(部門・作業・観察条件)</summary><div class="grid2" style="margin-top:8px">' +
+    field('部門', p + 'dept', u.dept, 'text', '例:出荷課') + field('代表作業', p + 'task', u.task, 'text', '例:ケースピッキング') +
+    field('作業場所', p + 'place', u.place, 'text', '例:1階 保管エリアB列') + field('観察した時間帯', p + 'time', u.time, 'text', '例:10:00〜10:40(繁忙時間帯)') +
+    field('勤務形態', p + 'shift', u.shift, 'text', '例:日勤') + field('従事人数(概数)', p + 'workers', u.workers, 'text', '例:約12名') +
+    field('観察数・観察時間', p + 'observation', u.observation, 'text', '例:3名×各3サイクル、約35分') + field('聞き取り人数', p + 'hearing', u.hearing, 'text', '例:管理者1名、従業員4名') +
+    field('確認した資料', p + 'docs', u.docs, 'text', '例:作業手順書、ヒヤリハット集計') + field('備考(通常時との違い)', p + 'memo', u.memo, 'text', '例:欠員1名あり') +
+    '</div><fieldset><legend>職種別の追加項目</legend><div class="checks">' + JOBS.map(function (j) {
+      return '<label><input type="checkbox" data-job="' + esc(j) + '" ' + (u.jobs.indexOf(j) >= 0 ? 'checked' : '') + '> ' + j + '</label>';
+    }).join('') + '</div></fieldset>' +
+    (v.units.length > 1 ? '<div class="row" id="delunitrow"><button class="btn danger" data-act="askdelunit">この評価単位を削除</button></div>' : '') + '</details>';
+  h += '<div class="row" style="margin-top:12px;justify-content:space-between"><div class="checks">' +
+    '<label><input type="checkbox" data-act="fshort" ' + (S.onlyShort ? 'checked' : '') + '> <span class="star">★</span>短時間版の項目のみ</label>' +
+    '<label><input type="checkbox" data-act="fempty" ' + (S.onlyEmpty ? 'checked' : '') + '> 未入力の項目のみ</label></div>' +
+    '<span class="progress" id="prog">入力 ' + done + ' / ' + items.length + '</span></div>';
+  var groups = {};
+  items.forEach(function (it) { var d = it.job ? '職種別:' + it.job : it.domain; (groups[d] = groups[d] || []).push(it); });
+  var order = DOMAINS.concat(JOBS.map(function (j) { return '職種別:' + j; }));
+  order.forEach(function (d) {
+    var list = (groups[d] || []).filter(function (it) {
+      if (S.onlyShort && !it.short) return false;
+      if (S.onlyEmpty) { var rt = u.ratings[it.id]; if (rt && rt.r) return false; }
+      return true;
+    });
+    if (!list.length) return;
+    var gd = (groups[d] || []).filter(function (it) { var rt = u.ratings[it.id]; return rt && rt.r; }).length;
+    h += '<div class="domainhead"><h3>' + esc(d) + '</h3><span class="progress">' + gd + ' / ' + groups[d].length + '</span></div>';
+    list.forEach(function (it) { h += unitCard(u, it); });
+  });
+  h += '<div class="row" style="margin-top:20px"><button class="btn primary" data-act="tab" data-v="analysis">分析とフィードバックを見る</button></div>';
+  return h;
+}
+
+function segHtml(name, cur, opts) {
+  return '<div class="seg" role="radiogroup">' + opts.map(function (o) {
+    return '<label><input type="radio" name="' + name + '" value="' + o.v + '" ' + (cur === o.v ? 'checked' : '') + '><span><span class="sym">' + o.s + '</span>' + o.l + '</span></label>';
+  }).join('') + '</div>';
+}
+function refHtml(it, person) {
+  var rows = [['確認する事実', it.facts], ['確認方法', it.method], ['判断基準', it.criteria]];
+  if (!person) rows.push(['想定される影響', it.impact], ['改善案(例)', it.improve]);
+  else rows.push(['対応する部門項目', it.unitRef]);
+  return '<details class="ref"><summary>確認する事実・判断基準を見る</summary><dl>' + rows.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + esc(r[1]) + '</dd>'; }).join('') + '</dl></details>';
+}
+function unitCard(u, it) {
+  var rt = u.ratings[it.id] || {};
+  var base = 'units.' + S.unit + '.ratings.' + it.id + '.';
+  var h = '<article class="card" id="card_' + it.id + '" data-r="' + (rt.r || '') + '">' +
+    '<div class="chead"><span class="cid">' + it.id + '</span><span class="ctitle">' + esc(it.title) + (it.short ? ' <span class="star" title="短時間版">★</span>' : '') + '</span>' +
+    (it.kubun ? '<span class="kb" title="法=法令上の義務 努=努力義務 指=公的指針 推=推奨">' + esc(it.kubun) + '</span>' : '') + '</div>' +
+    refHtml(it, false) + segHtml('r_' + it.id, rt.r, R_UNIT).replace(/<input /g, '<input data-rate="' + base + 'r" ');
+  if (rt.r === 'improve' || rt.r === 'urgent') {
+    h += '<div class="factors">' + ['sev', 'exp', 'scope'].map(function (k) {
+      var lab = { sev: '重大性', exp: 'ばく露(頻度・時間)', scope: '対象範囲(人数)' }[k];
+      return '<label>' + lab + '<select class="mini" data-path="' + base + k + '" data-rerender="1"><option value="">選択</option>' + LEVELS.map(function (l) {
+        return '<option value="' + l + '" ' + (rt[k] === l ? 'selected' : '') + '>' + l + ':' + LEVEL_HELP[k][l] + '</option>';
+      }).join('') + '</select></label>';
+    }).join('') + '<label>改善の種別<select class="mini" data-path="' + base + 'kind"><option value="">選択</option>' +
+      ['すぐできる改善', '検討を要する改善', '両方'].map(function (l) { return '<option ' + (rt.kind === l ? 'selected' : '') + '>' + l + '</option>'; }).join('') + '</select></label></div>';
+    var p = priority(rt);
+    h += '<div class="prio">優先度 <span class="pbadge p' + p + '">優先度' + p + '</span>' + (rt.r === 'urgent' ? '<span class="warnline">重大懸念として当日中に口頭で伝えてください</span>' : '') +
+      (factorsMissing(rt) ? '<span class="warnline">3要素を選ぶと優先度が確定します</span>' : '') + '</div>';
+  }
+  var ph = rt.r === 'unk' ? '確認できなかった理由と、次回の確認方法' : rt.r === 'na' ? '該当しない理由を一言' : '観察した事実(場所・回数・時間・人数)、確認した資料、聞き取りの要約。氏名は書かない';
+  h += '<textarea class="note" data-path="' + base + 'note" placeholder="' + ph + '" aria-label="' + it.id + ' 根拠・現場メモ">' + esc(rt.note || '') + '</textarea>';
+  if (rt.r === 'improve' || rt.r === 'urgent' || rt.r === 'good') h += '<span class="warnline notewarn" ' + ((rt.note || '').trim() ? 'hidden' : '') + '>根拠(観察した事実)を記入してください</span>';
+  return h + '</article>';
+}
+
+function renderPeople(v) {
+  v.people = v.people || [];
+  var h = '<h2>個人の評価(本人の同意がある場合のみ)</h2>' +
+    '<p class="muted">評価するのは、本人の作業・作業場所・設備が本人に合っているかです。能力・努力・健康状態は評価しません。氏名は入力せず、匿名コードで管理してください。症状・診断名・服薬は記録しません。</p>';
+  h += '<div class="unitbar">' + v.people.map(function (p, i) {
+    return '<button class="chip" data-act="person" data-v="' + i + '" aria-pressed="' + (i === S.person) + '">' + esc(p.code) + '</button>';
+  }).join('') + '<button class="btn ghost" data-act="addperson">+ 個人評価を追加</button></div>';
+  var p = v.people[S.person];
+  if (!p) { h += '<section class="empty"><h2>個人評価はまだありません</h2><p>本人の申し出、共用設備が体格に合わない、異動・新設備の導入時などに、本人の同意を得て行います。</p></section>'; return h; }
+  var base = 'people.' + S.person + '.';
+  h += '<fieldset><legend>' + esc(p.code) + ' の評価条件</legend><div class="grid2">' +
+    field('匿名コード', base + 'code', p.code, 'text') +
+    '<label class="f">対象の評価単位<select data-path="' + base + 'unitId"><option value="">選択</option>' + v.units.map(function (u, i) {
+      return '<option value="' + u.id + '" ' + (p.unitId === u.id ? 'selected' : '') + '>' + esc(unitName(u, i)) + '</option>'; }).join('') + '</select></label>' +
+    '</div><div class="checks" style="margin-top:10px"><label><input type="checkbox" data-path="' + base + 'consent" data-rerender="1" ' + (p.consent ? 'checked' : '') +
+    '> 目的・記録内容・共有範囲を説明し、本人の同意を得た(同意しなくても不利益がないことも伝えた)</label></div>' +
+    '<div class="row" id="delpersonrow" style="margin-top:8px"><button class="btn danger" data-act="askdelperson">この個人評価を削除</button></div></fieldset>';
+  if (!p.consent) { h += '<div class="banner">本人の同意を確認するまで、評価項目は入力できません。同意が得られない場合は、部門評価のみを行ってください。</div>'; return h; }
+  ITEMS.individual.forEach(function (it) {
+    var rt = p.ratings[it.id] || {}; var b = base + 'ratings.' + it.id + '.';
+    h += '<article class="card" id="pcard_' + it.id + '" data-r="' + (rt.r || '') + '"><div class="chead"><span class="cid">' + it.id + '</span><span class="ctitle">' + esc(it.title) + '</span><span class="kb">' + esc(it.domain) + '</span></div>' +
+      refHtml(it, true) + segHtml('pr_' + it.id, rt.r, R_PERSON).replace(/<input /g, '<input data-rate="' + b + 'r" ') +
+      '<textarea class="note" data-path="' + b + 'note" placeholder="観察した事実(高さ・回数・その場で試した調整と変化)" aria-label="' + it.id + ' 観察メモ">' + esc(rt.note || '') + '</textarea>' +
+      '<textarea class="note" data-path="' + b + 'opinion" placeholder="本人の意見(本人の言葉のまま。健康に関する内容は書かない)" aria-label="' + it.id + ' 本人の意見">' + esc(rt.opinion || '') + '</textarea>' +
+      '<label class="sharebox"><input type="checkbox" data-path="' + b + 'share" ' + (rt.share ? 'checked' : '') + '> 会社への共有に本人が同意(調整が必要な作業・設備と調整案のみ共有)</label></article>';
+  });
+  return h;
+}
+
+/* ---------- analysis ---------- */
+function analyze(v) {
+  var A = { units: [], urgent: [], plan: [], strengths: [], unk: [], law: [], check: [], total: 0, done: 0, counts: { good: 0, partial: 0, improve: 0, urgent: 0, na: 0, unk: 0 } };
+  v.units.forEach(function (u, ui) {
+    var name = unitName(u, ui);
+    var ua = { name: name, u: u, domains: [] };
+    var items = unitItems(u);
+    var groups = {};
+    items.forEach(function (it) {
+      var d = it.job ? '職種別' : it.domain; (groups[d] = groups[d] || []).push(it);
+      A.total++;
+      var rt = u.ratings[it.id] || {};
+      if (!rt.r) return;
+      A.done++; A.counts[rt.r]++;
+      var rec = { unit: name, ui: ui, it: it, rt: rt };
+      if (rt.r === 'urgent') A.urgent.push(rec);
+      if (rt.r === 'urgent' || rt.r === 'improve') { rec.p = priority(rt); A.plan.push(rec); if (isLaw(it)) A.law.push(rec); }
+      if (rt.r === 'good') A.strengths.push(rec);
+      if (rt.r === 'unk') A.unk.push(rec);
+      if ((rt.r === 'urgent' || rt.r === 'improve' || rt.r === 'good') && !(rt.note || '').trim()) A.check.push({ rec: rec, msg: '根拠(観察した事実)が未記入' });
+      if (factorsMissing(rt)) A.check.push({ rec: rec, msg: '重大性・ばく露・対象範囲が未選択(暫定で優先度3)' });
+      if (rt.r === 'unk' && !(rt.note || '').trim()) A.check.push({ rec: rec, msg: '未確認の理由・次回の確認方法が未記入' });
+    });
+    DOMAINS.concat(['職種別']).forEach(function (d) { if (groups[d]) ua.domains.push({ d: d, items: groups[d] }); });
+    A.units.push(ua);
+  });
+  A.plan.sort(function (a, b) { return a.p - b.p || a.ui - b.ui; });
+  // individuals
+  var people = (v.people || []).filter(function (p) { return p.consent; });
+  A.people = { n: people.length, items: [] };
+  ITEMS.individual.forEach(function (it) {
+    var c = { good: 0, partial: 0, improve: 0, urgent: 0, shared: 0, units: {} };
+    people.forEach(function (p) {
+      var rt = p.ratings[it.id]; if (!rt || !rt.r) return;
+      if (c[rt.r] != null) c[rt.r]++;
+      if ((rt.r === 'improve' || rt.r === 'urgent')) { if (rt.share) c.shared++; var k = p.unitId || '-'; c.units[k] = (c.units[k] || 0) + 1; }
+    });
+    A.people.items.push({ it: it, c: c });
+  });
+  return A;
+}
+
+function renderAnalysis(v) {
+  var A = analyze(v);
+  var p1 = A.plan.filter(function (r) { return r.p === 1; }).length, p2 = A.plan.filter(function (r) { return r.p === 2; }).length, p3 = A.plan.filter(function (r) { return r.p === 3; }).length;
+  var h = '<h2>分析とフィードバック</h2><p class="muted">合計点は出しません。重大懸念は別に示し、要改善の項目を重大性・ばく露・対象範囲から優先度1〜3に分けています。「該当なし」「未確認」は集計から除きます。</p>';
+  h += '<div class="tiles">' +
+    tile('入力済み', A.done + ' / ' + A.total) + tile('重大懸念', A.urgent.length, A.urgent.length > 0) +
+    tile('優先度1', p1, p1 > 0) + tile('優先度2', p2) + tile('優先度3', p3) + tile('未確認', A.counts.unk) + tile('記入の不足', A.check.length) + '</div>';
+
+  if (A.urgent.length) {
+    h += '<div class="alertbox"><h3>! 重大懸念(総合評価とは別に、当日中に伝える事項)</h3><ul class="list">' + A.urgent.map(function (r) {
+      return '<li><b>' + esc(r.it.id) + ' ' + esc(r.it.title) + '</b> ・ ' + esc(r.unit) + '<br>' + esc(r.rt.note || '(根拠未記入)') + '</li>';
+    }).join('') + '</ul></div>';
+  }
+
+  h += '<h3>評価マップ</h3><p class="muted small">1マス=1項目。マスにカーソルを合わせる(タップする)と内容が出ます。マスを押すとその項目へ移動します。</p><div class="map">' + A.units.map(function (ua, ui) {
+    return '<div class="maprow"><div class="u">' + esc(ua.name) + '</div><div class="mapdomains">' + ua.domains.map(function (dd) {
+      var cnt = { improve: 0, urgent: 0 };
+      dd.items.forEach(function (it) { var rt = ua.u.ratings[it.id] || {}; if (cnt[rt.r] != null) cnt[rt.r]++; });
+      return '<div class="mapdomain"><span class="dn">' + esc(dd.d) + (cnt.improve + cnt.urgent ? ' ・ 課題' + (cnt.improve + cnt.urgent) : '') + '</span><div class="cells">' + dd.items.map(function (it) {
+        var rt = ua.u.ratings[it.id] || {}; var rl = rlabel(rt.r);
+        return '<button class="cell" data-r="' + (rt.r || '') + '" data-act="jump" data-u="' + ui + '" data-v="' + it.id + '" data-tip="' + esc(it.id + ' ' + it.title + ' — ' + (rl ? rl.l : '未入力') + (rt.note ? '\n' + rt.note.slice(0, 120) : '')) + '" aria-label="' + esc(it.id + ' ' + (rl ? rl.l : '未入力')) + '">' + (rl ? rl.s : '') + '</button>';
+      }).join('') + '</div></div>';
+    }).join('') + '</div></div>';
+  }).join('') + '</div><div class="legend">' + R_UNIT.map(function (o) { return '<span><span class="cell" data-r="' + o.v + '">' + o.s + '</span>' + o.l + '</span>'; }).join('') +
+    '<span><span class="cell" data-r=""></span>未入力</span></div>';
+
+  h += '<h3>優先して改善する課題</h3>';
+  if (!A.plan.length) h += '<p class="muted">要改善・優先対応の項目はまだありません。</p>';
+  else h += '<div class="tablewrap"><table class="plan"><thead><tr><th>優先度</th><th>評価単位</th><th>項目</th><th>観察された事実</th><th>重大性/ばく露/範囲</th><th>改善案(例)</th><th>種別</th><th>区分</th></tr></thead><tbody>' +
+    A.plan.map(function (r) {
+      return '<tr><td><span class="pbadge p' + r.p + '">優先度' + r.p + '</span>' + (r.rt.r === 'urgent' ? '<br><span class="warnline">重大懸念</span>' : '') + '</td><td>' + esc(r.unit) + '</td><td><b>' + esc(r.it.id) + '</b> ' + esc(r.it.title) +
+        '</td><td class="pre">' + esc(r.rt.note || '(未記入)') + '</td><td>' + esc([r.rt.sev, r.rt.exp, r.rt.scope].map(function (x) { return x || '—'; }).join(' / ')) +
+        '</td><td class="pre">' + esc(r.it.improve) + '</td><td>' + esc(r.rt.kind || '—') + '</td><td>' + esc(r.it.kubun) + '</td></tr>';
+    }).join('') + '</tbody></table></div><p class="muted small">優先度1=すぐ対応、優先度2=3か月以内に着手、優先度3=半年〜1年で計画。同じ優先度なら「すぐできる改善」から着手を提案します。改善案は評価表の例示です。観察した事実に合わせて具体化してください。</p>';
+
+  if (A.law.length) h += '<h3>法令・指針に関わる可能性がある課題(要確認)</h3><ul class="list">' + A.law.map(function (r) {
+    return '<li><b>' + esc(r.it.id) + '</b> ' + esc(r.it.title) + ' ・ ' + esc(r.unit) + ' ・ 区分:' + esc(r.it.kubun) + '</li>'; }).join('') + '</ul><p class="muted small">区分の「法」「努」は法令上の義務・努力義務に関わる項目です。適合の判断は原文で確認してください(評価キット第9章)。</p>';
+
+  h += '<h3>主な強み(良好の根拠)</h3>';
+  h += A.strengths.length ? '<ul class="list">' + A.strengths.map(function (r) { return '<li><b>' + esc(r.it.id) + '</b> ' + esc(r.it.title) + ' ・ ' + esc(r.unit) + (r.rt.note ? '<br>' + esc(r.rt.note) : '') + '</li>'; }).join('') + '</ul>' : '<p class="muted">良好と評価した項目はまだありません。</p>';
+
+  if (A.unk.length) h += '<h3>未確認の項目(次回の確認事項)</h3><ul class="list">' + A.unk.map(function (r) { return '<li><b>' + esc(r.it.id) + '</b> ' + esc(r.it.title) + ' ・ ' + esc(r.unit) + (r.rt.note ? '<br>' + esc(r.rt.note) : '') + '</li>'; }).join('') + '</ul>';
+  if (A.check.length) h += '<h3>記入の不足</h3><ul class="list">' + A.check.map(function (c) { return '<li><button class="btn ghost" data-act="jump" data-u="' + c.rec.ui + '" data-v="' + c.rec.it.id + '">' + esc(c.rec.it.id) + '</button> ' + esc(c.rec.unit) + ':' + esc(c.msg) + '</li>'; }).join('') + '</ul>';
+
+  // individuals
+  h += '<h3>個人評価の集計</h3>';
+  if (!A.people.n) h += '<p class="muted">同意のある個人評価はありません。</p>';
+  else {
+    var small = A.people.n < 5;
+    h += '<p class="muted small">同意のある ' + A.people.n + '名分。' + (small ? '5名未満のため、企業向けの報告では人数を出さず、共通する設備・作業の課題としてのみ記載してください。' : '企業向けの報告では、本人が共有に同意した項目だけを人数単位で記載します。') + '</p>';
+    h += '<div class="tablewrap"><table><thead><tr><th>項目</th><th>適合</th><th>一部調整</th><th>要調整</th><th>優先対応</th><th>うち共有同意</th><th>部門課題への反映</th></tr></thead><tbody>' + A.people.items.map(function (x) {
+      var multi = Object.keys(x.c.units).some(function (k) { return x.c.units[k] >= 2; });
+      return '<tr><td><b>' + x.it.id + '</b> ' + esc(x.it.title) + '</td><td>' + x.c.good + '</td><td>' + x.c.partial + '</td><td>' + x.c.improve + '</td><td>' + x.c.urgent + '</td><td>' + x.c.shared + '</td><td>' +
+        (multi ? '同じ評価単位で2名以上が要調整:部門項目 ' + esc(x.it.unitRef) + ' で課題として扱う' : '—') + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  }
+
+  // AI feedback
+  h += '<h3>所見文の下書き(AI)</h3>';
+  if (S.sample) {
+    h += '<p class="muted small">入力した評価・根拠メモ・個人評価の集計(共有同意分のみ)をもとに、企業向け報告書の構成で所見文を作成します。本人の意見欄は送信しません。根拠メモに氏名が含まれていないことを確認してから実行してください。</p>' +
+      '<div class="row"><button class="btn primary" data-act="ai" ' + (S.aiBusy || !A.done ? 'disabled' : '') + '>' + (S.aiBusy ? '作成中…' : (v.aiText ? '所見文を作り直す' : '所見文を作成する')) + '</button>' +
+      (S.aiBusy ? '<button class="btn" data-act="aistop">中止</button>' : '') + '</div>' +
+      '<div class="aiout" id="aiout" ' + (v.aiText || S.aiBusy ? '' : 'hidden') + '>' + esc(v.aiText || '') + '</div><p class="muted small">AIの下書きです。事実・数値・法令の記載は必ず評価者が確認・修正してください。</p>';
+  } else h += '<p class="muted">このビューではAIによる下書きを利用できません。下の「報告書の下書き」をご利用ください。</p>';
+
+  // export
+  h += '<h3>書き出し</h3><div class="export"><div class="row">' +
+    (S.downloads ? '<button class="btn" data-act="dlcsv">評価結果をCSVで保存</button><button class="btn" data-act="dlmd">報告書の下書きを保存(.md)</button>' : '') +
+    '<button class="btn" data-act="copymd">報告書の下書きをコピー</button></div>' +
+    '<textarea class="copy" id="mdbox" readonly aria-label="報告書の下書き">' + esc(reportMd(v, A)) + '</textarea></div>';
+  return h;
+}
+function tile(k, v, alert) { return '<div class="tile' + (alert ? ' alert' : '') + '"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>'; }
+
+function reportMd(v, A) {
+  A = A || analyze(v);
+  var L = [];
+  L.push('# エルゴノミクス現地評価 報告書(下書き)', '', '- 企業・事業場:' + (v.company || '') + ' ' + (v.site || ''), '- 訪問日:' + (v.date || ''), '- 評価者:' + (v.assessors || ''), '');
+  L.push('## 0. 要約', '');
+  L.push('- 重大懸念:' + (A.urgent.length ? A.urgent.length + '件(' + A.urgent.map(function (r) { return r.it.id + ' ' + r.it.title; }).join('、') + ')' : 'なし'));
+  L.push('- 優先して改善する課題:' + (A.plan.slice(0, 3).map(function (r) { return '[優先度' + r.p + '] ' + r.unit + ' ' + r.it.title; }).join(' / ') || 'なし'));
+  L.push('- 主な強み:' + (A.strengths.slice(0, 3).map(function (r) { return r.unit + ' ' + r.it.title; }).join(' / ') || '—'), '');
+  L.push('## 1. 評価の目的と方法', '', '部門・代表作業を単位に、観察・設備や資料の確認・短い聞き取りで評価しました。従業員個人の能力・健康状態は評価していません。', '');
+  A.units.forEach(function (ua) {
+    var u = ua.u;
+    L.push('- ' + ua.name + ':場所 ' + (u.place || '—') + '/時間帯 ' + (u.time || '—') + '/従事 ' + (u.workers || '—') + '/観察 ' + (u.observation || '—') + '/聞き取り ' + (u.hearing || '—'));
+  });
+  L.push('', '## 2. 部門・作業ごとの結果', '');
+  A.units.forEach(function (ua) {
+    var c = { good: 0, partial: 0, improve: 0, urgent: 0, na: 0, unk: 0 };
+    unitItems(ua.u).forEach(function (it) { var rt = ua.u.ratings[it.id]; if (rt && rt.r) c[rt.r]++; });
+    L.push('### ' + ua.name, '', '良好 ' + c.good + ' / 一部改善 ' + c.partial + ' / 要改善 ' + c.improve + ' / 優先対応 ' + c.urgent + ' / 該当なし ' + c.na + ' / 未確認 ' + c.unk, '');
+    A.strengths.filter(function (r) { return r.ui === A.units.indexOf(ua); }).forEach(function (r) { L.push('- 強み:' + r.it.title + (r.rt.note ? '(' + r.rt.note.replace(/\n/g, ' ') + ')' : '')); });
+    A.plan.filter(function (r) { return r.ui === A.units.indexOf(ua); }).forEach(function (r) { L.push('- 課題[優先度' + r.p + ']:' + r.it.title + (r.rt.note ? '(' + r.rt.note.replace(/\n/g, ' ') + ')' : '')); });
+    L.push('');
+  });
+  L.push('## 3. 優先して改善する課題と改善策の案', '', '| 優先度 | 評価単位 | 項目 | 観察された事実 | 改善案(例) | 種別 | 区分 |', '|---|---|---|---|---|---|---|');
+  A.plan.forEach(function (r) { L.push('| ' + r.p + ' | ' + r.unit + ' | ' + r.it.id + ' ' + r.it.title + ' | ' + (r.rt.note || '').replace(/\n/g, ' ').replace(/\|/g, '/') + ' | ' + r.it.improve.replace(/\n/g, ' ') + ' | ' + (r.rt.kind || '') + ' | ' + r.it.kubun + ' |'); });
+  if (A.law.length) L.push('', '法令・指針に関わる可能性がある項目(要確認):' + A.law.map(function (r) { return r.it.id; }).join('、'));
+  if (A.people.n) {
+    L.push('', '## 個別調整の実施状況', '');
+    if (A.people.n < 5) L.push('個人評価を実施しました(人数は個人が特定されないよう記載しません)。');
+    else L.push('個人評価:' + A.people.n + '名(本人同意あり)');
+    A.people.items.forEach(function (x) { if (x.c.shared >= 1 && A.people.n >= 5) L.push('- ' + x.it.title + ':調整が必要(共有同意 ' + x.c.shared + '名)'); else if (x.c.shared >= 1) L.push('- ' + x.it.title + ':調整が必要な例あり'); });
+  }
+  L.push('', '## 5. 企業に確認・決定していただきたい事項', '', '- 各改善策の実施担当と期限', '- 設備投資・人員配置など「検討を要する改善」の判断時期');
+  if (A.unk.length) L.push('- 未確認項目の確認方法:' + A.unk.map(function (r) { return r.it.id; }).join('、'));
+  L.push('', '## 6. 再評価の方法', '', '優先度1は1か月後、その他は3〜6か月後に、同じ評価単位・同じ時間帯・同じ方法で観察して変化を確認します。', '');
+  L.push('## 7. 評価結果の読み方と限界', '', '訪問日・時間帯・観察した作業の範囲での定性的評価です。合計点で職場の良否を判断するものではなく、医学的診断や個人の健康状態の判定ではありません。');
+  if (v.aiText) L.push('', '---', '', '## 付録:所見文(AI下書き・要確認)', '', v.aiText);
+  return L.join('\n');
+}
+
+function csvOut(v) {
+  var rows = [['評価単位', '部門', '代表作業', 'ID', '評価領域', '確認項目', '評価', '根拠・現場メモ', '重大性', 'ばく露', '対象範囲', '優先度', '改善の種別', '区分', '改善案(例)']];
+  v.units.forEach(function (u, i) {
+    unitItems(u).forEach(function (it) {
+      var rt = u.ratings[it.id] || {}; var rl = rlabel(rt.r);
+      rows.push([unitName(u, i), u.dept, u.task, it.id, it.job ? '職種別:' + it.job : it.domain, it.title, rl ? rl.l : '', rt.note || '', rt.sev || '', rt.exp || '', rt.scope || '', priority(rt) || '', rt.kind || '', it.kubun, it.improve]);
+    });
+  });
+  return '﻿' + rows.map(function (r) { return r.map(function (c) { c = String(c == null ? '' : c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\r\n');
+}
+
+function runAI() {
+  var v = visit(); var vid = S.cur; if (!S.sample || S.aiBusy) return;
+  var A = analyze(v);
+  var payload = {
+    visit: { company: v.company, site: v.site, date: v.date, purpose: v.purpose },
+    units: A.units.map(function (ua) {
+      var u = ua.u;
+      return { name: ua.name, place: u.place, time: u.time, workers: u.workers, observation: u.observation, hearing: u.hearing,
+        items: unitItems(u).filter(function (it) { var rt = u.ratings[it.id]; return rt && rt.r; }).map(function (it) {
+          var rt = u.ratings[it.id];
+          return { id: it.id, title: it.title, rating: rlabel(rt.r).l, note: rt.note || '', severity: rt.sev || '', exposure: rt.exp || '', scope: rt.scope || '', priority: priority(rt), legal: it.kubun, exampleImprovement: it.improve };
+        }) };
+    }),
+    individualSummary: A.people.n ? { consentedCount: A.people.n < 5 ? '5名未満' : A.people.n, itemsNeedingAdjustmentWithSharingConsent: A.people.items.filter(function (x) { return x.c.shared; }).map(function (x) { return x.it.title; }) } : null
+  };
+  var prompt = 'あなたは産業保健と人間工学に詳しい評価者の補助です。以下は企業への現地訪問で評価者が入力したエルゴノミクス評価の結果(JSON)です。\n' +
+    'これをもとに、経営者・部門責任者向けの所見文の下書きを日本語で作成してください。\n\n' +
+    '構成(見出しはこの順):\n1. 要約(重大懸念の有無、優先課題3つまで、強み3つまで)\n2. 部門・作業ごとの主な強み\n3. 優先して改善する課題(優先度と理由:重大性・ばく露・対象範囲)\n4. 改善策と実施時期の案(すぐできる改善/検討を要する改善を分ける)\n5. 企業に確認・決定してほしい事項\n6. 再評価の方法\n7. 評価結果の読み方と限界\n\n' +
+    '守ること:\n- 入力にある事実だけを使い、数値・事実・法令の条文番号を新たに作らない。根拠メモが空の項目は「根拠の記載なし」と書く。\n- 課題は作業・設備・仕組みを主語にし、個人を責める表現や個人が特定される表現を使わない。\n- 医学的診断、疾病リスクの断定、個人の健康状態の判定をしない。\n- legal が「法」「努」を含む項目は「法令上の義務・努力義務に関わる可能性(要確認)」と書き、推奨事項と区別する。\n- 項目IDを括弧で添える(例:B1)。\n- 全体で1800字程度まで。Markdownの見出し(##)と箇条書きを使う。\n\n評価結果JSON:\n' + JSON.stringify(payload);
+  S.aiBusy = true; S.aiCtl = new AbortController(); render();
+  var out = $('aiout'); if (out) out.textContent = '作成しています…';
+  S.sample(prompt, { modelTier: 'default', cache: false, signal: S.aiCtl.signal, onText: function (u) { var o = $('aiout'); if (o) o.textContent = u.text; } })
+    .then(function (res) { var cv = S.visits[vid]; if (!cv) return; cv.aiText = res.text + (res.truncated ? '\n\n(途中で終了しました。もう一度作成してください)' : ''); touch(vid); })
+    .catch(function (e) {
+      var msg = { not_granted: 'AIの利用が許可されていません。', rate_limited: '利用が集中しています。少し時間をおいてから作成してください。', cancelled: '作成を中止しました。', prompt_too_large: '入力が長すぎます。根拠メモを短くしてください。' }[e && e.code] || ('作成できませんでした(' + (e && e.code || 'error') + ')。');
+      var cv = S.visits[vid]; if (e && e.text && cv) { cv.aiText = e.text; touch(vid); } banner(msg);
+    })
+    .then(function () { S.aiBusy = false; S.aiCtl = null; if (S.tab === 'analysis') render(); });
+}
+
+/* ---------- sample visit ---------- */
+function sampleVisit() {
+  var v = newVisit();
+  v.sample = true; v.company = '記入例:○○株式会社'; v.site = '△△物流センター'; v.assessors = '保健師1名、理学療法士1名';
+  v.purpose = '出荷部門の腰部負担と、事務部門の作業環境を確認したい(架空の記入例)';
+  var u1 = newUnit(); Object.assign(u1, { dept: '出荷課', task: 'ケースピッキング', place: '1階 保管エリアB列', time: '10:00〜10:40(出荷締め前の繁忙時間帯)', shift: '日勤', workers: '約12名', observation: '3名×各3サイクル、約35分', hearing: '管理者1名、従業員4名', docs: '作業手順書(2019年版)、ヒヤリハット集計', memo: '欠員1名あり', jobs: ['物流・倉庫'] });
+  u1.ratings = {
+    A1: { r: 'improve', note: '床置きパレットからの取り出しで前かがみが1時間あたり約30回(観察3名全員)', sev: '中', exp: '大', scope: '大', kind: 'すぐできる改善' },
+    A3: { r: 'partial', note: '立ちっぱなしだが移動が多い。休憩以外に座る場所はない' },
+    B1: { r: 'improve', note: '重量表示のない飲料ケース(計量で約15kg)を1人で床から持ち上げ。1時間あたり30回前後', sev: '大', exp: '大', scope: '大', kind: '両方' },
+    B2: { r: 'improve', note: '台車3台あるが保管場所が作業場所から約40m。観察中は使用なし。4名中3名が「取りに行く時間がない」', sev: '中', exp: '大', scope: '中', kind: 'すぐできる改善' },
+    C1: { r: 'partial', note: '梱包台は高さ固定。背の高い作業者は前かがみ' },
+    C5: { r: 'improve', note: '重量物が最下段に配置されている列がある', sev: '中', exp: '中', scope: '大', kind: 'すぐできる改善' },
+    D1: { r: 'urgent', note: '1階非常口前に返品パレット2枚が置かれ、扉の開放範囲がふさがれていた(10:15確認)。出荷課長に10:30に口頭で伝達', sev: '大', exp: '中', scope: '大', kind: 'すぐできる改善' },
+    D2: { r: 'good', note: '通路・棚前とも暗い場所なし(照度は企業の測定記録で確認)' },
+    D3: { r: 'unk', note: '訪問は10月で暑熱なし。夏季の熱中症対策手順は資料未提出。次回提出を依頼' },
+    E1: { r: 'improve', note: '出荷締め(11時)前はペース調整ができないと管理者・従業員とも回答', sev: '中', exp: '大', scope: '大', kind: '検討を要する改善' },
+    E2: { r: 'improve', note: '10〜11時は休憩が取れず、欠員時は特定の班に集中', sev: '中', exp: '中', scope: '大', kind: '検討を要する改善' },
+    F1: { r: 'improve', note: '手順書(2019年版)が現行端末と一致せず、新人は口頭で確認', sev: '中', exp: '中', scope: '中', kind: 'すぐできる改善' },
+    G1: { r: 'good', note: '不具合報告から修理までの流れが掲示され、直近3か月で4件修理' },
+    G2: { r: 'partial', note: '日中は応援を呼べるが、夕方は人が少ない' },
+    'X-LG2': { r: 'good', note: '歩行者通路が床面表示で区分され、交差点にミラーあり' }
+  };
+  var u2 = newUnit(); Object.assign(u2, { dept: '事務課', task: '受注入力', place: '2階 事務室', time: '14:00〜14:30', shift: '日勤', workers: '約10名', observation: '10席を巡回、約20分', hearing: '従業員3名', jobs: ['事務・情報機器作業'] });
+  u2.ratings = {
+    A1: { r: 'na', note: '持ち上げ・前かがみを伴う作業なし' }, B1: { r: 'na', note: '重量物の取扱いなし' }, B2: { r: 'na', note: '重量物の取扱いなし' },
+    A3: { r: 'partial', note: '入力が続く午後は1時間以上座りっぱなしになることがあると3名中2名' },
+    C2: { r: 'good', note: '全席で座面高さ・背もたれ調整可。足台の貸出あり' },
+    C3: { r: 'improve', note: '10席中6席でノートPCを単体使用し、画面が目の高さより大きく下', sev: '中', exp: '大', scope: '大', kind: 'すぐできる改善' },
+    D2: { r: 'good', note: '机上の照度は企業の測定記録で基準以上。窓際の映り込みなし' },
+    F2: { r: 'partial', note: '電話の取次ぎが入力中に1時間あたり数回入る' },
+    'X-OF2': { r: 'improve', note: '外付けキーボード・スタンドの貸与制度はあるが3名とも知らなかった', sev: '小', exp: '大', scope: '大', kind: 'すぐできる改善' }
+  };
+  v.units = [u1, u2];
+  v.people = [{ id: uid(), code: 'P-01', unitId: u1.id, consent: true, ratings: {
+    P1: { r: 'improve', note: '梱包台が肘より約15cm低い。天板を置く調整で前かがみが減ることを本人と確認', opinion: '梱包台が低くて腰を曲げたままになる', share: true },
+    P4: { r: 'partial', note: 'テープカッターを利き手側に移動', share: false },
+    P6: { r: 'improve', note: '最下段の重量ケースの取り出しが多い', share: true } } }];
+  return v;
+}
+
+/* ---------- events ---------- */
+function setPath(obj, path, val) {
+  var ks = path.split('.'); var o = obj;
+  for (var i = 0; i < ks.length - 1; i++) { var k = ks[i]; if (o[k] == null) o[k] = {}; o = o[k]; }
+  o[ks[ks.length - 1]] = val;
+}
+function rerenderCard(path) {
+  var v = visit(); var m;
+  if ((m = path.match(/^units\.(\d+)\.ratings\.([^.]+)\./))) {
+    var u = v.units[+m[1]]; var it = itemById[m[2]]; var el = $('card_' + m[2]);
+    if (el && it) { var tmp = document.createElement('div'); tmp.innerHTML = unitCard(u, it); el.replaceWith(tmp.firstChild); }
+    var items = unitItems(u); var done = items.filter(function (x) { var rt = u.ratings[x.id]; return rt && rt.r; }).length;
+    var pg = $('prog'); if (pg) pg.textContent = '入力 ' + done + ' / ' + items.length;
+  } else if ((m = path.match(/^people\.(\d+)\.ratings\.([^.]+)\./))) {
+    var el2 = $('pcard_' + m[2]); var rt = v.people[+m[1]].ratings[m[2]] || {}; if (el2) el2.dataset.r = rt.r || '';
+  } else render();
+}
+
+document.addEventListener('input', function (e) {
+  var t = e.target; var path = t.dataset && t.dataset.path; if (!path || !visit()) return;
+  if (t.type === 'checkbox' || t.tagName === 'SELECT') return;
+  setPath(visit(), path, t.value); touch();
+  if (/\.note$/.test(path)) { var card = t.closest('.card'); var w = card && card.querySelector('.notewarn'); if (w) w.hidden = !!t.value.trim(); }
+  if (path === 'company' || path === 'site') { var n = document.querySelector('.vhead .name'); if (n) n.textContent = (visit().company || '名称未設定の訪問') + (visit().site ? ' ' + visit().site : ''); }
+});
+document.addEventListener('change', function (e) {
+  var t = e.target; var v = visit();
+  if (t.dataset.act === 'fshort') { S.onlyShort = t.checked; render(); return; }
+  if (t.dataset.act === 'fempty') { S.onlyEmpty = t.checked; render(); return; }
+  if (!v) return;
+  if (t.dataset.rate) { setPath(v, t.dataset.rate, t.value); touch(); rerenderCard(t.dataset.rate); return; }
+  if (t.dataset.job) {
+    var u = v.units[S.unit]; var j = t.dataset.job; var i = u.jobs.indexOf(j);
+    if (t.checked && i < 0) u.jobs.push(j); if (!t.checked && i >= 0) u.jobs.splice(i, 1);
+    touch(); render(); return;
+  }
+  var path = t.dataset.path; if (!path) return;
+  if (t.type === 'checkbox') setPath(v, path, t.checked);
+  else if (t.tagName === 'SELECT') setPath(v, path, t.value);
+  else return;
+  touch();
+  if (t.dataset.rerender) { if (/^people\.\d+\.consent$/.test(path)) render(); else rerenderCard(path); }
+});
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
+  var act = b.dataset.act, val = b.dataset.v, v = visit();
+  if (act === 'home') { S.cur = null; render(); window.scrollTo(0, 0); }
+  else if (act === 'new') { var id = 'v' + uid(); S.visits[id] = newVisit(); S.cur = id; S.tab = 'info'; S.unit = 0; S.person = 0; touch(id); render(); }
+  else if (act === 'sample') { var sid = 'v' + uid(); S.visits[sid] = sampleVisit(); S.cur = sid; S.tab = 'analysis'; S.unit = 0; S.person = 0; touch(sid); render(); window.scrollTo(0, 0); }
+  else if (act === 'open') { S.cur = val; S.tab = 'units'; S.unit = 0; S.person = 0; render(); window.scrollTo(0, 0); }
+  else if (act === 'tab') { S.tab = val; render(); window.scrollTo(0, 0); }
+  else if (act === 'unit') { S.unit = +val; render(); }
+  else if (act === 'addunit') { v.units.push(newUnit()); S.unit = v.units.length - 1; touch(); render(); }
+  else if (act === 'person') { S.person = +val; render(); }
+  else if (act === 'addperson') { v.people = v.people || []; v.people.push({ id: uid(), code: 'P-' + String(v.people.length + 1).padStart(2, '0'), unitId: '', consent: false, ratings: {} }); S.person = v.people.length - 1; touch(); render(); }
+  else if (act === 'askdel' || act === 'askdelunit' || act === 'askdelperson') {
+    var row = $(act === 'askdel' ? 'delrow' : act === 'askdelunit' ? 'delunitrow' : 'delpersonrow');
+    var what = { askdel: 'この訪問記録をすべて削除します。元に戻せません。', askdelunit: 'この評価単位と入力した評価を削除します。', askdelperson: 'この個人評価を削除します。' }[act];
+    row.innerHTML = '<span class="confirm">' + what + ' <button class="btn danger" data-act="' + act.replace('ask', 'do') + '">削除する</button><button class="btn" data-act="cancel">やめる</button></span>';
+  }
+  else if (act === 'cancel') render();
+  else if (act === 'dodel') { removeVisit(S.cur); S.cur = null; render(); }
+  else if (act === 'dodelunit') { v.units.splice(S.unit, 1); S.unit = 0; touch(); render(); }
+  else if (act === 'dodelperson') { v.people.splice(S.person, 1); S.person = 0; touch(); render(); }
+  else if (act === 'jump') { S.tab = 'units'; S.unit = +b.dataset.u; S.onlyShort = false; S.onlyEmpty = false; render(); var c = $('card_' + val); if (c) { c.scrollIntoView({ block: 'center' }); var ta = c.querySelector('textarea'); if (ta) ta.focus({ preventScroll: true }); } }
+  else if (act === 'ai') runAI();
+  else if (act === 'aistop') { if (S.aiCtl) S.aiCtl.abort(); }
+  else if (act === 'dlcsv' || act === 'dlmd') {
+    var name = (v.company || '訪問') + '_' + (v.date || today());
+    var req = act === 'dlcsv' ? { filename: name + '_評価結果.csv', data: new Blob([csvOut(v)], { type: 'text/csv' }) } : { filename: name + '_報告書下書き.md', data: reportMd(v) };
+    S.downloads.save(req).catch(function (er) { if (er && er.code !== 'declined') banner('保存できませんでした(' + (er && er.code) + ')。「報告書の下書きをコピー」をご利用ください。'); });
+  }
+  else if (act === 'copymd') {
+    var box = $('mdbox');
+    var done = function () { b.textContent = 'コピーしました'; setTimeout(function () { b.textContent = '報告書の下書きをコピー'; }, 1600); };
+    try { navigator.clipboard.writeText(box.value).then(done, function () { box.select(); }); } catch (er) { box.select(); }
+  }
+});
+
+// tooltip for map cells
+var tip = $('tip');
+function showTip(el) { var r = el.getBoundingClientRect(); tip.textContent = el.dataset.tip; tip.hidden = false;
+  var x = Math.min(r.left, window.innerWidth - tip.offsetWidth - 8); tip.style.left = Math.max(8, x) + 'px';
+  var y = r.top - tip.offsetHeight - 6; tip.style.top = (y < 8 ? r.bottom + 6 : y) + 'px'; }
+document.addEventListener('mouseover', function (e) { var c = e.target.closest('.cell[data-tip]'); if (c) showTip(c); else tip.hidden = true; });
+document.addEventListener('focusin', function (e) { var c = e.target.closest && e.target.closest('.cell[data-tip]'); if (c) showTip(c); else tip.hidden = true; });
+window.addEventListener('scroll', function () { tip.hidden = true; }, { passive: true });
+
+render();
+boot();
+})();
+</script>
