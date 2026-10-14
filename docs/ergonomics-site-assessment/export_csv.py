@@ -2,7 +2,8 @@ import csv, re, sys, os
 src, outdir = sys.argv[1], sys.argv[2]
 s = open(src, encoding='utf-8').read()
 names = {'standard':'01_評価表_標準版','addon':'02_評価表_職種別追加項目','header':'03_訪問記録_ヘッダー',
-         'critical':'04_重大懸念記録','hearing':'05_ヒアリング質問','action':'06_アクションプラン','mapping':'07_既存項目の扱い'}
+         'critical':'04_重大懸念記録','hearing':'05_ヒアリング質問','action':'06_アクションプラン','mapping':'07_既存項目の扱い',
+         'individual':'08_個人評価票','selfcheck':'09_本人用セルフチェック','individual_plan':'10_個別調整プラン'}
 os.makedirs(outdir, exist_ok=True)
 for key, name in names.items():
     m = re.search(r'<!-- TABLE:%s -->\n(.*?)<!-- /TABLE:%s -->' % (key, key), s, re.S)
