@@ -35,7 +35,7 @@ export const SOURCE_LABEL: Record<SourceType, string> = {
 };
 
 /** 列仕様が未確認で、列マッピング確定が必要な種別 */
-export const MAPPING_REQUIRED: SourceType[] = ["IBOW_SALES_CSV", "IBOW_IMPLEMENTATION_XLSX", "ZEST_METRICS_ZIP"];
+export const MAPPING_REQUIRED: SourceType[] = ["IBOW_SALES_CSV"];
 
 export type Severity = "ERROR" | "WARNING" | "INFO";
 

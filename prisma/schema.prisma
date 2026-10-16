@@ -391,6 +391,8 @@ model VisitRecord {
   jobType     JobType?
   subjectKey  String?
   minutes     Int?
+  /// 訪問種別（iBow: 介護 / 医療 / 予防 / サ(自)）
+  category    String?
   cancelled   Boolean     @default(false)
   fingerprint String      @unique
 

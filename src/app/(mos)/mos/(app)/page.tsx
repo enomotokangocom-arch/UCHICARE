@@ -4,8 +4,8 @@ import { requireUser } from "@/mos/server/auth";
 import { getDb } from "@/mos/server/db";
 import { dataFreshness, hasOrigin, listSnapshots, originFromParam, reviewStats } from "@/mos/server/queries";
 import { viewPLForRole } from "@/mos/domain/view";
-import { JOB_TYPE_LABEL, UNIT_LABEL, type BusinessUnit } from "@/mos/domain/types";
-import { METRIC_KEYS } from "@/mos/domain/parsers/mapped";
+import { UNIT_LABEL, type BusinessUnit } from "@/mos/domain/types";
+import { ZEST_METRIC_LABEL } from "@/mos/domain/parsers/zest";
 import { SampleBanner, StatusBadge } from "@/mos/ui/Badges";
 import { Card, Notice, PageHeader } from "@/mos/ui/Card";
 import { MonthPicker } from "@/mos/ui/MonthPicker";
@@ -194,52 +194,72 @@ export default async function DashboardPage(props: PageProps<"/mos">) {
             <div>
               <dt className="text-xs text-slate-500">訪問予定（ZEST）</dt>
               <dd className="text-lg font-semibold tabular-nums">
-                {kpi.visits.scheduled === null
-                  ? kpi.zestMetrics.VISITS_PLANNED !== undefined
-                    ? `${num(kpi.zestMetrics.VISITS_PLANNED)}件`
-                    : "データなし"
-                  : `${num(kpi.visits.scheduled)}件`}
+                {kpi.visits.scheduled === null ? "データなし" : `${num(kpi.visits.scheduled)}件`}
               </dd>
             </div>
             <div>
               <dt className="text-xs text-slate-500">キャンセル件数</dt>
               <dd className="tabular-nums">
-                実績側 {kpi.visits.cancelledActualSource === null ? "—" : `${num(kpi.visits.cancelledActualSource)}件`} ／ 予定側{" "}
-                {kpi.visits.cancelledScheduleSource === null ? (kpi.zestMetrics.VISITS_CANCELLED !== undefined ? `${num(kpi.zestMetrics.VISITS_CANCELLED)}件` : "—") : `${num(kpi.visits.cancelledScheduleSource)}件`}
+                {kpi.visits.cancelledScheduleSource === null ? "データなし" : `${num(kpi.visits.cancelledScheduleSource)}件（ZEST）`}
+                <span className="block text-[11px] text-slate-500">iBow 実施報告書には中止の記録がないため ZEST の値</span>
               </dd>
             </div>
             <div>
               <dt className="text-xs text-slate-500">利用者数</dt>
               <dd className="tabular-nums">
-                訪問看護 {kpi.users.homonkango === null ? "—" : `${num(kpi.users.homonkango)}人`}
+                訪問看護 {kpi.users.homonkango === null ? "—" : `${num(kpi.users.homonkango)}人（実績）`}
+                {kpi.users.zestUsers !== null && kpi.users.zestUsers !== undefined && (
+                  <>
+                    <br />
+                    訪問看護 {num(kpi.users.zestUsers)}人（ZEST予定）
+                  </>
+                )}
                 <br />
                 居宅支援 {kpi.users.kyotaku === null ? "—" : `${num(kpi.users.kyotaku)}人`}
                 <span className="block text-[11px] text-slate-500">居宅は今月請求件数（要介護＋要支援）</span>
               </dd>
             </div>
           </dl>
+          {kpi.byCategory?.length > 0 && (
+            <div className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-600">
+              <p className="mb-1">訪問種別（iBow 実施実績）</p>
+              <ul className="grid grid-cols-2 gap-x-3">
+                {kpi.byCategory.map((c) => (
+                  <li key={c.category}>
+                    {c.category}: {num(c.visits)}件・{num(Math.round(c.minutes / 6) / 10)}時間
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {Object.keys(kpi.zestMetrics).length > 0 && (
             <ul className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-600">
-              {Object.entries(kpi.zestMetrics).map(([k, v]) => (
-                <li key={k}>
-                  ZEST {METRIC_KEYS.find((m) => m.key === k)?.label ?? k}: {num(v)}
-                </li>
-              ))}
+              {Object.entries(kpi.zestMetrics)
+                .filter(([k]) => ZEST_METRIC_LABEL[k] && !["VISITS_PLANNED", "CANCELLATIONS", "USERS"].includes(k))
+                .map(([k, v]) => (
+                  <li key={k}>
+                    ZEST {ZEST_METRIC_LABEL[k]}: {num(v)}
+                  </li>
+                ))}
             </ul>
           )}
         </Card>
 
         <Card title="職種別稼働率">
           {kpi.utilization.length === 0 ? (
-            <p className="text-sm text-slate-600">稼働可能時間が未設定です。{user.role === "ADMIN" && "設定画面で職種別に入力してください。"}</p>
+            <p className="text-sm text-slate-600">
+              データがありません。ZEST 経営指標を取込むか、{user.role === "ADMIN" ? "設定画面で" : ""}職種別の稼働可能時間を入力してください。
+            </p>
           ) : (
             <BarList
-              items={kpi.utilization.map((u) => ({ label: `${JOB_TYPE_LABEL[u.jobType]}（${u.headcount}人）`, value: u.rate }))}
+              items={kpi.utilization.map((u) => ({ label: `${u.label}${u.headcount !== undefined ? `（${u.headcount}人）` : ""}`, value: u.rate }))}
               format={(v) => (v === null ? "データなし" : pct(v))}
               max={1}
             />
           )}
-          <p className="mt-2 text-xs text-slate-500">iBow の実施時間 ÷ 稼働可能時間</p>
+          <p className="mt-2 text-xs text-slate-500">
+            {kpi.utilization[0]?.source === "ZEST" ? "出典: ZEST 経営指標（職員の予定ベース）" : "iBow の実施時間 ÷ 稼働可能時間"}
+          </p>
         </Card>
 
         <Card title="要確認">

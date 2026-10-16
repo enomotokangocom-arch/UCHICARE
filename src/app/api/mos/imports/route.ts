@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/mos/server/auth";
 import { getDb, requireEnv } from "@/mos/server/db";
 import { importFile } from "@/mos/server/importService";
+import { parseYearMonth } from "@/mos/domain/normalize";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -18,7 +19,14 @@ export async function POST(request: Request) {
   const files = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
   if (files.length === 0) return NextResponse.json({ error: "ファイルを選択してください" }, { status: 400 });
 
-  const ctx = { db: getDb(), userId: user.id, origin: "REAL" as const, hashSecret: requireEnv("MOS_HASH_SECRET") };
+  const zestRaw = String(form.get("zestYearMonth") ?? "").trim();
+  let zestYearMonth: string | null = null;
+  if (zestRaw) {
+    const ym = parseYearMonth(zestRaw);
+    if (!ym.ok) return NextResponse.json({ error: `ZEST の対象年月: ${ym.reason}` }, { status: 400 });
+    zestYearMonth = ym.value;
+  }
+  const ctx = { db: getDb(), userId: user.id, origin: "REAL" as const, hashSecret: requireEnv("MOS_HASH_SECRET"), zestYearMonth };
   const results = [];
   for (const file of files) {
     if (file.size > MAX_BYTES) {

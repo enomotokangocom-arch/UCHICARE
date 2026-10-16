@@ -4,9 +4,11 @@ import type { Prisma } from "@/generated/prisma/client";
 import { classifyTx, matchInternalTransfers } from "../domain/classify";
 import { detectSourceType, loadFile, type LoadedFile } from "../domain/detect";
 import type { Sheet } from "../domain/grid";
-import { formatDate, toUtcDate, yearMonthOf } from "../domain/normalize";
+import { formatDate, toUtcDate, yearMonthOf, type CalendarDate } from "../domain/normalize";
 import { parseGmo, parseSendai, type ParsedBankTx } from "../domain/parsers/bank";
+import { parseIbowImplementation, type IbowVisit } from "../domain/parsers/ibowImplementation";
 import { parseKyotaku, type KyotakuMonth } from "../domain/parsers/kyotaku";
+import { parseZest } from "../domain/parsers/zest";
 import {
   aggregateSales,
   applyMapping,
@@ -17,7 +19,7 @@ import {
   type SheetHeaderInfo,
 } from "../domain/parsers/mapped";
 import { parseTrialBalancePages, segmentIntegrityDiffs, type TbParseResult } from "../domain/parsers/trialBalance";
-import { MAPPING_REQUIRED, type Issue, type SourceType } from "../domain/types";
+import { MAPPING_REQUIRED, type Issue, type JobType, type SourceType } from "../domain/types";
 import type { Db } from "./db";
 import { recalculate } from "./recalc";
 import { loadAccounts, loadRules } from "./settings";
@@ -31,6 +33,8 @@ export type ImportContext = {
   hashSecret: string;
   /** 取込後に再計算するか（テストや一括投入では false にできる） */
   recalc?: boolean;
+  /** ZEST 経営指標の対象年月（ファイルに期間が含まれないため利用者が指定する） */
+  zestYearMonth?: string | null;
 };
 
 type Counters = { totalRows: number; importedRows: number; duplicateRows: number; heldRows: number; months: Set<string> };
@@ -190,6 +194,22 @@ async function processLoaded(
       issues.push(...r.issues);
       c.totalRows = r.totalRows;
       await persistTrialBalance(ctx, batchId, r, c, issues);
+      return finalize(ctx, batchId, c, issues);
+    }
+    case "IBOW_IMPLEMENTATION_XLSX": {
+      const r = parseIbowImplementation(sheets, ctx.hashSecret);
+      issues.push(...r.issues);
+      c.totalRows = r.totalRows;
+      await persistVisits(ctx, batchId, "IBOW", "ACTUAL", r.visits.map(ibowToVisit), c, issues);
+      return finalize(ctx, batchId, c, issues);
+    }
+    case "ZEST_METRICS_ZIP": {
+      const r = parseZest(sheets, ctx.zestYearMonth ?? null);
+      issues.push(...r.issues);
+      c.totalRows = r.totalRows;
+      if (!r.issues.some((i) => i.code.startsWith("PERIOD") || i.code === "DAY_CHECK_MISSING")) {
+        await persistMetrics(ctx, batchId, "ZEST", r.metrics.map((m) => ({ ...m, yearMonth: ctx.zestYearMonth!, unit: "HOMONKANGO" as const })), c, issues);
+      }
       return finalize(ctx, batchId, c, issues);
     }
     default: {
@@ -495,7 +515,6 @@ async function persistMapped(
   c: Counters,
   issues: Issue[],
 ) {
-  const { db } = ctx;
   const r = applyMapping(sheets, info, spec, { hashSecret: ctx.hashSecret, defaultUnit: "HOMONKANGO" });
   issues.push(...r.issues);
   c.totalRows = r.totalRows;
@@ -512,60 +531,123 @@ async function persistMapped(
     );
   } else if (spec.purpose === "VISITS") {
     const kind = visitSource === "ZEST" ? "SCHEDULED" : "ACTUAL";
-    const closed = await closedMonths(db, ctx.origin);
-    const seen = new Map<string, number>();
-    const rows: Prisma.VisitRecordCreateManyInput[] = [];
-    let held = 0;
-    for (const v of r.visits) {
-      const n = seen.get(v.dupKey) ?? 0;
-      seen.set(v.dupKey, n + 1);
-      if (closed.has(v.yearMonth)) {
-        held++;
-        continue;
-      }
-      rows.push({
-        batchId,
-        origin: ctx.origin,
-        source: visitSource,
-        kind,
-        visitDate: toUtcDate(v.date),
-        yearMonth: v.yearMonth,
-        unit: v.unit,
-        staffKey: v.staffKey,
-        jobType: v.jobType,
-        subjectKey: v.subjectKey,
-        minutes: v.minutes,
-        cancelled: v.status === "CANCELLED",
-        fingerprint: sha256(`${visitSource}|${kind}|${v.dupKey}|${n}`),
-      });
-    }
-    if (held) {
-      c.heldRows += held;
-      issues.push({ severity: "WARNING", code: "CLOSED_MONTH", message: `確定済みの月の訪問記録 ${held} 件は取込んでいません` });
-    }
-    const inserted = rows.length ? (await db.visitRecord.createMany({ data: rows, skipDuplicates: true })).count : 0;
-    c.importedRows += inserted;
-    c.duplicateRows += rows.length - inserted;
-    for (const v of rows) c.months.add(v.yearMonth);
+    await persistVisits(
+      ctx,
+      batchId,
+      visitSource,
+      kind,
+      r.visits.map((v) => ({ ...v, category: null, cancelled: v.status === "CANCELLED" })),
+      c,
+      issues,
+    );
   } else {
-    const closed = await closedMonths(db, ctx.origin);
-    for (const m of r.metrics) {
-      const where = { origin: ctx.origin, source: visitSource, yearMonth: m.yearMonth, unit: m.unit, metricKey: m.metricKey } as const;
-      const active = await db.metricValue.findFirst({ where: { ...where, state: "ACTIVE" } });
-      if (active && active.value === m.value) {
+    await persistMetrics(ctx, batchId, visitSource, r.metrics, c, issues);
+  }
+}
+
+type VisitInput = {
+  date: CalendarDate;
+  yearMonth: string;
+  unit: "HOMONKANGO" | "KYOTAKU";
+  staffKey: string | null;
+  jobType: JobType | null;
+  subjectKey: string | null;
+  minutes: number | null;
+  category: string | null;
+  cancelled: boolean;
+  dupKey: string;
+};
+
+function ibowToVisit(v: IbowVisit): VisitInput {
+  return { ...v, unit: "HOMONKANGO", jobType: null, cancelled: false };
+}
+
+async function persistVisits(
+  ctx: ImportContext,
+  batchId: string,
+  source: "IBOW" | "ZEST",
+  kind: "ACTUAL" | "SCHEDULED",
+  visits: VisitInput[],
+  c: Counters,
+  issues: Issue[],
+) {
+  const closed = await closedMonths(ctx.db, ctx.origin);
+  const seen = new Map<string, number>();
+  const rows: Prisma.VisitRecordCreateManyInput[] = [];
+  let held = 0;
+  for (const v of visits) {
+    const n = seen.get(v.dupKey) ?? 0;
+    seen.set(v.dupKey, n + 1);
+    if (closed.has(v.yearMonth)) {
+      held++;
+      continue;
+    }
+    rows.push({
+      batchId,
+      origin: ctx.origin,
+      source,
+      kind,
+      visitDate: toUtcDate(v.date),
+      yearMonth: v.yearMonth,
+      unit: v.unit,
+      staffKey: v.staffKey,
+      jobType: v.jobType,
+      subjectKey: v.subjectKey,
+      minutes: v.minutes,
+      category: v.category,
+      cancelled: v.cancelled,
+      fingerprint: sha256(`${source}|${kind}|${v.dupKey}|${n}`),
+    });
+  }
+  if (held) {
+    c.heldRows += held;
+    issues.push({ severity: "WARNING", code: "CLOSED_MONTH", message: `確定済みの月の訪問記録 ${held} 件は取込んでいません` });
+  }
+  const inserted = rows.length ? (await ctx.db.visitRecord.createMany({ data: rows, skipDuplicates: true })).count : 0;
+  c.importedRows += inserted;
+  c.duplicateRows += rows.length - inserted;
+  if (rows.length - inserted > 0) {
+    issues.push({ severity: "INFO", code: "DUPLICATE_ROWS", message: `取込済みの訪問記録 ${rows.length - inserted} 件は重複のためスキップしました` });
+  }
+  for (const v of rows) c.months.add(v.yearMonth);
+}
+
+async function persistMetrics(
+  ctx: ImportContext,
+  batchId: string,
+  source: "IBOW" | "ZEST",
+  metrics: { yearMonth: string; unit: "HOMONKANGO" | "KYOTAKU"; metricKey: string; value: number }[],
+  c: Counters,
+  issues: Issue[],
+) {
+  const { db } = ctx;
+  const closed = await closedMonths(db, ctx.origin);
+  let held = 0;
+  for (const m of metrics) {
+    const where = { origin: ctx.origin, source, yearMonth: m.yearMonth, unit: m.unit, metricKey: m.metricKey } as const;
+    const active = await db.metricValue.findFirst({ where: { ...where, state: "ACTIVE" } });
+    if (active && active.value === m.value) {
+      c.duplicateRows++;
+      continue;
+    }
+    if (closed.has(m.yearMonth)) {
+      const heldRows = await db.metricValue.findMany({ where: { ...where, state: "HELD" } });
+      if (heldRows.some((h) => h.value === m.value)) {
         c.duplicateRows++;
         continue;
       }
-      if (closed.has(m.yearMonth)) {
-        c.heldRows++;
-        await db.metricValue.create({ data: { ...where, batchId, value: m.value, state: "HELD" } });
-        continue;
-      }
-      if (active) await db.metricValue.update({ where: { id: active.id }, data: { state: "SUPERSEDED" } });
-      await db.metricValue.create({ data: { ...where, batchId, value: m.value, state: "ACTIVE" } });
-      c.importedRows++;
-      c.months.add(m.yearMonth);
+      held++;
+      await db.metricValue.create({ data: { ...where, batchId, value: m.value, state: "HELD" } });
+      continue;
     }
+    if (active) await db.metricValue.update({ where: { id: active.id }, data: { state: "SUPERSEDED" } });
+    await db.metricValue.create({ data: { ...where, batchId, value: m.value, state: "ACTIVE" } });
+    c.importedRows++;
+    c.months.add(m.yearMonth);
+  }
+  if (held) {
+    c.heldRows += held;
+    issues.push({ severity: "WARNING", code: "CLOSED_MONTH", message: `確定済みの月の指標 ${held} 件は保留しました` });
   }
 }
 

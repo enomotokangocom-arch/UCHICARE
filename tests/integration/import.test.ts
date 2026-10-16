@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { strToU8 } from "fflate";
-import { buildXlsx, gmoRows, kyotakuSheetRows, sendaiRows, trialBalancePages } from "@/mos/testing/fixtures";
+import { strToU8 as u8, zipSync } from "fflate";
+import { buildXlsx, gmoRows, ibowImplementationRows, kyotakuSheetRows, sendaiRows, trialBalancePages, zestCsvFiles } from "@/mos/testing/fixtures";
 import { applyHeldValues, confirmMappingAndImport, importFile, importLoaded } from "@/mos/server/importService";
 import { closeMonth, recalculate, reopenMonth, type SnapshotData } from "@/mos/server/recalc";
 import { ctx, createUser, hasTestDb, resetDb, testDb } from "./helpers";
@@ -175,5 +176,30 @@ describe.skipIf(!hasTestDb)("取込サービス（DB統合）", () => {
     const s = await snapshot("2026-08");
     expect(s!.data.pl.basis).toBe("ESTIMATE");
     expect(s!.data.pl.company.revenue).toBeNull(); // 訪問看護の売上データがないため全社売上は出さない
+  });
+
+  it("iBow 実施実績と ZEST 予定を別々に取込み、ダッシュボード指標に反映する", async () => {
+    const impl = await importFile(ctx(d), "Implementation (2).xlsx", await buildXlsx([{ name: "実施報告書", rows: ibowImplementationRows() }]));
+    expect(impl.status).toBe("SUCCEEDED");
+    const visits = await d.visitRecord.findMany();
+    expect(visits).toHaveLength(6);
+    expect(visits.every((v) => v.source === "IBOW" && v.kind === "ACTUAL" && v.jobType === null)).toBe(true);
+    expect(JSON.stringify(visits)).not.toContain("架空");
+    // 同じファイル（別名）の再取込は重複
+    expect((await importFile(ctx(d), "Implementation (2) コピー.xlsx", await buildXlsx([{ name: "実施報告書", rows: ibowImplementationRows() }]))).status).toBe("DUPLICATE");
+    expect(await d.visitRecord.count()).toBe(6);
+
+    const zip = zipSync(Object.fromEntries(Object.entries(zestCsvFiles({ weekday: 22, holiday: 8 })).map(([k, v]) => [k, u8(v)])));
+    const noPeriod = await importFile(ctx(d), "dashboard-経営指標.zip", zip);
+    expect(noPeriod.status).toBe("FAILED");
+    const zest = await importFile({ ...ctx(d), zestYearMonth: "2026-09" }, "dashboard-経営指標.zip", zip);
+    expect(zest.status).toBe("SUCCEEDED");
+    expect(await d.metricValue.count({ where: { source: "ZEST", yearMonth: "2026-09", metricKey: "VISITS_PLANNED" } })).toBe(1);
+
+    const s = await snapshot("2026-09");
+    expect(s!.data.kpi.visits).toMatchObject({ actual: 6, scheduled: 1500, cancelledScheduleSource: 100 });
+    expect(s!.data.kpi.users).toMatchObject({ homonkango: 4, zestUsers: 250 });
+    expect(s!.data.kpi.utilization[0]).toMatchObject({ source: "ZEST", label: "理学療法士", rate: 0.4 });
+    expect(s!.data.kpi.byCategory.find((c) => c.category === "介護")).toEqual({ category: "介護", visits: 2, minutes: 120 });
   });
 });

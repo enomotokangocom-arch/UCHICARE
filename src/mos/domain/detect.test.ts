@@ -40,7 +40,8 @@ describe("種別の自動判別", () => {
     const f = await loadFile("dashboard-経営指標.zip", zip);
     expect(f.kind).toBe("zip");
     if (f.kind === "zip") expect(f.sheets[0].rows[1]).toEqual(["2026/08", "10"]);
-    expect(detectSourceType("dashboard-経営指標.zip", f)).toMatchObject({ sourceType: "ZEST_METRICS_ZIP", detectedBy: "filename" });
+    // ZEST の形式は実ファイルで確認済みのため、名前だけ一致して内容が違う zip は取込まない
+    expect(detectSourceType("dashboard-経営指標.zip", f)).toMatchObject({ sourceType: "UNKNOWN" });
   });
 
   it("判別できないファイルは UNKNOWN", async () => {

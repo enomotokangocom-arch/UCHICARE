@@ -39,6 +39,11 @@ export function UploadForm() {
         accept=".csv,.xlsx,.pdf,.zip"
         className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2"
       />
+      <label className="block text-sm">
+        <span className="text-slate-700">ZEST 経営指標の対象年月</span>
+        <span className="ml-1 text-xs text-slate-500">（ZEST の zip を取込むときのみ必須。ファイルに期間が含まれないため）</span>
+        <input name="zestYearMonth" type="month" className="mt-1 block rounded-md border border-slate-300 px-2 py-1" />
+      </label>
       <button disabled={pending} className="rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60">
         {pending ? "取込中…" : "取込む"}
       </button>

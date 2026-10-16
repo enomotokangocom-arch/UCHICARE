@@ -54,9 +54,9 @@ describe("業務指標", () => {
       pl,
     });
     expect(k.visits).toMatchObject({ actual: 2, scheduled: 2, cancelledActualSource: 1, cancelledScheduleSource: 1 });
-    expect(k.users).toEqual({ homonkango: 2, kyotaku: 70 });
-    expect(k.utilization.find((u) => u.jobType === "NURSE")!.rate).toBeCloseTo(0.1);
-    expect(k.utilization.find((u) => u.jobType === "PT")!.rate).toBeCloseTo(0.1);
+    expect(k.users).toEqual({ homonkango: 2, kyotaku: 70, zestUsers: null });
+    expect(k.utilization.find((u) => u.label === "看護師")!.rate).toBeCloseTo(0.1);
+    expect(k.utilization.find((u) => u.label === "理学療法士")!).toMatchObject({ rate: 0.1, source: "CAPACITY" });
     expect(k.targets[0]).toMatchObject({ actual: 1100, rate: 1.1 });
     expect(k.targets[1]).toMatchObject({ actual: 2, rate: 0.5 });
   });
@@ -65,9 +65,38 @@ describe("業務指標", () => {
     const k = computeKpi({ yearMonth: "2026-08", visits: [], metrics: [], kyotakuBilledUsers: null, capacity: [{ unit: "HOMONKANGO", jobType: "NURSE", headcount: 1, availableMinutes: 600 }], targets: [{ unit: "COMPANY", metric: "VISITS", value: 10 }], pl });
     expect(k.visits.actual).toBeNull();
     expect(k.visits.scheduled).toBeNull();
-    expect(k.users).toEqual({ homonkango: null, kyotaku: null });
+    expect(k.users).toEqual({ homonkango: null, kyotaku: null, zestUsers: null });
     expect(k.utilization[0].rate).toBeNull();
     expect(k.targets[0].rate).toBeNull();
+  });
+});
+
+describe("ZEST 経営指標の利用", () => {
+  it("予定件数・キャンセル・利用者数・職種別稼働率を ZEST の指標から取る（稼働可能時間が未設定の場合）", () => {
+    const metrics = [
+      { source: "ZEST" as const, metricKey: "VISITS_PLANNED", unit: "HOMONKANGO" as const, value: 1800 },
+      { source: "ZEST" as const, metricKey: "CANCELLATIONS", unit: "HOMONKANGO" as const, value: 170 },
+      { source: "ZEST" as const, metricKey: "USERS", unit: "HOMONKANGO" as const, value: 280 },
+      { source: "ZEST" as const, metricKey: "UTIL_JOB:理学療法士", unit: "HOMONKANGO" as const, value: 0.47 },
+    ];
+    const k = computeKpi({
+      yearMonth: "2026-08",
+      visits: [v({ category: "介護", minutes: 60 }), v({ category: "医療", minutes: 30 }), v({ category: "介護", minutes: null })],
+      metrics,
+      kyotakuBilledUsers: null,
+      capacity: [],
+      targets: [],
+      pl,
+    });
+    expect(k.visits.scheduled).toBe(1800);
+    expect(k.visits.cancelledScheduleSource).toBe(170);
+    expect(k.users.zestUsers).toBe(280);
+    expect(k.utilization).toEqual([{ label: "理学療法士", rate: 0.47, source: "ZEST" }]);
+    expect(k.byCategory).toEqual([
+      { category: "介護", visits: 2, minutes: 60 },
+      { category: "医療", visits: 1, minutes: 30 },
+    ]);
+    expect(k.actualMinutes).toBe(90);
   });
 });
 
