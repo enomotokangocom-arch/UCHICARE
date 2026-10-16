@@ -3,23 +3,14 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import { classifyTx, matchInternalTransfers } from "../domain/classify";
 import { detectSourceType, loadFile, type LoadedFile } from "../domain/detect";
-import type { Sheet } from "../domain/grid";
 import { formatDate, toUtcDate, yearMonthOf, type CalendarDate } from "../domain/normalize";
 import { parseGmo, parseSendai, type ParsedBankTx } from "../domain/parsers/bank";
 import { parseIbowImplementation, type IbowVisit } from "../domain/parsers/ibowImplementation";
+import { parseIbowSales } from "../domain/parsers/ibowSales";
 import { parseKyotaku, type KyotakuMonth } from "../domain/parsers/kyotaku";
 import { parseZest } from "../domain/parsers/zest";
-import {
-  aggregateSales,
-  applyMapping,
-  extractHeaderInfo,
-  headerSignature,
-  validateMapping,
-  type ColumnMappingSpec,
-  type SheetHeaderInfo,
-} from "../domain/parsers/mapped";
 import { parseTrialBalancePages, segmentIntegrityDiffs, type TbParseResult } from "../domain/parsers/trialBalance";
-import { MAPPING_REQUIRED, type Issue, type JobType, type SourceType } from "../domain/types";
+import type { Issue, JobType, SourceType } from "../domain/types";
 import type { Db } from "./db";
 import { recalculate } from "./recalc";
 import { loadAccounts, loadRules } from "./settings";
@@ -111,7 +102,7 @@ export async function importLoaded(
   const name = fileName.normalize("NFC");
 
   const previous = await db.importBatch.findFirst({
-    where: { sha256: hash, origin: ctx.origin, status: { in: ["SUCCEEDED", "PARTIAL", "NEEDS_MAPPING"] } },
+    where: { sha256: hash, origin: ctx.origin, status: { in: ["SUCCEEDED", "PARTIAL"] } },
     orderBy: { createdAt: "asc" },
   });
   if (previous) {
@@ -149,7 +140,7 @@ export async function importLoaded(
       const status = await finalize(ctx, batch.id, newCounters(), detection.issues);
       return { batchId: batch.id, status };
     }
-    const status = await processLoaded(ctx, batch.id, detection.sourceType, loaded, detection.issues, data);
+    const status = await processLoaded(ctx, batch.id, detection.sourceType, loaded, detection.issues);
     return { batchId: batch.id, status };
   } catch (e) {
     console.error("[mos] import failed", e);
@@ -167,7 +158,6 @@ async function processLoaded(
   sourceType: SourceType,
   loaded: LoadedFile,
   issues: Issue[],
-  raw: Uint8Array,
 ): Promise<string> {
   const c = newCounters();
   const sheets = loaded.kind === "xlsx" || loaded.kind === "csv" || loaded.kind === "zip" ? loaded.sheets : [];
@@ -196,6 +186,22 @@ async function processLoaded(
       await persistTrialBalance(ctx, batchId, r, c, issues);
       return finalize(ctx, batchId, c, issues);
     }
+    case "IBOW_SALES_CSV": {
+      const r = parseIbowSales(sheets);
+      issues.push(...r.issues);
+      c.totalRows = r.totalRows;
+      if (r.month) {
+        await persistRevenue(
+          ctx,
+          batchId,
+          "IBOW_SALES",
+          [{ yearMonth: r.month.yearMonth, unit: "HOMONKANGO", amount: r.month.totalAmount, quantity: r.month.users, detail: { byKind: r.month.byKind, users: r.month.users } }],
+          c,
+          issues,
+        );
+      }
+      return finalize(ctx, batchId, c, issues);
+    }
     case "IBOW_IMPLEMENTATION_XLSX": {
       const r = parseIbowImplementation(sheets, ctx.hashSecret);
       issues.push(...r.issues);
@@ -212,44 +218,8 @@ async function processLoaded(
       }
       return finalize(ctx, batchId, c, issues);
     }
-    default: {
-      if (!MAPPING_REQUIRED.includes(sourceType)) throw new Error(`未対応の種別 ${sourceType}`);
-      const info = extractHeaderInfo(sheets);
-      if (info.length === 0) {
-        issues.push({ severity: "ERROR", code: "HEADER_NOT_FOUND", message: "見出し行（列名）が見つかりません" });
-        return finalize(ctx, batchId, c, issues);
-      }
-      const signature = headerSignature(info);
-      const mapping = await ctx.db.columnMapping.findUnique({ where: { sourceType_headerSignature: { sourceType, headerSignature: signature } } });
-      if (!mapping) {
-        await ctx.db.importIssue.createMany({
-          data: [
-            ...issues.map((i) => ({ ...i, batchId })),
-            {
-              batchId,
-              severity: "WARNING",
-              code: "NEEDS_MAPPING",
-              message: "この形式の列仕様は未確定です。列マッピングを確定すると取込まれます（列名以外の値は表示・保存していません）",
-            },
-          ],
-        });
-        await ctx.db.importBatch.update({
-          where: { id: batchId },
-          data: {
-            status: "NEEDS_MAPPING",
-            headerInfo: info as unknown as Prisma.InputJsonValue,
-            rawFile: Buffer.from(raw),
-            warningCount: 1,
-            totalRows: info.reduce((s, x) => s + x.dataRows, 0),
-          },
-        });
-        return "NEEDS_MAPPING";
-      }
-      const spec: ColumnMappingSpec = { purpose: mapping.purpose, fields: mapping.fields as Record<string, string>, valueMaps: mapping.valueMaps as ColumnMappingSpec["valueMaps"] };
-      issues.push({ severity: "INFO", code: "MAPPING_APPLIED", message: `確定済みの列マッピングを適用しました` });
-      await persistMapped(ctx, batchId, sourceType, sheets, info, spec, c, issues);
-      return finalize(ctx, batchId, c, issues, { mapping: { connect: { id: mapping.id } } });
-    }
+    default:
+      throw new Error(`未対応の種別 ${sourceType}`);
   }
 }
 
@@ -503,47 +473,7 @@ async function persistTrialBalance(ctx: ImportContext, batchId: string, r: TbPar
   if (unknown.length) issues.push({ severity: "WARNING", code: "UNKNOWN_ACCOUNT", message: `科目マスタにない科目があります（${unknown.join("、")}）。設定画面で登録してください` });
 }
 
-// ---------- 列マッピング方式 ----------
-
-async function persistMapped(
-  ctx: ImportContext,
-  batchId: string,
-  sourceType: SourceType,
-  sheets: Sheet[],
-  info: SheetHeaderInfo[],
-  spec: ColumnMappingSpec,
-  c: Counters,
-  issues: Issue[],
-) {
-  const r = applyMapping(sheets, info, spec, { hashSecret: ctx.hashSecret, defaultUnit: "HOMONKANGO" });
-  issues.push(...r.issues);
-  c.totalRows = r.totalRows;
-  const visitSource = sourceType === "ZEST_METRICS_ZIP" ? "ZEST" : "IBOW";
-
-  if (spec.purpose === "SALES") {
-    await persistRevenue(
-      ctx,
-      batchId,
-      "IBOW_SALES",
-      aggregateSales(r.sales).map((s) => ({ yearMonth: s.yearMonth, unit: s.unit, amount: s.amount, quantity: s.quantity, detail: null })),
-      c,
-      issues,
-    );
-  } else if (spec.purpose === "VISITS") {
-    const kind = visitSource === "ZEST" ? "SCHEDULED" : "ACTUAL";
-    await persistVisits(
-      ctx,
-      batchId,
-      visitSource,
-      kind,
-      r.visits.map((v) => ({ ...v, category: null, cancelled: v.status === "CANCELLED" })),
-      c,
-      issues,
-    );
-  } else {
-    await persistMetrics(ctx, batchId, visitSource, r.metrics, c, issues);
-  }
-}
+// ---------- 訪問記録・指標 ----------
 
 type VisitInput = {
   date: CalendarDate;
@@ -651,42 +581,6 @@ async function persistMetrics(
   }
 }
 
-/** 列マッピングを確定し、マッピング待ちの取込を実行する */
-export async function confirmMappingAndImport(
-  ctx: ImportContext,
-  batchId: string,
-  spec: ColumnMappingSpec,
-  note: string | null,
-): Promise<{ ok: true; status: string } | { ok: false; errors: string[] }> {
-  const { db } = ctx;
-  const batch = await db.importBatch.findUnique({ where: { id: batchId } });
-  if (!batch || batch.status !== "NEEDS_MAPPING") return { ok: false, errors: ["マッピング待ちの取込ではありません"] };
-  if (!batch.rawFile) return { ok: false, errors: ["元ファイルの保持期限を過ぎています。もう一度アップロードしてください"] };
-  const info = batch.headerInfo as unknown as SheetHeaderInfo[];
-  const errors = validateMapping(spec, info);
-  if (errors.length) return { ok: false, errors };
-
-  const signature = headerSignature(info);
-  const mapping = await db.columnMapping.upsert({
-    where: { sourceType_headerSignature: { sourceType: batch.sourceType, headerSignature: signature } },
-    update: { purpose: spec.purpose, fields: spec.fields, valueMaps: spec.valueMaps, note, confirmedById: ctx.userId, confirmedAt: new Date() },
-    create: { sourceType: batch.sourceType, headerSignature: signature, purpose: spec.purpose, fields: spec.fields, valueMaps: spec.valueMaps, note, confirmedById: ctx.userId },
-  });
-  await db.auditLog.create({ data: { userId: ctx.userId, action: "MAPPING_CONFIRMED", target: mapping.id, detail: { sourceType: batch.sourceType, purpose: spec.purpose } } });
-
-  const loaded = await loadFile(batch.fileName, new Uint8Array(batch.rawFile));
-  const sheets = loaded.kind === "xlsx" || loaded.kind === "csv" || loaded.kind === "zip" ? loaded.sheets : [];
-  const c = newCounters();
-  const issues: Issue[] = [];
-  await persistMapped(ctx, batchId, batch.sourceType as SourceType, sheets, info, spec, c, issues);
-  const status = await finalize(ctx, batchId, c, issues, {
-    mapping: { connect: { id: mapping.id } },
-    rawFile: null,
-    rawPurgedAt: new Date(),
-  });
-  return { ok: true, status };
-}
-
 /** 確定解除後などに、保留（HELD）中の値を反映する */
 export async function applyHeldValues(db: Db, yearMonth: string, userId: string | null) {
   const close = await db.monthClose.findUnique({ where: { yearMonth } });
@@ -718,14 +612,3 @@ export async function applyHeldValues(db: Db, yearMonth: string, userId: string 
   await db.auditLog.create({ data: { userId, action: "HELD_APPLIED", target: yearMonth, detail: { revenue: heldFacts.length, trialBalance: heldTb.length, metrics: heldMetrics.length } } });
   await recalculate(db, { trigger: "MANUAL", origin: "REAL", months: [yearMonth] });
 }
-
-/** 列マッピング待ちのまま保持期限（14日）を過ぎた元ファイルを消去する */
-export async function purgeExpiredRawFiles(db: Db, now = new Date()) {
-  const limit = new Date(now.getTime() - 14 * 86_400_000);
-  const r = await db.importBatch.updateMany({
-    where: { status: "NEEDS_MAPPING", rawFile: { not: null }, createdAt: { lt: limit } },
-    data: { rawFile: null, rawPurgedAt: now },
-  });
-  return r.count;
-}
-

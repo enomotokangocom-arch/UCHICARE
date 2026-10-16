@@ -4,6 +4,7 @@ import { findHeaderRow, readCsv, readXlsx, type Sheet } from "./grid";
 import { compactLabel, normalizeText } from "./normalize";
 import { GMO_HEADERS, SENDAI_HEADERS } from "./parsers/bank";
 import { isIbowImplementation } from "./parsers/ibowImplementation";
+import { isIbowSales } from "./parsers/ibowSales";
 import { isKyotakuWorkbook } from "./parsers/kyotaku";
 import { isTrialBalanceText } from "./parsers/trialBalance";
 import { isZestExport } from "./parsers/zest";
@@ -70,6 +71,7 @@ function bySheets(sheets: Sheet[]): SourceType | null {
   if (sheets.some((s) => findHeaderRow(s, GMO_HEADERS, compactLabel))) return "BANK_GMO";
   if (isKyotakuWorkbook(sheets)) return "KYOTAKU_SALES_XLSX";
   if (isIbowImplementation(sheets)) return "IBOW_IMPLEMENTATION_XLSX";
+  if (isIbowSales(sheets)) return "IBOW_SALES_CSV";
   return null;
 }
 
@@ -105,7 +107,7 @@ export function detectSourceType(fileName: string, loaded: LoadedFile): Detectio
   if (byContent) return { sourceType: byContent, detectedBy: byName === byContent ? "content+filename" : "content", issues };
   if (byName) {
     // 内容で確認できる種別なのに内容が一致しない場合は取込まない
-    const contentCheckable: SourceType[] = ["BANK_GMO", "BANK_SENDAI", "KYOTAKU_SALES_XLSX", "TRIAL_BALANCE_PDF", "IBOW_IMPLEMENTATION_XLSX", "ZEST_METRICS_ZIP"];
+    const contentCheckable: SourceType[] = ["BANK_GMO", "BANK_SENDAI", "KYOTAKU_SALES_XLSX", "TRIAL_BALANCE_PDF", "IBOW_IMPLEMENTATION_XLSX", "ZEST_METRICS_ZIP", "IBOW_SALES_CSV"];
     if (contentCheckable.includes(byName)) {
       issues.push({
         severity: "ERROR",

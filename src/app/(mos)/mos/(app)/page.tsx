@@ -188,7 +188,14 @@ export default async function DashboardPage(props: PageProps<"/mos">) {
         <Card title="訪問・利用者">
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <dt className="text-xs text-slate-500">訪問件数（iBow実施実績）</dt>
+              <dt className="text-xs text-slate-500">
+                訪問件数（iBow実施実績）
+                {kpi.actualPeriod && (
+                  <span className="block text-[11px]">
+                    {Number(kpi.actualPeriod.from.slice(5, 7))}/{Number(kpi.actualPeriod.from.slice(8))}〜{Number(kpi.actualPeriod.to.slice(5, 7))}/{Number(kpi.actualPeriod.to.slice(8))} 分
+                  </span>
+                )}
+              </dt>
               <dd className="text-lg font-semibold tabular-nums">{kpi.visits.actual === null ? "データなし" : `${num(kpi.visits.actual)}件`}</dd>
             </div>
             <div>

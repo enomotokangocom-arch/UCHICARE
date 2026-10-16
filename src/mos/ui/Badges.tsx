@@ -22,7 +22,6 @@ const IMPORT: Record<string, string> = {
   PARTIAL: "bg-amber-50 text-amber-800",
   FAILED: "bg-red-50 text-red-800",
   DUPLICATE: "bg-slate-100 text-slate-600",
-  NEEDS_MAPPING: "bg-violet-50 text-violet-800",
 };
 export const IMPORT_STATUS_LABEL: Record<string, string> = {
   PROCESSING: "処理中",
@@ -30,7 +29,6 @@ export const IMPORT_STATUS_LABEL: Record<string, string> = {
   PARTIAL: "一部エラー",
   FAILED: "失敗",
   DUPLICATE: "重複（取込済）",
-  NEEDS_MAPPING: "列マッピング待ち",
 };
 export function ImportStatusBadge({ status }: { status: string }) {
   return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${IMPORT[status] ?? ""}`}>{IMPORT_STATUS_LABEL[status] ?? status}</span>;

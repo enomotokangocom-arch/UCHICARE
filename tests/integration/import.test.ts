@@ -1,8 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { strToU8 } from "fflate";
 import { strToU8 as u8, zipSync } from "fflate";
-import { buildXlsx, gmoRows, ibowImplementationRows, kyotakuSheetRows, sendaiRows, trialBalancePages, zestCsvFiles } from "@/mos/testing/fixtures";
-import { applyHeldValues, confirmMappingAndImport, importFile, importLoaded } from "@/mos/server/importService";
+import iconv from "iconv-lite";
+import { buildXlsx, gmoRows, ibowImplementationRows, kyotakuSheetRows, salesListCsv, sendaiRows, trialBalancePages, zestCsvFiles } from "@/mos/testing/fixtures";
+import { applyHeldValues, importFile, importLoaded } from "@/mos/server/importService";
 import { closeMonth, recalculate, reopenMonth, type SnapshotData } from "@/mos/server/recalc";
 import { ctx, createUser, hasTestDb, resetDb, testDb } from "./helpers";
 
@@ -143,28 +144,14 @@ describe.skipIf(!hasTestDb)("取込サービス（DB統合）", () => {
     expect(facts.map((f) => f.state)).toEqual(["SUPERSEDED", "ACTIVE"]);
   });
 
-  it("列仕様未確認のファイルは列マッピング待ちになり、確定後に取込まれ、元ファイルは消去される", async () => {
-    const admin = await createUser(d);
-    const csv = "請求年月,利用者氏名,請求額\n2026/08,テスト 太郎,10000\n2026/08,テスト 花子,20000\n";
-    const r = await importFile(ctx(d, admin.id), "SalesList.csv", strToU8(csv));
-    expect(r.status).toBe("NEEDS_MAPPING");
-    const batch = await d.importBatch.findUniqueOrThrow({ where: { id: r.batchId } });
-    expect(batch.rawFile).not.toBeNull();
-    expect(JSON.stringify(batch.headerInfo)).not.toContain("テスト 太郎");
-
-    const bad = await confirmMappingAndImport(ctx(d, admin.id), r.batchId, { purpose: "SALES", fields: { 請求年月: "yearMonth", 利用者氏名: "amount" }, valueMaps: {} }, null);
-    expect(bad.ok).toBe(false);
-
-    const ok = await confirmMappingAndImport(ctx(d, admin.id), r.batchId, { purpose: "SALES", fields: { 請求年月: "yearMonth", 請求額: "amount" }, valueMaps: {} }, "SalesList 確定");
-    expect(ok).toEqual({ ok: true, status: "SUCCEEDED" });
-    const done = await d.importBatch.findUniqueOrThrow({ where: { id: r.batchId } });
-    expect(done.rawFile).toBeNull();
-    expect(await d.revenueFact.findFirst({ where: { source: "IBOW_SALES" } })).toMatchObject({ unit: "HOMONKANGO", yearMonth: "2026-08", amount: 30000 });
-
-    // 同じ列構成の次のファイルには確定済みマッピングが自動適用される
-    const next = await importFile(ctx(d, admin.id), "SalesList (1).csv", strToU8("請求年月,利用者氏名,請求額\n2026/09,テスト 次郎,5000\n"));
-    expect(next.status).toBe("SUCCEEDED");
-    expect(await d.revenueFact.count({ where: { source: "IBOW_SALES", state: "ACTIVE" } })).toBe(2);
+  it("iBow 月次売上を訪問看護の売上（推計）として取込み、利用者別の明細は保存しない", async () => {
+    const r = await importFile(ctx(d), "SalesList.csv", new Uint8Array(iconv.encode(salesListCsv(), "Shift_JIS")));
+    expect(r.status).toBe("SUCCEEDED");
+    const fact = await d.revenueFact.findFirstOrThrow({ where: { source: "IBOW_SALES" } });
+    expect(fact).toMatchObject({ unit: "HOMONKANGO", yearMonth: "2026-09", amount: 220000, quantity: 4, state: "ACTIVE" });
+    expect(JSON.stringify(fact.detail)).not.toContain("9001");
+    const s = await snapshot("2026-09");
+    expect(s!.data.pl.units.HOMONKANGO).toMatchObject({ revenue: 220000, revenueStatus: "ESTIMATED", revenueSource: "OPERATIONAL" });
   });
 
   it("再計算は未確定月だけを対象にし、実行履歴を残す", async () => {
@@ -179,14 +166,19 @@ describe.skipIf(!hasTestDb)("取込サービス（DB統合）", () => {
   });
 
   it("iBow 実施実績と ZEST 予定を別々に取込み、ダッシュボード指標に反映する", async () => {
-    const impl = await importFile(ctx(d), "Implementation (2).xlsx", await buildXlsx([{ name: "実施報告書", rows: ibowImplementationRows() }]));
+    // exceljs は作成日時を書き込むため、同じファイルとして扱うにはバイト列を使い回す
+    const implFile = await buildXlsx([{ name: "実施報告書", rows: ibowImplementationRows() }]);
+    const impl = await importFile(ctx(d), "Implementation (2).xlsx", implFile);
     expect(impl.status).toBe("SUCCEEDED");
     const visits = await d.visitRecord.findMany();
     expect(visits).toHaveLength(6);
     expect(visits.every((v) => v.source === "IBOW" && v.kind === "ACTUAL" && v.jobType === null)).toBe(true);
     expect(JSON.stringify(visits)).not.toContain("架空");
     // 同じファイル（別名）の再取込は重複
-    expect((await importFile(ctx(d), "Implementation (2) コピー.xlsx", await buildXlsx([{ name: "実施報告書", rows: ibowImplementationRows() }]))).status).toBe("DUPLICATE");
+    expect((await importFile(ctx(d), "Implementation (2) コピー.xlsx", implFile)).status).toBe("DUPLICATE");
+    // 作り直したファイル（バイト列は異なるが内容は同じ）は行単位の重複判定でスキップされる
+    const rebuilt = await importFile(ctx(d), "Implementation (2) 再出力.xlsx", await buildXlsx([{ name: "実施報告書", rows: ibowImplementationRows() }]));
+    expect(["SUCCEEDED", "DUPLICATE"]).toContain(rebuilt.status);
     expect(await d.visitRecord.count()).toBe(6);
 
     const zip = zipSync(Object.fromEntries(Object.entries(zestCsvFiles({ weekday: 22, holiday: 8 })).map(([k, v]) => [k, u8(v)])));

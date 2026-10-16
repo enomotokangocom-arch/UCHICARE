@@ -3,7 +3,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getDb } from "@/mos/server/db";
-import { purgeExpiredRawFiles } from "@/mos/server/importService";
 import { recalculate } from "@/mos/server/recalc";
 
 export const runtime = "nodejs";
@@ -21,9 +20,8 @@ function authorized(request: Request): boolean {
 async function run(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const db = getDb();
-  const purged = await purgeExpiredRawFiles(db);
   const r = await recalculate(db, { trigger: "CRON" });
-  return NextResponse.json({ ok: true, months: r.months, runId: r.runId, purgedRawFiles: purged });
+  return NextResponse.json({ ok: true, months: r.months, runId: r.runId });
 }
 
 export const GET = run;

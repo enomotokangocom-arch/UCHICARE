@@ -4,33 +4,23 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/mos/server/auth";
 import { getDb } from "@/mos/server/db";
 import { SOURCE_LABEL, type SourceType } from "@/mos/domain/types";
-import type { MappingPurpose, SheetHeaderInfo } from "@/mos/domain/parsers/mapped";
 import { ImportStatusBadge } from "@/mos/ui/Badges";
-import { Card, Notice, PageHeader } from "@/mos/ui/Card";
+import { Card, PageHeader } from "@/mos/ui/Card";
 import { dateTime, num } from "@/mos/ui/format";
-import { MappingForm } from "./MappingForm";
 
 export const metadata: Metadata = { title: "取込詳細" };
 
-const PURPOSES: Partial<Record<SourceType, MappingPurpose[]>> = {
-  IBOW_SALES_CSV: ["SALES"],
-  IBOW_IMPLEMENTATION_XLSX: ["VISITS"],
-  ZEST_METRICS_ZIP: ["VISITS", "METRICS"],
-};
 const SEVERITY = { ERROR: "エラー", WARNING: "警告", INFO: "情報" } as const;
 
 export default async function ImportDetailPage(props: PageProps<"/mos/imports/[id]">) {
-  const user = await requireUser(["ADMIN", "MANAGER"]);
+  await requireUser(["ADMIN", "MANAGER"]);
   const { id } = await props.params;
   const db = getDb();
   const batch = await db.importBatch.findUnique({
     where: { id },
-    omit: { rawFile: true },
-    include: { issues: { orderBy: [{ severity: "asc" }, { rowNumber: "asc" }] }, uploadedBy: { select: { name: true } }, mapping: true },
+    include: { issues: { orderBy: [{ severity: "asc" }, { rowNumber: "asc" }] }, uploadedBy: { select: { name: true } } },
   });
   if (!batch) notFound();
-  const info = (batch.headerInfo ?? []) as unknown as SheetHeaderInfo[];
-  const purposes = PURPOSES[batch.sourceType as SourceType];
 
   return (
     <>
@@ -91,26 +81,6 @@ export default async function ImportDetailPage(props: PageProps<"/mos/imports/[i
           </p>
         )}
       </Card>
-
-      {batch.status === "NEEDS_MAPPING" && purposes && (
-        <div className="mt-4">
-          <Card title="列マッピング（列仕様の確定）">
-            <p className="mb-3 text-sm text-slate-700">
-              この形式は列の意味がまだ確定していません。各列の意味を指定してください。指定しなかった列は取込まず保存もしません。
-              利用者ID・職員IDはハッシュ化して保存します（氏名・住所・医療情報は保存できません）。
-            </p>
-            {user.role === "ADMIN" ? (
-              batch.rawPurgedAt ? (
-                <Notice tone="warn">元ファイルの保持期限（14日）を過ぎたため消去しました。もう一度アップロードしてください。</Notice>
-              ) : (
-                <MappingForm batchId={batch.id} purposes={purposes} info={info} />
-              )
-            ) : (
-              <Notice>列マッピングの確定は経営者（管理者）が行います。</Notice>
-            )}
-          </Card>
-        </div>
-      )}
 
       <div className="mt-4">
         <Card title={`エラーログ・メッセージ（${batch.issues.length}件）`}>

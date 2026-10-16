@@ -206,3 +206,36 @@ export function zestCsvFiles(days = { weekday: 21, holiday: 10 }): Record<string
     "dashboard-経営指標/曜日別　訪問状況.csv": "曜日,訪問件数,訪問時間,移動時間\n月曜日,1,1,1\n",
   };
 }
+
+/** iBow SalesList.csv（1〜2行目に事業所名・提供月、3行目が見出し、最終行が合計行）。数値・IDは架空 */
+export function salesListCsv(opts?: { brokenTotal?: boolean; month?: string }): string {
+  const header = ["利用者ID", "医療提供回数", "医療総金額", "医療給付割合", "医療自己負担額", "在宅がん医療総合診療料金額", "医療公費番号1", "医療公費番号2", "介護提供回数", "介護総単位数", "介護総金額", "介護給付割合", "介護自己負担単位数", "介護自己負担額", "介護公費番号1", "介護公費番号2", "予防提供回数", "予防総単位数", "予防総金額", "予防給付割合", "予防自己負担単位数", "予防自己負担額", "予防公費番号1", "予防公費番号2", "定期巡回提供回数", "定期巡回総単位数", "定期巡回総金額", "定期巡回給付割合", "定期巡回自己負担単位数", "定期巡回自己負担額", "定期巡回公費番号1", "定期巡回公費番号2", "サービス提供回数"];
+  const empty = () => Array(header.length).fill("");
+  const row = (id: string, med: [number, number, number] | null, care: [number, number, number] | null, prev: [number, number, number] | null, kohi = "") => {
+    const r = empty();
+    r[0] = id;
+    if (med) [r[1], r[2], r[3], r[4], r[5], r[6]] = [String(med[0]), String(med[1]), "7割", String(med[2]), "0", kohi];
+    if (care) [r[8], r[9], r[10], r[11], r[12], r[13]] = [String(care[0]), "1000", String(care[1]), "90%", "100", String(care[2])];
+    if (prev) [r[16], r[17], r[18], r[19], r[20], r[21]] = [String(prev[0]), "500", String(prev[1]), "90%", "50", String(prev[2])];
+    return r;
+  };
+  const rows = [
+    row("9001", [5, 50000, 15000], null, null, "54"),
+    row("9002", null, [8, 80000, 8000], null),
+    row("9003", [2, 20000, 6000], [4, 40000, 4000], null),
+    row("9004", null, null, [3, 30000, 3000]),
+  ];
+  const total = empty();
+  [total[1], total[2], total[4], total[5]] = ["7", String(70000 + (opts?.brokenTotal ? 1 : 0)), "21000", "0"];
+  [total[8], total[10], total[13]] = ["12", "120000", "12000"];
+  [total[16], total[18], total[21]] = ["3", "30000", "3000"];
+  total[32] = "";
+  const lines = [
+    ["ステーション名：テスト訪問看護ステーション", ...Array(header.length - 1).fill("")],
+    [`提供月：${opts?.month ?? "2026年09月度"}`, ...Array(header.length - 1).fill("")],
+    header,
+    ...rows,
+    total,
+  ];
+  return lines.map((l) => l.join(",")).join("\r\n") + "\r\n";
+}

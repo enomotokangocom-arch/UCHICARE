@@ -3,11 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { ColumnMappingSpec, MappingPurpose } from "../domain/parsers/mapped";
 import { matchKey, normalizeText, parseYearMonth } from "../domain/normalize";
 import { createSession, deleteSession, hashPassword, requireUser, verifyPassword } from "./auth";
-import { getDb, requireEnv } from "./db";
-import { applyHeldValues, classifyTransactions, confirmMappingAndImport } from "./importService";
+import { getDb } from "./db";
+import { applyHeldValues, classifyTransactions } from "./importService";
 import { NEEDS_REVIEW_WHERE } from "./queries";
 import { closeMonth, recalculate, reopenMonth } from "./recalc";
 import { saveSetting } from "./settings";
@@ -115,54 +114,6 @@ export async function classifyTxAction(_: ActionState, form: FormData): Promise<
   await recalculate(db, { trigger: "MANUAL", origin: tx.origin, months: [...months] });
   revalidatePath("/mos", "layout");
   return { message: "分類を保存しました" };
-}
-
-// ---------- 列マッピング ----------
-
-export async function confirmMappingAction(batchId: string, _: ActionState, form: FormData): Promise<ActionState> {
-  const user = await requireUser(["ADMIN"]);
-  const purpose = str(form, "purpose") as MappingPurpose;
-  if (!["SALES", "VISITS", "METRICS"].includes(purpose)) return { error: "取込目的を選んでください" };
-  const fields: Record<string, string> = {};
-  for (const [k, v] of form.entries()) {
-    if (k.startsWith("field:") && typeof v === "string" && v && v !== "IGNORE") fields[k.slice(6)] = v;
-  }
-  const parseMap = (name: string) => {
-    const out: Record<string, string> = {};
-    for (const line of String(form.get(name) ?? "").split(/\r?\n/)) {
-      const [raw, target] = line.split(/=|＝/).map((s) => normalizeText(s));
-      if (raw && target) out[raw] = target;
-    }
-    return out;
-  };
-  const spec: ColumnMappingSpec = {
-    purpose,
-    fields,
-    valueMaps: {
-      status: parseMap("map:status") as ColumnMappingSpec["valueMaps"]["status"],
-      jobType: parseMap("map:jobType") as ColumnMappingSpec["valueMaps"]["jobType"],
-      unit: parseMap("map:unit") as ColumnMappingSpec["valueMaps"]["unit"],
-    },
-  };
-  const allowed = {
-    status: ["DONE", "PLANNED", "CANCELLED"],
-    jobType: ["NURSE", "PT", "OT", "ST", "CARE_MANAGER", "OTHER"],
-    unit: ["HOMONKANGO", "KYOTAKU"],
-  } as const;
-  for (const [k, list] of Object.entries(allowed)) {
-    const m = spec.valueMaps[k as keyof typeof allowed] ?? {};
-    const bad = Object.values(m).filter((x) => !(list as readonly string[]).includes(x));
-    if (bad.length) return { error: `値の対応表（${k}）に使えない値があります: ${bad.join(", ")}` };
-  }
-  const r = await confirmMappingAndImport(
-    { db: getDb(), userId: user.id, origin: "REAL", hashSecret: requireEnv("MOS_HASH_SECRET") },
-    batchId,
-    spec,
-    str(form, "note") || null,
-  );
-  if (!r.ok) return { errors: r.errors };
-  revalidatePath("/mos", "layout");
-  return { message: `取込みました（${r.status}）` };
 }
 
 // ---------- 月次確定 ----------

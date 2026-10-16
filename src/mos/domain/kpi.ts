@@ -11,6 +11,8 @@ export type VisitLite = {
   minutes: number | null;
   subjectKey: string | null;
   category?: string | null;
+  /** 訪問日 YYYY-MM-DD（実績の対象期間の表示に使う） */
+  date?: string;
 };
 
 export type KpiInput = {
@@ -48,6 +50,8 @@ export type MonthKpi = {
   /** iBow 実施実績の訪問種別（介護・医療・予防・自費）ごとの件数と時間 */
   byCategory: { category: string; visits: number; minutes: number }[];
   actualMinutes: number | null;
+  /** iBow 実施実績に含まれる訪問日の範囲（月の途中までのファイルを見分けるため） */
+  actualPeriod: { from: string; to: string } | null;
   targets: TargetProgress[];
   zestMetrics: Record<string, number>;
 };
@@ -126,6 +130,10 @@ export function computeKpi(input: KpiInput): MonthKpi {
     utilization,
     byCategory: [...catMap.entries()].map(([category, v]) => ({ category, ...v })).sort((a, b) => b.visits - a.visits),
     actualMinutes: ibow.length ? done.reduce((s, v) => s + (v.minutes ?? 0), 0) : null,
+    actualPeriod: (() => {
+      const dates = ibow.map((v) => v.date).filter((d): d is string => Boolean(d)).sort();
+      return dates.length ? { from: dates[0], to: dates[dates.length - 1] } : null;
+    })(),
     targets,
     zestMetrics,
   };

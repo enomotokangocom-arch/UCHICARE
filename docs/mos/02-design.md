@@ -10,11 +10,11 @@
 
 | 方針 | 実装での担保 |
 |---|---|
-| 列名・値を推測しない | 確認済ファイルは見出しラベル起点で読み、検算（合計＝内訳の和など）に通らない行は取込まない。未確認ファイルは列マッピング確定まで取込不可。 |
+| 列名・値を推測しない | すべての取込ファイルを実ファイルで確認し、見出しラベルで形式を検証してから読む。検算（合計＝内訳の和、合計行との一致など）に通らない行・シートは取込まない。ファイルに無い情報（ZEST の対象年月）は利用者が指定し、日数で検算する。 |
 | 推測値を実績として保存しない | 取込テーブル（実績）には **ファイルに書かれていた値だけ** を保存。推計は再計算結果（`MonthlySnapshot`）にのみ存在し、必ず `ESTIMATED` 状態が付く。空欄を 0 で補完しない。試算表の未経過月（全科目0）は保存しない。 |
 | サンプルと実データの区別 | すべての取込データに `origin = REAL / SAMPLE`。画面アップロードは常に `REAL`、サンプルは `npm run mos:seed-sample` のみが作る。集計は origin を混ぜない。サンプル表示中は全画面に警告帯を表示。 |
 | 確定月を無断で書き換えない | `MonthClose` が `CLOSED` の月に関する新しい値は `HELD`（保留）として保存し、計算には使わない。確定解除は管理者のみ・理由必須・監査ログ記録。確定月のスナップショットは再計算しない。 |
-| 個人情報の非表示 | 利用者の氏名・住所・医療情報は **DBに保存しない**（列マッピングで保存対象外、ID列のみ HMAC でハッシュ化）。銀行明細の摘要（個人名を含みうる）は管理者・事務のみ閲覧。職員ロールは集計値のみ。 |
+| 個人情報の非表示 | 利用者の氏名・住所・年齢・公費番号などの医療情報は **DBに保存しない**（取込処理がその列を読まない。利用者ID・職員名は HMAC でハッシュ化）。銀行明細の摘要（個人名を含みうる）は管理者・事務のみ閲覧。職員ロールは集計値のみ。 |
 | 非公式な自動ログインをしない | iBow・ZEST・銀行への自動ログイン／スクレイピングは実装しない。取込はユーザーが公式画面からダウンロードしたファイルのアップロードのみ。 |
 | 毎朝8時の自動再計算 | 再計算は冪等なサービス関数。`/api/mos/cron/recalculate`（`CRON_SECRET` 認証）を JST 8:00（UTC 23:00）に呼ぶ。`vercel.json` に cron 定義、他環境は `npm run mos:recalc` を crontab 等で実行。 |
 
@@ -33,7 +33,7 @@ User ─┬─< ImportBatch ─┬─< ImportIssue
       │                └─< MetricValue          （ZEST経営指標）
       ├─< AuditLog
       └─< MonthClose
-ColumnMapping（未確認ファイルの列マッピング）   ClassificationRule（銀行明細の自動分類）
+ClassificationRule（銀行明細の自動分類）
 AccountTitle（勘定科目マスタ：区分・固定/変動/人件費・直接/共通/本部）
 Target（月次目標） StaffCapacity（職種別稼働可能時間） AppSetting（配賦基準・照合許容差など）
 RecalcRun ─< MonthlySnapshot（月×部門の損益・KPI計算結果）
@@ -44,21 +44,20 @@ RecalcRun ─< MonthlySnapshot（月×部門の損益・KPI計算結果）
 | テーブル | 役割 | 主なカラム / 制約 |
 |---|---|---|
 | `User` | 利用者 | `role: ADMIN（経営者）/ MANAGER（事務・管理者）/ STAFF（職員）`、`passwordHash`(bcrypt) |
-| `ImportBatch` | 取込1回＝1行（取込履歴） | `sourceType`, `sha256`, `origin`, `status: PROCESSING/SUCCEEDED/PARTIAL/FAILED/DUPLICATE/NEEDS_MAPPING`, 件数（取込・重複スキップ・保留・エラー）, 対象期間, `duplicateOfId`, `rawFile`（列マッピング待ちの間のみ保持、取込後に消去）, `headerInfo`（列名と非空件数のみ。値は保持しない） |
+| `ImportBatch` | 取込1回＝1行（取込履歴） | `sourceType`, `sha256`, `origin`, `status: PROCESSING/SUCCEEDED/PARTIAL/FAILED/DUPLICATE`, 件数（取込・重複スキップ・保留・エラー）, 対象期間, `duplicateOfId`。元ファイルは保存しない |
 | `ImportIssue` | エラーログ | `severity: ERROR/WARNING/INFO`, シート名, 行番号, 列, コード, メッセージ（値は個人情報を含まない形でのみ記録） |
 | `BankAccount` | 口座 | `bank: GMO/SENDAI`, `accountKey`（口座識別子の SHA-256）, `last4` |
 | `BankTransaction` | 銀行明細 | `fingerprint`（UNIQUE：銀行・口座・日付・連番・摘要・入出金・残高のハッシュ）→ **重複取込防止**。分類: `category`, `accountTitle`, `unit`, `allocation: DIRECT/COMMON/HQ`, `behavior: LABOR/FIXED/VARIABLE`, `classifiedBy: RULE/MANUAL/TRANSFER_MATCH/NONE`, `transferPairId` |
 | `ClassificationRule` | 自動分類ルール | 優先度, 対象銀行, 入出金方向, 照合フィールド（摘要/メモ）, パターン（NFKC正規化・空白除去後の部分一致）, 付与する分類 |
 | `RevenueFact` | 売上の事実（月×部門） | `source: KYOTAKU_SHEET/IBOW_SALES`, `amount`, `quantity`（件数）, `detail`(JSON: 要介護/要支援/委託の件数・金額), `state: ACTIVE/SUPERSEDED/HELD` |
 | `TrialBalanceLine` | 試算表の科目行 | 会計年度, `yearMonth`（決算仕訳は null）, `segment: COMPANY/HOMONKANGO/KYOTAKU`, 科目名, 金額, `state` |
-| `VisitRecord` | 訪問 | `source: ZEST/IBOW`, `kind: SCHEDULED（予定）/ACTUAL（実施実績）`, 日付, 部門, `staffKey`/`subjectKey`（HMAC）, 職種, 分, `cancelled`, `fingerprint` UNIQUE |
+| `VisitRecord` | 訪問 | `source: ZEST/IBOW`, `kind: SCHEDULED（予定）/ACTUAL（実施実績）`, 日付, 部門, `staffKey`/`subjectKey`（HMAC）, 職種, 分, 訪問種別, `cancelled`, `fingerprint` UNIQUE |
 | `MetricValue` | ZEST等の指標値 | 月, 指標キー, 値 |
-| `ColumnMapping` | 列マッピング | `sourceType` + `headerSignature`（列名集合のハッシュ）で UNIQUE、`purpose: SALES/VISITS/METRICS`, `fields`(列名→項目), `valueMaps`(状態・職種・部門の値対応), 確定者・確定日時 |
 | `AccountTitle` | 勘定科目マスタ | `section`（売上/売上調整/原価/販管費/営業外収益/営業外費用/特別/小計）, `behavior`, `allocation` |
 | `MonthClose` | 月次確定 | `yearMonth` UNIQUE, `status: OPEN/CLOSED`, 確定者, 解除理由 |
 | `MonthlySnapshot` | 計算結果 | `origin` × `yearMonth` × `unit` UNIQUE, `valueStatus: ESTIMATED/RECONCILED/FINAL`, `data`(JSON) |
 | `Target` / `StaffCapacity` | 目標値 / 職種別稼働可能時間（集計値のみ） | `yearMonth` × 部門 × 指標 UNIQUE |
-| `AuditLog` | 監査ログ | 誰が・いつ・何を（手動分類、確定、確定解除、設定変更、マッピング確定） |
+| `AuditLog` | 監査ログ | 誰が・いつ・何を（手動分類、確定、確定解除、保留値の反映、設定変更） |
 
 ### 2.3 値の状態（推計・照合済・確定）
 
@@ -82,7 +81,7 @@ RecalcRun ─< MonthlySnapshot（月×部門の損益・KPI計算結果）
    | 仙台銀行明細 | 見出し行に `照会口座,番号,勘定日,出金金額（円）,入金金額（円）,残高（円）` | `仙台銀行` を含む |
    | 居宅売上管理表 | xlsx のいずれかのシートに `月間売上表` と `総売上` | `居宅売上` を含む |
    | 試算表PDF | PDF テキストに `残 高 試 算 表`（空白除去後 `残高試算表`）と `損益計算書` | `試算表` を含む |
-   | iBow 月次売上 | （列仕様未確認） | `SalesList*.csv` |
+   | iBow 月次売上 | 見出し行に `利用者ID,医療総金額,介護総金額,予防総金額,…` | `SalesList*.csv` |
    | iBow 訪問実績 | 見出し行に `訪問日,ID,訪問種別,開始時間,提供時間,主訪問者` | `Implementation*.xlsx` |
    | ZEST 経営指標 | zip 内 CSV の見出しに `日別 x 職員の予定(サービスプラン・緊急) 訪問件数_対象期間` | `dashboard-経営指標*.zip` |
 
@@ -124,18 +123,13 @@ RecalcRun ─< MonthlySnapshot（月×部門の損益・KPI計算結果）
   取込後、`COMPANY = HOMONKANGO + KYOTAKU` を科目ごとに検算し差異を照合画面に表示。
 - **iBow 訪問実績**: 見出し行の6列だけを読み `VisitRecord(kind=ACTUAL, source=IBOW)`。利用者ID・主訪問者はハッシュ化。
 - **ZEST 経営指標**: 見出しで CSV を識別し `MetricValue(source=ZEST)`（予定ベース）。対象年月はアップロード時に指定し、日数で検算。
-- **iBow 売上**（列仕様未確認）: 3.4 の列マッピング方式。
+- **iBow 売上**: 2行目の提供月と、保険種類別の総金額・回数・自己負担額を読み、合計行と検算。利用者ID・公費番号は保存しない。
 
-### 3.4 列マッピング方式（未確認ファイル用）
+### 3.4 実ファイル確認前の扱い（廃止済み）
 
-1. アップロード時に、シート（zip の場合は中の CSV）ごとの **列名と非空件数だけ** を抽出して `headerInfo` に保存。値は表示・保存しない。
-2. 状態 `NEEDS_MAPPING`。管理者が取込目的（売上 / 訪問 / 指標）と、各列の意味（日付・ID・職種・時間・状態…／取込まない）を選ぶ。
-   - 列名に `氏名・名前・住所・電話・生年月日・病名・傷病・診断・被保険者番号・保険者番号・メール` を含む列は、
-     「取込まない」か「ID（ハッシュ化して保存）」にしか割り当てられない。
-   - 状態列・職種列・事業所列の **値の対応表** も管理者が入力する（例: `中止`→キャンセル）。対応表に無い値の行はエラー。
-3. 確定したマッピングは `sourceType + 列名集合` で保存され、次回以降の同じ形式のファイルには自動適用。
-4. iBow 訪問実績 → `VisitRecord(kind=ACTUAL, source=IBOW)`、ZEST → `VisitRecord(kind=SCHEDULED, source=ZEST)` または `MetricValue`。
-   **予定と実施実績は別レコード・別指標として集計**し、混同しない。
+当初は未提供だったファイル（iBow・ZEST）向けに、列名だけを表示して管理者が列の意味を指定する「列マッピング方式」を用意したが、
+全ファイルを実物で確認して専用の取込処理に置き換えたため廃止した（`ColumnMapping` テーブルも削除）。
+形式が変わったファイルは見出しの検証でエラーになり、取込まれない。
 
 ### 3.5 銀行明細の分類と二重計上防止
 
@@ -185,7 +179,7 @@ RecalcRun ─< MonthlySnapshot（月×部門の損益・KPI計算結果）
 | `/mos` | 経営ダッシュボード | ○ | ○ | ○（集計値のみ） |
 | `/mos/pl` | 損益計算書（全社・部門別、直接/共通/本部、固定/変動/人件費、状態表示） | ○ | ○ | × |
 | `/mos/imports` | ファイル取込・取込履歴 | ○ | ○ | × |
-| `/mos/imports/[id]` | 取込詳細・エラーログ・列マッピング | ○ | ○（マッピング確定は ADMIN） | × |
+| `/mos/imports/[id]` | 取込詳細・エラーログ | ○ | ○ | × |
 | `/mos/transactions` | 未分類取引の確認・手動分類 | ○ | ○ | × |
 | `/mos/reconciliation` | 試算表との照合差異・確定月の変更候補 | ○ | ○ | × |
 | `/mos/closing` | 月次確定・確定解除 | ○ | × | × |
@@ -228,11 +222,11 @@ RecalcRun ─< MonthlySnapshot（月×部門の損益・KPI計算結果）
 |---|---|---|
 | 0 | 実ファイル解析・データ仕様・本設計書 | 本文書 |
 | 1-a | Prisma スキーマ・マイグレーション・科目マスタ/分類ルール初期データ | `prisma migrate` 成功 |
-| 1-b | 正規化・種別判別・GMO/仙台/居宅/試算表パーサ・列マッピングパーサ | 単体テスト |
-| 1-c | 取込サービス（重複防止・版管理・確定月保護・エラーログ）・取込画面・履歴・マッピング画面 | 統合テスト |
+| 1-b | 正規化・種別判別・GMO/仙台/居宅/試算表パーサ | 単体テスト |
+| 1-c | 取込サービス（重複防止・版管理・確定月保護・エラーログ）・取込画面・履歴 | 統合テスト |
 | 1-d | 銀行明細の自動分類・振替照合・未分類取引画面 | 単体テスト |
 | 2-a | 損益計算（試算表ベース／推計）・配賦・状態判定 | 単体テスト（配賦後合計＝全社 等） |
 | 2-b | 照合差異・月次確定/解除・監査ログ・損益画面 | 統合テスト |
 | 3 | ダッシュボード・権限別表示・サンプルデータ・8時再計算 | 単体テスト＋ビルド成功 |
-| 次段階（未着手） | 未確認ファイル（iBow・ZEST）の確定マッピング登録 → 提供後 | 実ファイルで検証 |
+| 1-e | iBow 実施報告書・iBow 月次売上・ZEST 経営指標の専用取込（実ファイル確認後） | 実ファイルで検証済 |
 | 対象外（Phase 1〜3 完了後） | AI改善提案など | — |

@@ -16,7 +16,6 @@ export default async function ImportsPage() {
     orderBy: { createdAt: "desc" },
     take: 100,
     include: { uploadedBy: { select: { name: true } } },
-    omit: { rawFile: true, headerInfo: true },
   });
   return (
     <>
@@ -33,7 +32,7 @@ export default async function ImportsPage() {
               <li>残高試算表 年間推移・部門別（pdf）</li>
               <li>iBow 実施報告書（Implementation.xlsx）… 実施実績。氏名・住所・年齢は取込みません</li>
               <li>ZEST 経営指標（dashboard-経営指標.zip）… 予定ベースの指標。対象年月の指定が必要です</li>
-              <li>iBow SalesList.csv … 初回は列マッピングの確定が必要です</li>
+              <li>iBow 月次売上（SalesList.csv）… 利用者別の明細は保存せず、保険種類別の合計だけを取込みます</li>
             </ul>
             <p className="mt-2">同じファイルを再度取込んでもデータは重複しません。</p>
           </div>

@@ -34,8 +34,8 @@ describe("業務指標", () => {
     const k = computeKpi({
       yearMonth: "2026-08",
       visits: [
-        v({}),
-        v({ subjectKey: "b", jobType: "PT", minutes: 40 }),
+        v({ date: "2026-08-09" }),
+        v({ subjectKey: "b", jobType: "PT", minutes: 40, date: "2026-08-01" }),
         v({ cancelled: true }),
         v({ source: "ZEST", kind: "SCHEDULED" }),
         v({ source: "ZEST", kind: "SCHEDULED" }),
@@ -54,6 +54,7 @@ describe("業務指標", () => {
       pl,
     });
     expect(k.visits).toMatchObject({ actual: 2, scheduled: 2, cancelledActualSource: 1, cancelledScheduleSource: 1 });
+    expect(k.actualPeriod).toEqual({ from: "2026-08-01", to: "2026-08-09" });
     expect(k.users).toEqual({ homonkango: 2, kyotaku: 70, zestUsers: null });
     expect(k.utilization.find((u) => u.label === "看護師")!.rate).toBeCloseTo(0.1);
     expect(k.utilization.find((u) => u.label === "理学療法士")!).toMatchObject({ rate: 0.1, source: "CAPACITY" });
@@ -97,6 +98,7 @@ describe("ZEST 経営指標の利用", () => {
       { category: "医療", visits: 1, minutes: 30 },
     ]);
     expect(k.actualMinutes).toBe(90);
+    expect(k.actualPeriod).toBeNull();
   });
 });
 

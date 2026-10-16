@@ -34,9 +34,6 @@ export const SOURCE_LABEL: Record<SourceType, string> = {
   UNKNOWN: "不明",
 };
 
-/** 列仕様が未確認で、列マッピング確定が必要な種別 */
-export const MAPPING_REQUIRED: SourceType[] = ["IBOW_SALES_CSV"];
-
 export type Severity = "ERROR" | "WARNING" | "INFO";
 
 export type Issue = {

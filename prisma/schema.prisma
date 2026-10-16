@@ -39,7 +39,6 @@ enum ImportStatus {
   PARTIAL
   FAILED
   DUPLICATE
-  NEEDS_MAPPING
 }
 
 enum Severity {
@@ -158,12 +157,6 @@ enum JobType {
   OTHER
 }
 
-enum MappingPurpose {
-  SALES
-  VISITS
-  METRICS
-}
-
 enum TargetMetric {
   REVENUE
   OPERATING_PROFIT
@@ -195,7 +188,6 @@ model User {
   imports  ImportBatch[]
   audits   AuditLog[]
   closes   MonthClose[]
-  mappings ColumnMapping[]
 }
 
 model AuditLog {
@@ -232,13 +224,6 @@ model ImportBatch {
   periodStart   String? // YYYY-MM
   periodEnd     String?
   duplicateOfId String?
-  /// 列マッピング待ちの間だけ保持。取込完了で消去する。
-  rawFile       Bytes?
-  rawPurgedAt   DateTime?
-  /// 列名と非空件数のみ（値は保持しない）
-  headerInfo    Json?
-  mappingId     String?
-  mapping       ColumnMapping? @relation(fields: [mappingId], references: [id])
 
   issues        ImportIssue[]
   transactions  BankTransaction[]
@@ -263,24 +248,6 @@ model ImportIssue {
   column    String?
 
   @@index([batchId])
-}
-
-model ColumnMapping {
-  id              String         @id @default(cuid())
-  sourceType      SourceType
-  headerSignature String
-  purpose         MappingPurpose
-  /// { "列名": "項目キー" }
-  fields          Json
-  /// { "status": {"中止": "CANCELLED"}, "jobType": {...}, "unit": {...} }
-  valueMaps       Json
-  note            String?
-  confirmedById   String?
-  confirmedBy     User?          @relation(fields: [confirmedById], references: [id])
-  confirmedAt     DateTime       @default(now())
-  batches         ImportBatch[]
-
-  @@unique([sourceType, headerSignature])
 }
 
 model BankAccount {

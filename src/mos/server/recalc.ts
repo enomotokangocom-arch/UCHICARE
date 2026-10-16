@@ -69,7 +69,7 @@ export async function computeMonth(db: Db, origin: Origin, yearMonth: string, cl
 
   const kpi = computeKpi({
     yearMonth,
-    visits: visits.map((v) => ({ source: v.source, kind: v.kind, unit: v.unit, jobType: v.jobType, cancelled: v.cancelled, minutes: v.minutes, subjectKey: v.subjectKey, category: v.category })),
+    visits: visits.map((v) => ({ source: v.source, kind: v.kind, unit: v.unit, jobType: v.jobType, cancelled: v.cancelled, minutes: v.minutes, subjectKey: v.subjectKey, category: v.category, date: v.visitDate.toISOString().slice(0, 10) })),
     metrics: metrics.map((m) => ({ source: m.source, metricKey: m.metricKey, unit: m.unit, value: m.value })),
     kyotakuBilledUsers,
     capacity: capacity.map((c) => ({ unit: c.unit, jobType: c.jobType, headcount: c.headcount, availableMinutes: c.availableMinutes })),
