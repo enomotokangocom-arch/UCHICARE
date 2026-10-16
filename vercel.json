@@ -1,0 +1,3 @@
+{
+  "crons": [{ "path": "/api/mos/cron/recalculate", "schedule": "0 23 * * *" }]
+}

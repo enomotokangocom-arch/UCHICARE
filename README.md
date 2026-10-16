@@ -1,5 +1,8 @@
 # UCHICARE
 
+> **Uchi Management OS（`/mos`）** — 訪問看護・居宅介護支援の売上・費用・営業利益を統合する経営管理アプリは
+> 下記「Uchi Management OS」の節を参照してください。以下は既存の健康経営ダッシュボードの説明です。
+
 保健師・療法士・ケアマネジャーが監修する、企業向け健康経営データ可視化ツールのプロトタイプです。
 
 労働環境(エルゴノミクス評価)・ミニストレスチェック・腰痛リスク調査・介護リスク調査(ビジネスケアラー)の4つの調査票をもとに、企業の健康経営指標をダッシュボードで可視化し、チャットで企業課題をキャッチアップします。
@@ -63,3 +66,39 @@ WordPress連携が未設定の場合、承認・自動送信キューの表示�
 - Zustand (状態管理 / localStorage永続化)
 - Recharts (グラフ描画)
 - Claude API (`@anthropic-ai/sdk`) — 企業課題チャットのAI応答
+
+---
+
+## Uchi Management OS（`/mos`）
+
+株式会社Uchi care の訪問看護事業・居宅介護支援事業の売上・費用・営業利益を統合し、職員が経営状況を理解できるようにする管理会計アプリです。
+
+- 設計書: [`docs/mos/02-design.md`](docs/mos/02-design.md)（DB設計・画面構成・取込仕様・実装計画）
+- データ仕様: [`docs/mos/01-data-spec.md`](docs/mos/01-data-spec.md)（実ファイルの解析結果）
+
+### セットアップ
+
+```bash
+npm install                      # prisma generate も実行されます
+cp .env.local.example .env       # DATABASE_URL・MOS_SESSION_SECRET・MOS_HASH_SECRET・CRON_SECRET を設定
+npm run db:migrate               # マイグレーション適用
+npx prisma db seed               # 勘定科目マスタ・分類ルールの初期データ
+npm run mos:create-user -- --email you@example.com --name 氏名 --role ADMIN   # パスワードは対話入力
+npm run dev                      # http://localhost:3000/mos
+```
+
+画面確認用の架空データは `npm run mos:seed-sample` で投入できます（`origin=SAMPLE` として実データと分離。ダッシュボードの「サンプルデータを表示」で切替）。
+
+### 毎朝8時の自動再計算
+
+- Vercel: `vercel.json` の Cron（UTC 23:00 = JST 8:00）が `/api/mos/cron/recalculate` を呼びます。環境変数 `CRON_SECRET` を設定してください。
+- その他の環境: `0 8 * * * cd /path/to/app && TZ=Asia/Tokyo npm run mos:recalc`
+
+### テスト
+
+```bash
+npm run test:db:prepare   # テスト用 DB（DATABASE_URL_TEST）にマイグレーション
+npm test                  # 単体テスト＋DB統合テスト（DATABASE_URL_TEST 未設定なら統合テストはスキップ）
+```
+
+テストのフィクスチャは、実ファイルで確認した構造だけを再現した合成データです。実データ（金額・氏名・口座番号）はリポジトリに含めません。

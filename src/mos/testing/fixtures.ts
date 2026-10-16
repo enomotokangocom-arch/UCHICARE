@@ -1,0 +1,172 @@
+// テスト用フィクスチャ。実ファイルで確認した「構造」だけを再現した合成データ（実在の金額・氏名・口座番号は使わない）。
+import ExcelJS from "exceljs";
+
+type CellInput = string | number | Date | null;
+
+export async function buildXlsx(sheets: { name: string; rows: CellInput[][]; merges?: string[] }[]): Promise<Uint8Array> {
+  const wb = new ExcelJS.Workbook();
+  for (const s of sheets) {
+    const ws = wb.addWorksheet(s.name);
+    s.rows.forEach((row, r) =>
+      row.forEach((v, c) => {
+        if (v !== null && v !== undefined) ws.getCell(r + 1, c + 1).value = v;
+      }),
+    );
+    for (const m of s.merges ?? []) ws.mergeCells(m);
+  }
+  return new Uint8Array(await wb.xlsx.writeBuffer());
+}
+
+/** GMO 明細（日付降順・YYYYMMDD・メモ列あり） */
+export function gmoRows(): CellInput[][] {
+  return [
+    ["日付", "摘要", "入金金額", "出金金額", "残高", "メモ"],
+    ["20260831", "振込手数料", null, 100, 500000, null],
+    ["20260831", "振込 シチジユウシチ ト－ホクガス．カ", null, 2000, 500100, null],
+    ["20260828", "Visaデビット利用 アスクル 承認番号：111111 TID：222222", null, 1500, 502100, "名刺"],
+    ["20260828", "Visaデビット利用 コメダ珈琲店 承認番号：333333 TID：444444", null, 1200, 503600, "会議費"],
+    ["20260827", "振込 センダイ カ）テストフドウサン", null, 80000, 504800, "家賃"],
+    ["20260810", "振込 カ）ウチケア", 1000000, null, 584800, null],
+    ["20260801", "普通預金 利息", 10, null, 4800, null],
+  ];
+}
+
+/** 仙台銀行明細（勘定日昇順・M/D/YYYY・摘要の右に見出し空欄のメモ列） */
+export function sendaiRows(): CellInput[][] {
+  const acct = "テスト支店（999） 普通 0001234";
+  const h = ["照会口座", "番号", "勘定日", "（起算日）", "出金金額（円）", "入金金額（円）", "小切手区分", "残高（円）", "取引区分", "明細区分", "金融機関名", "支店名", "摘要", null];
+  return [
+    h,
+    [acct, 1, "8/3/2026", null, "50,000", null, null, "9,950,000", "出金", null, null, null, "ｾｿﾞﾝ)ﾘ-ｽ", null],
+    [acct, 1, "8/7/2026", null, null, "700,000", null, "10,650,000", "振込", null, "77", "ｹﾝﾁﾖｳ", "ﾐﾔｷﾞｹﾝｺｸﾎﾚﾝ", null],
+    [acct, 1, "8/10/2026", null, "1,000,000", null, null, "9,650,000", "出金", null, null, null, "ATMﾌﾘｺﾐ", null],
+    [acct, 2, "8/10/2026", null, null, "3,000", null, "9,653,000", "入金", null, null, null, null, null],
+    [acct, 3, "8/10/2026", null, "300,000", null, null, "9,353,000", "出金", null, null, null, "ｱﾒﾂｸｽ", "PC"],
+    [acct, 1, "8/17/2026", null, "100,000", null, null, "9,253,000", "出金", null, null, null, "ﾍﾝｻｲｷﾝ 8ｶﾞﾂ", null],
+    [acct, 1, "8/18/2026", null, "5,000,000", null, null, "4,253,000", "出金", null, null, null, "ｷﾕｳﾌﾘｼｷﾝ", null],
+    [acct, 1, "8/27/2026", null, "20,000", null, null, "4,233,000", "出金", null, null, null, "SMBC(ﾃｽﾄｼﾖｳｼﾞ", null],
+    [acct, 2, "8/27/2026", null, "20,000", null, null, "4,213,000", "出金", null, null, null, "SMBC(ﾃｽﾄｼﾖｳｼﾞ", null],
+  ];
+}
+
+type KyotakuMonthInput = {
+  ymLabel: string;
+  care: [number, number, number, number]; // 今月件数, 今月金額, 月後れ件数, 月後れ金額
+  support: [number, number, number, number];
+  commission?: [number, number];
+  certification?: number;
+  totalOverride?: number;
+  newLayout?: boolean;
+};
+
+/**
+ * 居宅売上管理表の月シート。
+ * 旧版: 単価 | 今月(件数,金額) | 月後れ(件数,金額) | 合計(件数,金額)
+ * 新版（令和8年6月〜）: 月後れの前に「月後れ単価」列が1列増える
+ */
+export function kyotakuSheetRows(m: KyotakuMonthInput): { rows: CellInput[][]; merges: string[] } {
+  const sum = (a: number[]) => [a[0], a[1], a[2], a[3], a[0] + a[2], a[1] + a[3]];
+  const careVals = sum(m.care);
+  const supportVals = sum(m.support);
+  const total =
+    m.totalOverride ?? careVals[5] + supportVals[5] + (m.commission?.[1] ?? 0) + (m.certification ?? 0);
+  const L = m.newLayout ? 1 : 0; // 追加列の数
+  const yearlyCol = 10 + L;
+  const row = (label: string, nums: (number | null)[], unitPrice: number | null = null): CellInput[] => {
+    const r: CellInput[] = [null, label, unitPrice];
+    // 今月(件数,金額)
+    r.push(nums[0] ?? null, nums[1] ?? null);
+    if (L) r.push(null); // 月後れ単価
+    r.push(nums[2] ?? null, nums[3] ?? null, nums[4] ?? null, nums[5] ?? null);
+    while (r.length < yearlyCol) r.push(null);
+    return r;
+  };
+  const header1: CellInput[] = [null, "月間売上表"];
+  while (header1.length < yearlyCol) header1.push(null);
+  header1.push("年間売上表");
+  const header2: CellInput[] = [null, m.ymLabel, null, null, null, null, null, "総売上", total];
+  while (header2.length < yearlyCol) header2.push(null);
+  header2.push(null, null, null, null, null, null, null, "総売上", 99999999);
+  const header3: CellInput[] = [null, null, "単価", null, "今月請求", null];
+  if (L) header3.push(null);
+  header3.push("月後れ請求", null, "合計");
+  while (header3.length < yearlyCol) header3.push(null);
+  header3.push(null, null, null, "要介護", null, "要支援", null, "委託", "合計");
+
+  const rows: CellInput[][] = [
+    header1,
+    header2,
+    header3,
+    row("要介護", careVals),
+    row("居宅介護支援費", [m.care[0], m.care[1], m.care[2], m.care[3], m.care[0] + m.care[2], m.care[1] + m.care[3]], 10000),
+    row("加算/減算", [null, 0, null, 0, 0, 0]),
+    row("要支援", supportVals),
+    row("介護予防支援費", [m.support[0], m.support[1], null, 0, m.support[0], m.support[1]], 5000),
+    row("委託連携", [null, 0, null, 0, 0, 0]),
+  ];
+  if (m.commission) {
+    const r: CellInput[] = [null, "委託"];
+    while (r.length < 7 + L) r.push(null);
+    r.push(m.commission[0], m.commission[1]);
+    while (r.length < yearlyCol) r.push(null);
+    rows.push(r);
+  }
+  if (m.certification !== undefined) rows.push(row("認定調査", [null, 0, null, 0, 0, m.certification]));
+  // 右ブロック（年間売上表）の行。左ブロックの読み取りに影響しないことを確認するため値を入れる
+  rows[4].push(null, "1月", 1, 1000, 1, 1000, 0, 0, 2000);
+  // 結合セル: 見出し（今月請求）と「要介護」ラベル（B:C）。exceljs は従属セルにも値を複製するため、
+  // 従属セルを空として扱えていないと数値の並びが崩れる
+  const col = (i: number) => String.fromCharCode(65 + i);
+  const merges = [`${col(4)}3:${col(5)}3`, "B4:C4"];
+  return { rows, merges };
+}
+
+/** 試算表 PDF のテキスト行（部門別3頁分）。金額は合成値 */
+export function trialBalancePages(opts?: { brokenTotal?: boolean; kyotakuRent?: number }): string[][] {
+  const months = "6月度 7月度 8月度 9月度 10月度 11月度 12月度 1月度 2月度 3月度 4月度 5月度 決算仕訳合計 当期合計";
+  const fmt = (n: number) => n.toLocaleString("en-US");
+  const line = (label: string, jun: number, jul: number, aug: number, totalAdj = 0) =>
+    `${label.split("").join(" ")} ${[jun, jul, aug, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].map(fmt).join(" ")} ${fmt(jun + jul + aug + totalAdj)}`;
+  const page = (seg: string, rows: string[]) => [
+    "令和 8年度 残 高 試 算 表 ( 年 間 推 移 ) 1 頁",
+    seg,
+    "株式会社テスト",
+    "損益計算書",
+    "単位： 円",
+    `勘 定 科 目 ${months}`,
+    ...rows,
+    "作成者：テスト会計事務所",
+  ];
+  const rent = opts?.kyotakuRent ?? 80000;
+  return [
+    page("事業所(合計)", [
+      line("訪問看護事業収益", 10000000, 11000000, 12000000),
+      line("居宅介護事業収益", 800000, 850000, 900000),
+      line("返戻等", -100000, -50000, -20000),
+      line("売上高合計", 10700000, 11800000, 12880000),
+      line("役員報酬", 1000000, 1000000, 1000000),
+      line("給料手当", 6000000, 6100000, 6200000, opts?.brokenTotal ? 1 : 0),
+      line("地代家賃", 500000, 500000, 500000),
+      line("通信費", 200000, 200000, 200000),
+      line("販売管理費計", 7700000, 7800000, 7900000),
+      line("営業損益金額", 3000000, 4000000, 4980000),
+      line("支払利息", 50000, 50000, 50000),
+    ]),
+    page("訪問看護", [
+      line("訪問看護事業収益", 10000000, 11000000, 12000000),
+      line("返戻等", -100000, -50000, -20000),
+      line("売上高合計", 9900000, 10950000, 11980000),
+      line("役員報酬", 1000000, 1000000, 1000000),
+      line("給料手当", 5300000, 5400000, 5500000),
+      line("地代家賃", 500000 - rent, 500000 - rent, 500000 - rent),
+      line("通信費", 200000, 200000, 200000),
+      line("支払利息", 50000, 50000, 50000),
+    ]),
+    page("居宅支援", [
+      line("居宅介護事業収益", 800000, 850000, 900000),
+      line("売上高合計", 800000, 850000, 900000),
+      line("給料手当", 700000, 700000, 700000),
+      line("地代家賃", rent, rent, rent),
+    ]),
+  ];
+}

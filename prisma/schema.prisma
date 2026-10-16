@@ -1,0 +1,480 @@
+// Uchi Management OS のデータベース定義
+// 設計: docs/mos/02-design.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN // 経営者
+  MANAGER // 事務・管理者
+  STAFF // 職員（集計値のみ閲覧）
+}
+
+/// 実データかサンプルデータか。集計で混ぜない。
+enum DataOrigin {
+  REAL
+  SAMPLE
+}
+
+enum SourceType {
+  BANK_GMO
+  BANK_SENDAI
+  KYOTAKU_SALES_XLSX
+  TRIAL_BALANCE_PDF
+  IBOW_SALES_CSV
+  IBOW_IMPLEMENTATION_XLSX
+  ZEST_METRICS_ZIP
+  UNKNOWN
+}
+
+enum ImportStatus {
+  PROCESSING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  DUPLICATE
+  NEEDS_MAPPING
+}
+
+enum Severity {
+  ERROR
+  WARNING
+  INFO
+}
+
+/// 事業所・部門。COMPANY は全社、HQ は本部（試算表には存在しない管理会計上の区分）
+enum Unit {
+  COMPANY
+  HOMONKANGO
+  KYOTAKU
+  HQ
+}
+
+enum Bank {
+  GMO
+  SENDAI
+}
+
+enum TxCategory {
+  EXPENSE
+  PAYROLL
+  TAX_SOCIAL
+  INTERNAL_TRANSFER
+  CARD_SETTLEMENT
+  LOAN_PRINCIPAL
+  LOAN_REPAYMENT_MIXED
+  LOAN_INTEREST
+  REVENUE_RECEIPT
+  OTHER_INCOME
+  UNCLASSIFIED
+}
+
+enum ClassifiedBy {
+  RULE
+  MANUAL
+  TRANSFER_MATCH
+  NONE
+}
+
+enum TxDirection {
+  IN
+  OUT
+  ANY
+}
+
+enum RuleField {
+  DESCRIPTION
+  MEMO
+}
+
+enum CostAllocation {
+  DIRECT // 直接費
+  COMMON // 共通費
+  HQ // 本部費
+}
+
+enum CostBehavior {
+  LABOR // 人件費
+  FIXED // 固定費
+  VARIABLE // 変動費
+}
+
+enum AccountSection {
+  REVENUE
+  REVENUE_ADJUSTMENT
+  COGS
+  SGA
+  NON_OPERATING_INCOME
+  NON_OPERATING_EXPENSE
+  EXTRAORDINARY
+  SUBTOTAL
+}
+
+/// 月次集計系データの版の状態
+enum FactState {
+  ACTIVE
+  SUPERSEDED
+  HELD // 確定月への変更候補（計算に使わない）
+}
+
+enum ValueStatus {
+  ESTIMATED // 推計
+  RECONCILED // 照合済
+  FINAL // 確定
+}
+
+enum MonthStatus {
+  OPEN
+  CLOSED
+}
+
+enum RevenueSource {
+  KYOTAKU_SHEET
+  IBOW_SALES
+}
+
+enum VisitSource {
+  ZEST
+  IBOW
+}
+
+enum VisitKind {
+  SCHEDULED // 予定（ZEST）
+  ACTUAL // 実施実績（iBow）
+}
+
+enum JobType {
+  NURSE
+  PT
+  OT
+  ST
+  CARE_MANAGER
+  OTHER
+}
+
+enum MappingPurpose {
+  SALES
+  VISITS
+  METRICS
+}
+
+enum TargetMetric {
+  REVENUE
+  OPERATING_PROFIT
+  VISITS
+}
+
+enum RecalcTrigger {
+  CRON
+  MANUAL
+  IMPORT
+  CLOSE
+}
+
+enum RunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  imports  ImportBatch[]
+  audits   AuditLog[]
+  closes   MonthClose[]
+  mappings ColumnMapping[]
+}
+
+model AuditLog {
+  id     String   @id @default(cuid())
+  at     DateTime @default(now())
+  userId String?
+  user   User?    @relation(fields: [userId], references: [id])
+  action String
+  target String?
+  detail Json?
+
+  @@index([at])
+}
+
+model ImportBatch {
+  id            String       @id @default(cuid())
+  fileName      String
+  fileSize      Int
+  sha256        String
+  sourceType    SourceType
+  detectedBy    String // content / filename / content+filename
+  origin        DataOrigin   @default(REAL)
+  status        ImportStatus
+  uploadedById  String?
+  uploadedBy    User?        @relation(fields: [uploadedById], references: [id])
+  createdAt     DateTime     @default(now())
+  finishedAt    DateTime?
+  totalRows     Int          @default(0)
+  importedRows  Int          @default(0)
+  duplicateRows Int          @default(0)
+  heldRows      Int          @default(0)
+  errorCount    Int          @default(0)
+  warningCount  Int          @default(0)
+  periodStart   String? // YYYY-MM
+  periodEnd     String?
+  duplicateOfId String?
+  /// 列マッピング待ちの間だけ保持。取込完了で消去する。
+  rawFile       Bytes?
+  rawPurgedAt   DateTime?
+  /// 列名と非空件数のみ（値は保持しない）
+  headerInfo    Json?
+  mappingId     String?
+  mapping       ColumnMapping? @relation(fields: [mappingId], references: [id])
+
+  issues        ImportIssue[]
+  transactions  BankTransaction[]
+  revenueFacts  RevenueFact[]
+  tbLines       TrialBalanceLine[]
+  visits        VisitRecord[]
+  metrics       MetricValue[]
+
+  @@index([sha256, origin])
+  @@index([createdAt])
+}
+
+model ImportIssue {
+  id        String      @id @default(cuid())
+  batchId   String
+  batch     ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  severity  Severity
+  code      String
+  message   String
+  sheet     String?
+  rowNumber Int?
+  column    String?
+
+  @@index([batchId])
+}
+
+model ColumnMapping {
+  id              String         @id @default(cuid())
+  sourceType      SourceType
+  headerSignature String
+  purpose         MappingPurpose
+  /// { "列名": "項目キー" }
+  fields          Json
+  /// { "status": {"中止": "CANCELLED"}, "jobType": {...}, "unit": {...} }
+  valueMaps       Json
+  note            String?
+  confirmedById   String?
+  confirmedBy     User?          @relation(fields: [confirmedById], references: [id])
+  confirmedAt     DateTime       @default(now())
+  batches         ImportBatch[]
+
+  @@unique([sourceType, headerSignature])
+}
+
+model BankAccount {
+  id           String            @id @default(cuid())
+  bank         Bank
+  accountKey   String            @unique
+  last4        String
+  label        String
+  transactions BankTransaction[]
+}
+
+model BankTransaction {
+  id               String         @id @default(cuid())
+  batchId          String
+  batch            ImportBatch    @relation(fields: [batchId], references: [id])
+  origin           DataOrigin
+  accountId        String
+  account          BankAccount    @relation(fields: [accountId], references: [id])
+  txDate           DateTime       @db.Date
+  yearMonth        String
+  seq              Int?
+  description      String
+  memo             String?
+  txType           String?
+  counterpartyBank String?
+  deposit          Int
+  withdrawal       Int
+  balance          Int?
+  fingerprint      String         @unique
+
+  category         TxCategory     @default(UNCLASSIFIED)
+  accountTitle     String?
+  unit             Unit?
+  allocation       CostAllocation?
+  behavior         CostBehavior?
+  classifiedBy     ClassifiedBy   @default(NONE)
+  ruleId           String?
+  transferPairId   String?
+  reviewedById     String?
+  reviewedAt       DateTime?
+
+  @@index([origin, yearMonth, category])
+  @@index([txDate])
+}
+
+model ClassificationRule {
+  id           String          @id @default(cuid())
+  priority     Int             @default(100)
+  bank         Bank?
+  direction    TxDirection     @default(ANY)
+  field        RuleField       @default(DESCRIPTION)
+  pattern      String
+  category     TxCategory
+  accountTitle String?
+  unit         Unit?
+  allocation   CostAllocation?
+  behavior     CostBehavior?
+  active       Boolean         @default(true)
+  note         String?
+  createdAt    DateTime        @default(now())
+}
+
+model RevenueFact {
+  id        String        @id @default(cuid())
+  batchId   String
+  batch     ImportBatch   @relation(fields: [batchId], references: [id])
+  origin    DataOrigin
+  source    RevenueSource
+  unit      Unit
+  yearMonth String
+  amount    Int
+  quantity  Int?
+  detail    Json?
+  state     FactState
+  createdAt DateTime      @default(now())
+
+  @@index([origin, yearMonth, unit, source, state])
+}
+
+model TrialBalanceLine {
+  id          String      @id @default(cuid())
+  batchId     String
+  batch       ImportBatch @relation(fields: [batchId], references: [id])
+  origin      DataOrigin
+  fiscalYear  Int
+  /// null は決算仕訳
+  yearMonth   String?
+  segment     Unit
+  accountName String
+  amount      Int
+  state       FactState
+  createdAt   DateTime    @default(now())
+
+  @@index([origin, yearMonth, segment, state])
+}
+
+model VisitRecord {
+  id          String      @id @default(cuid())
+  batchId     String
+  batch       ImportBatch @relation(fields: [batchId], references: [id])
+  origin      DataOrigin
+  source      VisitSource
+  kind        VisitKind
+  visitDate   DateTime    @db.Date
+  yearMonth   String
+  unit        Unit
+  staffKey    String?
+  jobType     JobType?
+  subjectKey  String?
+  minutes     Int?
+  cancelled   Boolean     @default(false)
+  fingerprint String      @unique
+
+  @@index([origin, yearMonth, kind])
+}
+
+model MetricValue {
+  id        String      @id @default(cuid())
+  batchId   String
+  batch     ImportBatch @relation(fields: [batchId], references: [id])
+  origin    DataOrigin
+  source    VisitSource
+  yearMonth String
+  unit      Unit
+  metricKey String
+  value     Float
+  state     FactState
+
+  @@index([origin, yearMonth, metricKey, state])
+}
+
+model AccountTitle {
+  name       String          @id
+  section    AccountSection
+  behavior   CostBehavior?
+  allocation CostAllocation?
+  sortOrder  Int             @default(0)
+}
+
+model MonthClose {
+  yearMonth    String      @id
+  status       MonthStatus
+  closedAt     DateTime?
+  closedById   String?
+  closedBy     User?       @relation(fields: [closedById], references: [id])
+  reopenedAt   DateTime?
+  reopenReason String?
+}
+
+model Target {
+  id        String       @id @default(cuid())
+  yearMonth String
+  unit      Unit
+  metric    TargetMetric
+  value     Int
+
+  @@unique([yearMonth, unit, metric])
+}
+
+model StaffCapacity {
+  id               String  @id @default(cuid())
+  yearMonth        String
+  unit             Unit
+  jobType          JobType
+  headcount        Int
+  availableMinutes Int
+
+  @@unique([yearMonth, unit, jobType])
+}
+
+model AppSetting {
+  key   String @id
+  value Json
+}
+
+model RecalcRun {
+  id         String        @id @default(cuid())
+  trigger    RecalcTrigger
+  status     RunStatus
+  startedAt  DateTime      @default(now())
+  finishedAt DateTime?
+  message    String?
+  months     Int           @default(0)
+}
+
+model MonthlySnapshot {
+  id          String      @id @default(cuid())
+  origin      DataOrigin
+  yearMonth   String
+  unit        Unit
+  valueStatus ValueStatus
+  data        Json
+  computedAt  DateTime    @default(now())
+  frozen      Boolean     @default(false)
+
+  @@unique([origin, yearMonth, unit])
+}
