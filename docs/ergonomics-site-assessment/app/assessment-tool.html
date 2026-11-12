@@ -300,7 +300,7 @@ function boot() {
       db.collection('data/users/' + id).onSnapshot(function (snap) {
         snap.docs.forEach(function (d) {
           if (S.dirty[d.id] || S.saving[d.id] || d.metadata.hasPendingWrites) return;
-          var v = d.data(); if (v && v.units) S.visits[d.id] = v;
+          var v = d.data(); if (v && v.units) S.visits[d.id] = JSON.parse(JSON.stringify(v));
         });
         var ids = snap.docs.map(function (d) { return d.id; });
         Object.keys(S.visits).forEach(function (k) { if (ids.indexOf(k) < 0 && !S.dirty[k] && !S.saving[k]) delete S.visits[k]; });
@@ -771,14 +771,15 @@ function rerenderCard(path) {
   } else render();
 }
 
-document.addEventListener('input', function (e) {
+function guard(fn) { return function (e) { try { fn(e); } catch (er) { setSave('error', '入力を反映できませんでした'); banner('入力を反映できませんでした(' + (er && er.message) + ')。ページを開き直してください。'); } }; }
+document.addEventListener('input', guard(function (e) {
   var t = e.target; var path = t.dataset && t.dataset.path; if (!path || !visit()) return;
   if (t.type === 'checkbox' || t.tagName === 'SELECT') return;
   setPath(visit(), path, t.value); touch();
   if (/\.note$/.test(path)) { var card = t.closest('.card'); var w = card && card.querySelector('.notewarn'); if (w) w.hidden = !!t.value.trim(); }
   if (path === 'company' || path === 'site') { var n = document.querySelector('.vhead .name'); if (n) n.textContent = (visit().company || '名称未設定の訪問') + (visit().site ? ' ' + visit().site : ''); }
-});
-document.addEventListener('change', function (e) {
+}));
+document.addEventListener('change', guard(function (e) {
   var t = e.target; var v = visit();
   if (t.dataset.act === 'fshort') { S.onlyShort = t.checked; render(); return; }
   if (t.dataset.act === 'fempty') { S.onlyEmpty = t.checked; render(); return; }
@@ -795,8 +796,8 @@ document.addEventListener('change', function (e) {
   else return;
   touch();
   if (t.dataset.rerender) { if (/^people\.\d+\.consent$/.test(path)) render(); else rerenderCard(path); }
-});
-document.addEventListener('click', function (e) {
+}));
+document.addEventListener('click', guard(function (e) {
   var b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
   var act = b.dataset.act, val = b.dataset.v, v = visit();
   if (act === 'home') { S.cur = null; render(); window.scrollTo(0, 0); }
@@ -830,7 +831,7 @@ document.addEventListener('click', function (e) {
     var done = function () { b.textContent = 'コピーしました'; setTimeout(function () { b.textContent = '報告書の下書きをコピー'; }, 1600); };
     try { navigator.clipboard.writeText(box.value).then(done, function () { box.select(); }); } catch (er) { box.select(); }
   }
-});
+}));
 
 // tooltip for map cells
 var tip = $('tip');
@@ -840,6 +841,10 @@ function showTip(el) { var r = el.getBoundingClientRect(); tip.textContent = el.
 document.addEventListener('mouseover', function (e) { var c = e.target.closest('.cell[data-tip]'); if (c) showTip(c); else tip.hidden = true; });
 document.addEventListener('focusin', function (e) { var c = e.target.closest && e.target.closest('.cell[data-tip]'); if (c) showTip(c); else tip.hidden = true; });
 window.addEventListener('scroll', function () { tip.hidden = true; }, { passive: true });
+
+function flushAll() { Object.keys(S.dirty).forEach(function (id) { if (S.dirty[id]) { clearTimeout(timers[id]); flush(id); } }); }
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flushAll(); });
+window.addEventListener('pagehide', flushAll);
 
 render();
 boot();
