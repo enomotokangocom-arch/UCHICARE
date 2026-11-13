@@ -45,7 +45,7 @@
 body {
   background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.7;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 0 64px;
+  padding-block: 0 110px;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -197,6 +197,9 @@ td.pre { white-space: pre-line; }
 .aiout { white-space: pre-wrap; background: var(--sheet); border: 1px solid var(--rule-strong); border-radius: 8px; padding: 14px 16px; font-size: 14px; line-height: 1.75; max-height: 70vh; overflow: auto; }
 .export { display: grid; gap: 8px; }
 textarea.copy { width: 100%; min-height: 160px; font-size: 12.5px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--sheet); padding: 8px; }
+.savebar { position: fixed; z-index: 8; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 10px; background: var(--sheet); border: 1px solid var(--rule-strong); border-radius: 10px; padding: 8px 8px 8px 14px; box-shadow: 0 4px 16px rgba(0,0,0,.14); max-width: calc(100vw - 32px); }
+.savebar .note { font-size: 12.5px; color: var(--ink-soft); }
+.savebar .btn { white-space: nowrap; }
 .confirm { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
 @media (prefers-reduced-motion: no-preference) { .card { transition: border-color .15s; } }
 </style>
@@ -242,7 +245,7 @@ var pById = {};
 ITEMS.individual.forEach(function (it) { pById[it.id] = it; });
 
 var S = { db: null, uid: null, visits: {}, cur: null, tab: 'info', unit: 0, person: 0, onlyShort: false, onlyEmpty: false,
-          dirty: {}, saving: {}, again: {}, sample: null, downloads: null, aiBusy: false, aiCtl: null };
+          dirty: {}, saving: {}, savedAt: {}, sample: null, downloads: null, aiBusy: false, aiCtl: null };
 
 function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -264,22 +267,51 @@ function touch(id) {
   setSave('saving', '保存待ち…');
   clearTimeout(timers[id]);
   timers[id] = setTimeout(function () { flush(id); }, 900);
+  updateSaveBar();
 }
+function hm(d) { return (d ? new Date(d) : new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }); }
+var chains = {};
+// Writes to one document run one at a time; each write sends the visit as it is when the write starts.
 function flush(id) {
-  if (!S.db || !S.visits[id]) return;
-  if (S.saving[id]) { S.again[id] = true; return; }
-  S.saving[id] = true; S.dirty[id] = false;
-  setSave('saving', '保存中…');
-  var data = JSON.parse(JSON.stringify(S.visits[id]));
-  S.db.collection('data/users/' + S.uid).doc(id).set(data).then(function () {
-    S.saving[id] = false;
-    if (S.again[id] || S.dirty[id]) { S.again[id] = false; flush(id); return; }
-    setSave('saved', '保存済み ' + new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }));
-  }).catch(function (e) {
-    S.saving[id] = false; S.dirty[id] = true;
-    setSave('error', '保存できませんでした');
-    banner('保存に失敗しました(' + (e && e.code || 'error') + ')。' + (e && e.code === 'quota_exceeded' ? '保存容量の上限です。不要な訪問記録を削除してください。' : '通信状態を確認し、もう一度入力すると再保存します。'));
+  if (!S.db || !S.visits[id]) return Promise.resolve(false);
+  clearTimeout(timers[id]);
+  if (!S.dirty[id]) return chains[id] || Promise.resolve(true);
+  S.dirty[id] = false;
+  chains[id] = (chains[id] || Promise.resolve(true)).then(function () {
+    if (!S.visits[id]) return false;
+    S.saving[id] = true;
+    setSave('saving', '保存中…');
+    var data = JSON.parse(JSON.stringify(S.visits[id]));
+    return S.db.collection('data/users/' + S.uid).doc(id).set(data).then(function () {
+      S.saving[id] = false; S.savedAt[id] = data.updatedAt;
+      if (!S.dirty[id]) { setSave('saved', '保存済み ' + hm()); banner(''); }
+      updateSaveBar();
+      return true;
+    }, function (e) {
+      S.saving[id] = false; S.dirty[id] = true;
+      setSave('error', '保存できませんでした');
+      banner('保存に失敗しました(' + (e && e.code || 'error') + ')。' + (e && e.code === 'quota_exceeded' ? '保存容量の上限です。不要な訪問記録を削除してください。' : '通信状態を確認し、「一時保存」をもう一度押してください。'));
+      updateSaveBar();
+      return false;
+    });
   });
+  return chains[id];
+}
+function saveNow(btn) {
+  var id = S.cur; if (!id) return;
+  if (!S.db) { banner('このビューでは保存できません(サインインが必要、またはプレビュー表示)。'); return; }
+  S.dirty[id] = true;
+  S.visits[id].updatedAt = new Date().toISOString();
+  btn.disabled = true; btn.textContent = '保存中…';
+  flush(id).then(function (ok) {
+    btn.disabled = false; btn.textContent = ok ? '一時保存しました' : '一時保存';
+    if (ok) setTimeout(function () { btn.textContent = '一時保存'; }, 1800);
+  });
+}
+function updateSaveBar() {
+  var el = $('savebar-note'); if (!el) return;
+  var id = S.cur; var t = id && (S.savedAt[id] || (S.visits[id] && S.visits[id].updatedAt));
+  el.textContent = !S.db ? 'この画面では保存されません' : S.dirty[id] || S.saving[id] ? '未保存の入力があります' : (t ? '最終保存 ' + hm(t) : '');
 }
 function removeVisit(id) {
   delete S.visits[id];
@@ -361,7 +393,9 @@ function render() {
   if (S.tab === 'units') h += renderUnits(v);
   if (S.tab === 'people') h += renderPeople(v);
   if (S.tab === 'analysis') h += renderAnalysis(v);
+  h += '<div class="savebar" role="region" aria-label="一時保存"><span class="note" id="savebar-note"></span><button class="btn primary" data-act="savenow">一時保存</button></div>';
   app.innerHTML = h;
+  updateSaveBar();
 }
 
 function renderList() {
@@ -378,7 +412,7 @@ function renderList() {
     var v = S.visits[id]; var n = 0, done = 0, urgent = 0;
     v.units.forEach(function (u) { unitItems(u).forEach(function (it) { n++; var rt = u.ratings[it.id]; if (rt && rt.r) done++; if (rt && rt.r === 'urgent') urgent++; }); });
     return '<button class="vcard" data-act="open" data-v="' + id + '"><span class="t">' + esc(v.company || '名称未設定の訪問') + ' ' + esc(v.site || '') + (v.sample ? ' <span class="sampletag">記入例</span>' : '') + '</span>' +
-      '<span class="m">' + esc(v.date || '') + ' ・ 評価単位 ' + v.units.length + ' ・ 個人 ' + (v.people || []).length + '名</span>' +
+      '<span class="m">最終保存 ' + esc(v.updatedAt ? new Date(v.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') + '</span><span class="m">' + esc(v.date || '') + ' ・ 評価単位 ' + v.units.length + ' ・ 個人 ' + (v.people || []).length + '名</span>' +
       '<span class="m">入力 ' + done + ' / ' + n + ' 項目' + (urgent ? ' ・ <b style="color:var(--st-urgent)">優先対応 ' + urgent + '件</b>' : '') + '</span></button>';
   }).join('') + '</div>';
   return h;
@@ -800,7 +834,7 @@ document.addEventListener('change', guard(function (e) {
 document.addEventListener('click', guard(function (e) {
   var b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
   var act = b.dataset.act, val = b.dataset.v, v = visit();
-  if (act === 'home') { S.cur = null; render(); window.scrollTo(0, 0); }
+  if (act === 'home') { if (S.cur && S.dirty[S.cur]) flush(S.cur); S.cur = null; render(); window.scrollTo(0, 0); }
   else if (act === 'new') { var id = 'v' + uid(); S.visits[id] = newVisit(); S.cur = id; S.tab = 'info'; S.unit = 0; S.person = 0; touch(id); render(); }
   else if (act === 'sample') { var sid = 'v' + uid(); S.visits[sid] = sampleVisit(); S.cur = sid; S.tab = 'analysis'; S.unit = 0; S.person = 0; touch(sid); render(); window.scrollTo(0, 0); }
   else if (act === 'open') { S.cur = val; S.tab = 'units'; S.unit = 0; S.person = 0; render(); window.scrollTo(0, 0); }
@@ -819,6 +853,7 @@ document.addEventListener('click', guard(function (e) {
   else if (act === 'dodelunit') { v.units.splice(S.unit, 1); S.unit = 0; touch(); render(); }
   else if (act === 'dodelperson') { v.people.splice(S.person, 1); S.person = 0; touch(); render(); }
   else if (act === 'jump') { S.tab = 'units'; S.unit = +b.dataset.u; S.onlyShort = false; S.onlyEmpty = false; render(); var c = $('card_' + val); if (c) { c.scrollIntoView({ block: 'center' }); var ta = c.querySelector('textarea'); if (ta) ta.focus({ preventScroll: true }); } }
+  else if (act === 'savenow') saveNow(b);
   else if (act === 'ai') runAI();
   else if (act === 'aistop') { if (S.aiCtl) S.aiCtl.abort(); }
   else if (act === 'dlcsv' || act === 'dlmd') {
