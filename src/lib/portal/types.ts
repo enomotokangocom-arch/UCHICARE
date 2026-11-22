@@ -178,3 +178,44 @@ export interface Evaluation {
   status: EvaluationStatus;
   updatedAt: string;
 }
+
+export type ParkingOwnership = "自社所有" | "賃貸(月極)" | "その他";
+
+/** 自社が保有・契約している駐車場 */
+export interface ParkingLot {
+  id: string;
+  name: string;
+  unitId: BusinessUnitId;
+  address: string;
+  /** Googleマップ等のURL(空なら住所から検索リンクを作る) */
+  mapUrl: string;
+  ownership: ParkingOwnership;
+  /** 貸主・管理会社 */
+  contractor: string;
+  contact: string;
+  /** 月額(円)。自社所有なら null */
+  monthlyFee: number | null;
+  /** 契約期限・更新日 */
+  contractEnd: string;
+  notes: string;
+}
+
+export type ParkingUsage = "社用車" | "職員通勤" | "来客用" | "予備";
+
+/** 駐車場の区画 */
+export interface ParkingSpace {
+  id: string;
+  lotId: string;
+  label: string;
+  usage: ParkingUsage;
+  /** 社用車の区画に割り当てる車両 */
+  vehicleId: string;
+  /** 職員通勤の区画に割り当てる職員 */
+  staffId: string;
+  /** 職員の自家用車ナンバー */
+  staffCarPlate: string;
+  /** 来客用・予備区画の一時使用者(空なら空き) */
+  occupiedBy: string;
+  occupiedUntil: string;
+  notes: string;
+}

@@ -15,6 +15,7 @@ const portalNavItems = [
   { href: "/portal/notices", label: "社内のお知らせ", icon: "📢" },
   { href: "/portal/alcohol-check", label: "アルコールチェック", icon: "🌬️" },
   { href: "/portal/vehicle-log", label: "運行管理表", icon: "🚗" },
+  { href: "/portal/parking", label: "駐車場管理", icon: "🅿️" },
   { href: "/portal/minutes", label: "委員会議事録", icon: "🗂️" },
   { href: "/portal/evaluations", label: "人事評価", icon: "⭐" },
   { href: "/portal/settings", label: "設定・マスタ", icon: "⚙️" },

@@ -160,7 +160,7 @@ export default function VehicleLogPage() {
             <Field label="出発時刻" required>
               <input type="time" className={inputClass} required value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
             </Field>
-            <Field label="帰着時刻">
+            <Field label="帰着時刻" hint="出発時に記録し、帰着後に入力すると駐車場管理に反映されます">
               <input type="time" className={inputClass} value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
             </Field>
             <Field label="出発時メーター(km)" hint="前回の帰着時メーターを自動入力">

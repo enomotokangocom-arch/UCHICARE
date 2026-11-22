@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { unitName } from "@/lib/portal/defaults";
-import { alcoholChecksFor, committeeStatuses, noticeVisibleTo, sortNotices } from "@/lib/portal/logic";
+import { alcoholChecksFor, committeeStatuses, noticeVisibleTo, parkingContractAlerts, sortNotices } from "@/lib/portal/logic";
 import { formatDate, formatDateTime, todayString } from "@/lib/portal/util";
 import { LinkGrid } from "@/components/portal/LinkGrid";
 import { Card, PageContainer, StatusPill, UnitBadge, UnitBadges, buttonClass } from "@/components/portal/ui";
@@ -17,6 +17,7 @@ export default function PortalHome() {
   const committees = usePortalStore((s) => s.committees);
   const minutes = usePortalStore((s) => s.minutes);
   const evaluations = usePortalStore((s) => s.evaluations);
+  const parkingLots = usePortalStore((s) => s.parkingLots);
   const today = todayString();
 
   const myLinks = links.filter((l) => !current || l.units.includes(current.unitId));
@@ -40,6 +41,8 @@ export default function PortalHome() {
           (e.evaluatorId === current.id && e.status === "selfDone")
       )
     : [];
+
+  const parkingAlerts = parkingContractAlerts(parkingLots);
 
   return (
     <PageContainer>
@@ -125,7 +128,7 @@ export default function PortalHome() {
         </Card>
       </div>
 
-      {(committeeAlerts.length > 0 || myEvalTodos.length > 0) && (
+      {(committeeAlerts.length > 0 || myEvalTodos.length > 0 || parkingAlerts.length > 0) && (
         <Card className="mt-4">
           <h2 className="text-sm font-bold text-slate-900">✅ やることリスト</h2>
           <ul className="mt-2 space-y-2 text-sm">
@@ -135,6 +138,15 @@ export default function PortalHome() {
                 <Link href={`/portal/evaluations?id=${e.id}`} className="text-slate-700 hover:text-teal-700 hover:underline">
                   {e.period}:{e.staffId === current?.id ? "自己評価を入力してください" : "評価者評価を入力してください"}
                 </Link>
+              </li>
+            ))}
+            {parkingAlerts.map(({ lot, overdue }) => (
+              <li key={lot.id} className="flex flex-wrap items-center gap-2">
+                <StatusPill tone={overdue ? "danger" : "warn"}>{overdue ? "駐車場 契約期限切れ" : "駐車場 契約更新が近い"}</StatusPill>
+                <Link href="/portal/parking" className="text-slate-700 hover:text-teal-700 hover:underline">
+                  {lot.name}
+                </Link>
+                <span className="text-xs text-slate-400">期限 {formatDate(lot.contractEnd)}</span>
               </li>
             ))}
             {committeeAlerts.map((s) => (
@@ -167,9 +179,9 @@ export default function PortalHome() {
       <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { href: "/portal/vehicle-log", icon: "🚗", label: "運行管理表" },
+          { href: "/portal/parking", icon: "🅿️", label: "駐車場管理" },
           { href: "/portal/minutes", icon: "🗂️", label: "委員会議事録" },
           { href: "/portal/evaluations", icon: "⭐", label: "人事評価" },
-          { href: "/portal/settings", icon: "⚙️", label: "設定・マスタ" },
         ].map((m) => (
           <Link
             key={m.href}

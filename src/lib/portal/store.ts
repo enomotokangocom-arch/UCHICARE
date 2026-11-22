@@ -4,6 +4,8 @@ import {
   DEFAULT_COMMITTEES,
   DEFAULT_CRITERIA,
   DEFAULT_LINKS,
+  DEFAULT_PARKING_LOTS,
+  DEFAULT_PARKING_SPACES,
   DEFAULT_STAFF,
   DEFAULT_VEHICLES,
   sampleAlcoholChecks,
@@ -19,6 +21,8 @@ import {
   ExternalLink,
   Minutes,
   Notice,
+  ParkingLot,
+  ParkingSpace,
   Staff,
   Vehicle,
   VehicleLog,
@@ -43,6 +47,8 @@ interface PortalData {
   alcoholChecks: AlcoholCheck[];
   minutes: Minutes[];
   evaluations: Evaluation[];
+  parkingLots: ParkingLot[];
+  parkingSpaces: ParkingSpace[];
 }
 
 type CollectionKey = Exclude<keyof PortalData, "currentStaffId">;
@@ -68,6 +74,8 @@ function initialData(): PortalData {
     alcoholChecks: sampleAlcoholChecks(),
     minutes: sampleMinutes(),
     evaluations: [],
+    parkingLots: DEFAULT_PARKING_LOTS,
+    parkingSpaces: DEFAULT_PARKING_SPACES,
   };
 }
 

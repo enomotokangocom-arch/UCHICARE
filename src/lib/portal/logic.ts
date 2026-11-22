@@ -1,4 +1,4 @@
-import { AlcoholCheck, Committee, Evaluation, EvaluationCriterion, Minutes, Notice, Staff } from "./types";
+import { AlcoholCheck, Committee, Evaluation, EvaluationCriterion, Minutes, Notice, ParkingLot, ParkingSpace, Staff, VehicleLog } from "./types";
 import { addMonths, todayString } from "./util";
 
 export function noticeVisibleTo(notice: Notice, staff: Staff | undefined): boolean {
@@ -91,4 +91,41 @@ export function currentPeriod(today = todayString()): string {
   const [y, m] = today.split("-").map(Number);
   const fy = m >= 4 ? y : y - 1;
   return `${fy}年度 ${m >= 4 && m <= 9 ? "上期" : "下期"}`;
+}
+
+export type SpaceStatus = { tone: "ok" | "warn" | "danger" | "neutral" | "info"; label: string; detail: string };
+
+/**
+ * 区画の現在の状況。社用車の区画は、当日の運行管理表に「帰着時刻が未入力」の記録があれば外出中とみなす。
+ */
+export function parkingSpaceStatus(
+  space: ParkingSpace,
+  vehicleLogs: VehicleLog[],
+  vehicleName: (id: string) => string,
+  staffName: (id: string) => string,
+  today = todayString()
+): SpaceStatus {
+  if (space.usage === "社用車") {
+    if (!space.vehicleId) return { tone: "neutral", label: "未割当", detail: "車両が割り当てられていません" };
+    const out = vehicleLogs.find((l) => l.vehicleId === space.vehicleId && l.date === today && l.startTime && !l.endTime);
+    return out
+      ? { tone: "warn", label: "外出中", detail: `${vehicleName(space.vehicleId)} ・ ${staffName(out.driverId)} が ${out.startTime} に出発` }
+      : { tone: "ok", label: "駐車中", detail: vehicleName(space.vehicleId) };
+  }
+  if (space.usage === "職員通勤") {
+    if (!space.staffId) return { tone: "neutral", label: "未割当", detail: "職員が割り当てられていません" };
+    return { tone: "info", label: "割当済", detail: `${staffName(space.staffId)}${space.staffCarPlate ? `(${space.staffCarPlate})` : ""}` };
+  }
+  if (space.occupiedBy) {
+    return { tone: "danger", label: "使用中", detail: `${space.occupiedBy}${space.occupiedUntil ? ` 〜${space.occupiedUntil}頃まで` : ""}` };
+  }
+  return { tone: "ok", label: "空き", detail: space.usage };
+}
+
+/** 契約期限が過ぎた・60日以内に迫っている駐車場 */
+export function parkingContractAlerts(lots: ParkingLot[], today = todayString()) {
+  const limit = addMonths(today, 2);
+  return lots
+    .filter((l) => l.contractEnd && l.contractEnd <= limit)
+    .map((l) => ({ lot: l, overdue: l.contractEnd < today }));
 }

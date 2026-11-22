@@ -7,6 +7,8 @@ import {
   ExternalLink,
   Minutes,
   Notice,
+  ParkingLot,
+  ParkingSpace,
   Staff,
   Vehicle,
   VehicleLog,
@@ -191,3 +193,55 @@ export function sampleMinutes(): Minutes[] {
   ];
 }
 
+
+export const DEFAULT_PARKING_LOTS: ParkingLot[] = [
+  {
+    id: "p-1",
+    name: "本社 第1駐車場",
+    unitId: "houkan",
+    address: "",
+    mapUrl: "",
+    ownership: "自社所有",
+    contractor: "",
+    contact: "",
+    monthlyFee: null,
+    contractEnd: "",
+    notes: "事務所前。夜間は施錠",
+  },
+  {
+    id: "p-2",
+    name: "第2駐車場(月極)",
+    unitId: "kyotaku",
+    address: "",
+    mapUrl: "",
+    ownership: "賃貸(月極)",
+    contractor: "○○不動産",
+    contact: "",
+    monthlyFee: 16000,
+    contractEnd: "",
+    notes: "",
+  },
+];
+
+const space = (id: string, lotId: string, label: string, usage: ParkingSpace["usage"], patch: Partial<ParkingSpace> = {}): ParkingSpace => ({
+  id,
+  lotId,
+  label,
+  usage,
+  vehicleId: "",
+  staffId: "",
+  staffCarPlate: "",
+  occupiedBy: "",
+  occupiedUntil: "",
+  notes: "",
+  ...patch,
+});
+
+export const DEFAULT_PARKING_SPACES: ParkingSpace[] = [
+  space("ps-1", "p-1", "1", "社用車", { vehicleId: "v-1" }),
+  space("ps-2", "p-1", "2", "社用車", { vehicleId: "v-2" }),
+  space("ps-3", "p-1", "3", "来客用"),
+  space("ps-4", "p-2", "A", "社用車", { vehicleId: "v-3" }),
+  space("ps-5", "p-2", "B", "職員通勤", { staffId: "s-cm2", staffCarPlate: "○○ 500 か 11-22" }),
+  space("ps-6", "p-2", "C", "予備"),
+];
