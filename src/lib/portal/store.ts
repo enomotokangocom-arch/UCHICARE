@@ -7,6 +7,7 @@ import {
   DEFAULT_LINKS,
   LEGACY_DEFAULT_LINK_URLS,
   ADDED_DEFAULT_LINK_IDS,
+  DEFAULT_LINK_ORDER,
   DEFAULT_PARKING_LOTS,
   DEFAULT_PARKING_SPACES,
   DEFAULT_STAFF,
@@ -160,7 +161,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 5,
+      version: 6,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -170,8 +171,8 @@ export const usePortalStore = create<PortalState>()(
             position: s.position ?? (s.role === "管理者" ? "経営者" : "スタッフ"),
           }));
         }
-        // v1〜v4 → v5: 外部システムの実際のログインURL・アプリURLを反映(利用者が編集したURLはそのまま)
-        if (version < 5 && Array.isArray(state.links)) {
+        // v1〜v5 → v6: 外部システムの実際のログインURL・アプリURLを反映(利用者が編集したURLはそのまま)
+        if (version < 6 && Array.isArray(state.links)) {
           const defaults = new Map(DEFAULT_LINKS.map((l) => [l.id, l]));
           state.links = state.links.map((l) => {
             const d = defaults.get(l.id);
@@ -183,6 +184,15 @@ export const usePortalStore = create<PortalState>()(
             const d = defaults.get(id);
             if (d && !state.links.some((l) => l.id === id)) state.links.push(d);
           }
+          // 初期リンクは決まった順に並べ、利用者が追加したリンクはその後ろに元の順で並べる
+          const rank = (id: string) => {
+            const i = DEFAULT_LINK_ORDER.indexOf(id);
+            return i === -1 ? DEFAULT_LINK_ORDER.length : i;
+          };
+          state.links = state.links
+            .map((l, i) => ({ l, i }))
+            .sort((a, b) => rank(a.l.id) - rank(b.l.id) || a.i - b.i)
+            .map(({ l }) => l);
         }
         return state as PortalState;
       },

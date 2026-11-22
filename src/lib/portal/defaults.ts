@@ -49,18 +49,18 @@ export const DEFAULT_LINKS: ExternalLink[] = [
   { id: "kaipoke", name: "カイポケ", description: "居宅介護支援 カルテ・請求", category: "カルテ", url: "https://r.kaipoke.biz/kaipokebiz/login/COM020102.do?code=login/", icon: "📋", units: ["kyotaku"] },
   { id: "zest", name: "ZEST(ゼスト)", description: "訪問スケジュール管理", category: "スケジュール", url: "https://homecare.zest.jp/office/01HXB3BSP9C6EGAPKWXWJVHXW5/calendar/schedule/weekly/2024/05/24", appUrl: "https://apps.apple.com/app/id1375392167", icon: "🗓️", units: CARE },
   { id: "kingoftime", name: "KING OF TIME", description: "勤怠管理(打刻・休暇申請)", category: "勤怠", url: "https://www.kingoftime.jp/usces-member/?usces_page=login", icon: "⏰", units: ["houkan", "kyotaku", "uchinowa", "uchiwell"] },
+  { id: "mcs", name: "MCS", description: "医療介護専用SNS(多職種連携)", category: "連携・コミュニケーション", url: "https://www.medical-care.net/authentication/login", icon: "🤝", units: CARE },
+  { id: "lineworks", name: "LINE WORKS", description: "社内チャット・連絡", category: "連携・コミュニケーション", url: "https://talk.worksmobile.com/#/", icon: "💬", units: ["houkan", "kyotaku", "uchiwell"] },
+  { id: "elearning", name: "E-ラーニング(訪問看護)", description: "看護師・リハ・事務向けの研修", category: "研修・eラーニング", url: "https://cl.s-que.jp/vn/login", icon: "🎓", units: ["houkan"] },
   { id: "gdrive", name: "Googleドライブ", description: "共有フォルダ・書類保管", category: "書類管理", url: "https://drive.google.com/", icon: "📁", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "gsheets", name: "Googleスプレッドシート", description: "各種管理表", category: "書類管理", url: "https://docs.google.com/spreadsheets/", icon: "📊", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "gdocs", name: "Googleドキュメント", description: "文書・マニュアル", category: "書類管理", url: "https://docs.google.com/document/", icon: "📄", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "gslides", name: "Googleスライド", description: "研修資料・プレゼン", category: "書類管理", url: "https://docs.google.com/presentation/", icon: "🖼️", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "gforms", name: "Googleフォーム", description: "アンケート・申請フォーム", category: "書類管理", url: "https://docs.google.com/forms/", icon: "📝", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "mybridge", name: "myBridge", description: "名刺管理", category: "名刺", url: "https://jp.mybridge.com/auth/login/email", icon: "📇", units: CARE },
-  { id: "mcs", name: "MCS", description: "医療介護専用SNS(多職種連携)", category: "連携・コミュニケーション", url: "https://www.medical-care.net/authentication/login", icon: "🤝", units: CARE },
-  { id: "lineworks", name: "LINE WORKS", description: "社内チャット・連絡", category: "連携・コミュニケーション", url: "https://talk.worksmobile.com/#/", icon: "💬", units: ["houkan", "kyotaku", "uchiwell"] },
-  { id: "elearning", name: "E-ラーニング(訪問看護)", description: "看護師・リハ・事務向けの研修", category: "研修・eラーニング", url: "https://cl.s-que.jp/vn/login", icon: "🎓", units: ["houkan"] },
   { id: "enursing", name: "e-nursing 福利厚生", description: "福利厚生サービス", category: "福利厚生", url: "", appUrl: "https://apps.apple.com/app/id6744298649", icon: "🎁", units: CARE },
-  { id: "airregi", name: "Airレジ", description: "POSレジ・売上管理", category: "店舗・レジ", url: "https://airregi.jp/", icon: "🧾", units: ["uchinowa"] },
   { id: "uchicare-hp", name: "Uchi care ホームページ", description: "自社ホームページ", category: "その他", url: "https://uchicare.net/", icon: "🏠", units: ["houkan", "kyotaku", "uchinowa", "uchiwell"] },
+  { id: "airregi", name: "Airレジ", description: "POSレジ・売上管理", category: "店舗・レジ", url: "https://airregi.jp/", icon: "🧾", units: ["uchinowa"] },
   { id: "canva", name: "Canva", description: "チラシ・SNS画像作成", category: "デザイン", url: "https://www.canva.com/", icon: "🎨", units: ["uchinowa"] },
 ];
 
@@ -75,6 +75,9 @@ export const LEGACY_DEFAULT_LINK_URLS: Record<string, string[]> = {
   mybridge: ["https://mybridge.com/"],
   enursing: [""],
 };
+
+/** 初期リンクの表示順(保存済みデータも、この順に並べ替える) */
+export const DEFAULT_LINK_ORDER = DEFAULT_LINKS.map((l) => l.id);
 
 /** 後から追加した初期リンク(保存済みデータにない場合に追加する) */
 export const ADDED_DEFAULT_LINK_IDS = ["uchicare-hp", "elearning"];
