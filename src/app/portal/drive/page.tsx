@@ -37,6 +37,7 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
   const [rootName, setRootName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [busyLabel, setBusyLabel] = useState<string | null>(null);
   // 初めて開いたときだけ、未設定なら開いた状態にする(設定中に勝手に閉じないよう以後は利用者の操作に任せる)
   const [open, setOpen] = useState(() => !drive.ready);
 
@@ -47,8 +48,9 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
       .catch(() => setRootName(null));
   }, [drive.connected, drive.rootId]);
 
-  async function run(fn: () => Promise<string>) {
+  async function run(label: string, fn: () => Promise<string>) {
     setBusy(true);
+    setBusyLabel(label);
     setMessage(null);
     try {
       setMessage(await fn());
@@ -57,8 +59,22 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
       setMessage(`⚠ ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(false);
+      setBusyLabel(null);
     }
   }
+
+  const rootButtonHint = !drive.connected
+    ? "先に上の「Googleでログインして接続」を押してください。"
+    : !rootInput.trim()
+      ? "GoogleドライブでフォルダのURLをコピーして貼り付けてください。"
+      : null;
+
+  const statusLine =
+    busyLabel || message ? (
+      <p className={`rounded-lg px-3 py-2 text-sm ${busyLabel ? "bg-sky-50 text-sky-700" : message?.startsWith("⚠") ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
+        {busyLabel ? `⏳ ${busyLabel}` : message}
+      </p>
+    ) : null;
 
   return (
     <Card className="mb-5">
@@ -99,7 +115,7 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
                 className={buttonClass.secondary}
                 disabled={!drive.connected || busy || !rootInput.trim()}
                 onClick={() =>
-                  run(async () => {
+                  run("フォルダを確認しています...", async () => {
                     const id = parseFolderId(rootInput);
                     const item = await getItem(id);
                     if (item.mimeType !== FOLDER_MIME) throw new Error("フォルダではありません。");
@@ -110,10 +126,12 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
                   })
                 }
               >
-                このフォルダを使う
+                {busyLabel === "フォルダを確認しています..." ? "確認中..." : "このフォルダを使う"}
               </button>
             </div>
           </Field>
+          {rootButtonHint && <p className="-mt-2 text-xs text-amber-700">{rootButtonHint}</p>}
+          {statusLine}
           {drive.rootId && rootName && <p className="text-xs text-slate-600">現在の保存先: 📁 {rootName}</p>}
 
           <div className="flex flex-wrap gap-2">
@@ -122,7 +140,7 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
               className={buttonClass.secondary}
               disabled={!drive.connected || busy}
               onClick={() =>
-                run(async () => {
+                run("フォルダを作成しています...", async () => {
                   const folder = await createFolder("Uchi care ポータル");
                   setGoogleSettings({ driveRootFolderId: folder.id });
                   setRootInput(folder.id);
@@ -138,7 +156,7 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
               className={buttonClass.secondary}
               disabled={!drive.ready || busy}
               onClick={() =>
-                run(async () => {
+                run("標準フォルダを作成しています...", async () => {
                   for (const name of STANDARD_FOLDERS) await ensureFolderPath(drive.rootId, [name]);
                   return `標準フォルダ(${STANDARD_FOLDERS.join("・")})を作成しました。`;
                 })
@@ -147,7 +165,6 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
               標準フォルダを作成
             </button>
           </div>
-          {message && <p className={`text-sm ${message.startsWith("⚠") ? "text-rose-600" : "text-emerald-700"}`}>{message}</p>}
 
           <details className="rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
             <summary className="cursor-pointer font-semibold">初めて設定する方へ(Google Cloud での準備)</summary>
@@ -261,7 +278,7 @@ export default function DrivePage() {
                 }}
               >
                 <input className={`${inputClass} w-40 py-1.5`} placeholder="新しいフォルダ名" value={newFolder} onChange={(e) => setNewFolder(e.target.value)} />
-                <button type="submit" className={buttonClass.secondary} disabled={!newFolder.trim()}>
+                <button type="submit" className={`${buttonClass.secondary} whitespace-nowrap`} disabled={!newFolder.trim()}>
                   ＋ フォルダ
                 </button>
               </form>
