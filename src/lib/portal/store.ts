@@ -6,6 +6,7 @@ import {
   DEFAULT_JOB_DESCRIPTIONS,
   DEFAULT_LINKS,
   LEGACY_DEFAULT_LINK_URLS,
+  ADDED_DEFAULT_LINK_IDS,
   DEFAULT_PARKING_LOTS,
   DEFAULT_PARKING_SPACES,
   DEFAULT_STAFF,
@@ -159,7 +160,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 2,
+      version: 3,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -169,17 +170,18 @@ export const usePortalStore = create<PortalState>()(
             position: s.position ?? (s.role === "管理者" ? "経営者" : "スタッフ"),
           }));
         }
-        // v1 → v2: 外部システムの実際のログインURL・アプリURLを反映(利用者が編集したURLはそのまま)
-        if (version < 2 && Array.isArray(state.links)) {
+        // v1/v2 → v3: 外部システムの実際のログインURL・アプリURLを反映(利用者が編集したURLはそのまま)
+        if (version < 3 && Array.isArray(state.links)) {
           const defaults = new Map(DEFAULT_LINKS.map((l) => [l.id, l]));
           state.links = state.links.map((l) => {
             const d = defaults.get(l.id);
             if (!d) return l;
-            const untouched = l.id in LEGACY_DEFAULT_LINK_URLS && l.url === LEGACY_DEFAULT_LINK_URLS[l.id];
+            const untouched = (LEGACY_DEFAULT_LINK_URLS[l.id] ?? []).includes(l.url);
             return { ...l, url: untouched ? d.url : l.url, appUrl: l.appUrl ?? d.appUrl };
           });
-          for (const d of DEFAULT_LINKS) {
-            if (d.id === "uchicare-hp" && !state.links.some((l) => l.id === d.id)) state.links.push(d);
+          for (const id of ADDED_DEFAULT_LINK_IDS) {
+            const d = defaults.get(id);
+            if (d && !state.links.some((l) => l.id === id)) state.links.push(d);
           }
         }
         return state as PortalState;
