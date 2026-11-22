@@ -1,0 +1,28 @@
+import { financeScope, isAdmin } from "./logic";
+import { BusinessUnitId, Staff } from "./types";
+
+/** 個人の目標・実績を編集できるか(本人・管理者・同じ事業所の所長) */
+export function canEditPersonal(current: Staff | undefined, target: Staff | undefined): boolean {
+  if (!current || !target) return false;
+  return current.id === target.id || isAdmin(current) || (current.position === "所長" && current.unitId === target.unitId);
+}
+
+/** 個人の売上金額を見られるか(本人・経営数値の閲覧範囲に入る人) */
+export function canSeePersonalAmounts(current: Staff | undefined, target: Staff | undefined): boolean {
+  if (!current || !target) return false;
+  if (current.id === target.id) return true;
+  const scope = financeScope(current);
+  return scope.all || scope.units.includes(target.unitId);
+}
+
+/** 部門の目標を編集できるか(管理者・その事業所の所長) */
+export function canEditUnit(current: Staff | undefined, unitId: BusinessUnitId): boolean {
+  if (!current) return false;
+  return isAdmin(current) || (current.position === "所長" && current.unitId === unitId);
+}
+
+/** 部門の売上金額を見られるか(スタッフは達成率のみ) */
+export function canSeeUnitAmounts(current: Staff | undefined, unitId: BusinessUnitId): boolean {
+  const scope = financeScope(current);
+  return scope.all || scope.units.includes(unitId);
+}

@@ -21,6 +21,7 @@ const portalNavItems = [
   { href: "/portal/management", label: "経営数値", icon: "📈" },
   { href: "/portal/minutes", label: "委員会議事録", icon: "🗂️" },
   { href: "/portal/drive", label: "書類フォルダ", icon: "🗄️" },
+  { href: "/portal/goals", label: "目標管理", icon: "🎯" },
   { href: "/portal/evaluations", label: "人事評価", icon: "⭐" },
   { href: "/portal/job-descriptions", label: "職務記述書", icon: "📘" },
   { href: "/portal/settings", label: "設定・マスタ", icon: "⚙️" },

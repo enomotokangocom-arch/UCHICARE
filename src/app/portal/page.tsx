@@ -7,6 +7,7 @@ import { unitName } from "@/lib/portal/defaults";
 import { alcoholChecksFor, committeeStatuses, noticeVisibleTo, parkingContractAlerts, sortNotices } from "@/lib/portal/logic";
 import { formatDate, formatDateTime, todayString } from "@/lib/portal/util";
 import { LinkGrid } from "@/components/portal/LinkGrid";
+import { HomeGoalCards } from "@/components/portal/HomeGoalCards";
 import { Card, PageContainer, StatusPill, UnitBadge, UnitBadges, buttonClass } from "@/components/portal/ui";
 
 export default function PortalHome() {
@@ -128,6 +129,8 @@ export default function PortalHome() {
         </Card>
       </div>
 
+      <HomeGoalCards />
+
       {(committeeAlerts.length > 0 || myEvalTodos.length > 0 || parkingAlerts.length > 0) && (
         <Card className="mt-4">
           <h2 className="text-sm font-bold text-slate-900">✅ やることリスト</h2>
@@ -185,6 +188,7 @@ export default function PortalHome() {
           { href: "/portal/management", icon: "📈", label: "経営数値" },
           { href: "/portal/minutes", icon: "🗂️", label: "委員会議事録" },
           { href: "/portal/drive", icon: "🗄️", label: "書類フォルダ" },
+          { href: "/portal/goals", icon: "🎯", label: "目標管理" },
           { href: "/portal/evaluations", icon: "⭐", label: "人事評価" },
           { href: "/portal/job-descriptions", icon: "📘", label: "職務記述書" },
         ].map((m) => (

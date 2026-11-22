@@ -222,3 +222,17 @@ export function StatusPill({ tone, children }: { tone: "ok" | "warn" | "danger" 
     </span>
   );
 }
+
+/** 達成度のバー(0〜1)。1以上は緑 */
+export function ProgressBar({ ratio, label, className }: { ratio: number | null; label?: string; className?: string }) {
+  if (ratio === null || !Number.isFinite(ratio)) return <span className="text-xs text-slate-400">-</span>;
+  const done = ratio >= 1;
+  return (
+    <span className={clsx("flex items-center gap-2", className)}>
+      <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+        <span className={clsx("block h-full rounded-full", done ? "bg-emerald-500" : "bg-teal-500")} style={{ width: `${Math.min(1, ratio) * 100}%` }} />
+      </span>
+      <span className={clsx("w-12 text-right text-xs font-bold", done ? "text-emerald-700" : "text-slate-700")}>{label ?? `${Math.round(ratio * 100)}%`}</span>
+    </span>
+  );
+}

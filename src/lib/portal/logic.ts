@@ -1,6 +1,6 @@
 import { AlcoholCheck, Committee, Evaluation, EvaluationCriterion, Minutes, Notice, ParkingLot, ParkingSpace, Staff, VehicleLog } from "./types";
 import { addMonths, todayString } from "./util";
-import { BusinessUnitId, NanbyoEntry, NanbyoPatient } from "./types";
+import { BusinessUnitId, Goal, NanbyoEntry, NanbyoPatient } from "./types";
 
 export function noticeVisibleTo(notice: Notice, staff: Staff | undefined): boolean {
   if (!staff) return true;
@@ -187,4 +187,60 @@ export function nanbyoMonthSummary(patient: NanbyoPatient, entries: NanbyoEntry[
 /** 今回徴収する自己負担額の目安 = min(医療費総額 × 負担割合, 上限額までの残り) */
 export function suggestedCopay(totalCost: number, burdenRate: number, remaining: number): number {
   return Math.min(roundTo10(totalCost * burdenRate), remaining);
+}
+
+/** 目標の達成度(0〜1)。数値目標があれば実績÷目標、なければ状態から判断する */
+export function goalProgress(g: Goal): number {
+  if (g.status === "達成") return 1;
+  if (g.targetValue && g.currentValue !== null) return Math.max(0, Math.min(1, g.currentValue / g.targetValue));
+  return g.status === "進行中" ? 0.5 : 0;
+}
+
+/** 目標の期間の選択肢: 前月〜3か月先の各月と、今年度・来年度の半期 */
+export function goalPeriodOptions(today = todayString()): { value: string; label: string }[] {
+  const [y, m] = today.split("-").map(Number);
+  const months = [-1, 0, 1, 2, 3].map((d) => {
+    const dt = new Date(y, m - 1 + d, 1);
+    const v = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    return { value: v, label: `${dt.getFullYear()}年${dt.getMonth() + 1}月` };
+  });
+  const fy = m >= 4 ? y : y - 1;
+  const halves = [`${fy}年度 上期`, `${fy}年度 下期`, `${fy + 1}年度 上期`].map((v) => ({ value: v, label: v }));
+  return [...months, ...halves];
+}
+
+export function goalPeriodLabel(period: string): string {
+  const m = period.match(/^(\d{4})-(\d{2})$/);
+  return m ? `${m[1]}年${Number(m[2])}月` : period;
+}
+
+/** 今の時点で有効な目標か(今月の目標、または今の半期の目標) */
+export function isCurrentGoal(g: Goal, today = todayString()): boolean {
+  return g.period === today.slice(0, 7) || g.period === currentPeriod(today);
+}
+
+/** 事業所の月の売上・目標 */
+export function unitMonth(finance: import("./types").FinanceMonthly[], unitId: BusinessUnitId, month: string) {
+  const f = finance.find((x) => x.unitId === unitId && x.month === month);
+  return { revenue: f?.revenue ?? null, target: f?.revenueTarget ?? null };
+}
+
+/** 事業所の年度(4月始まり)累計: 売上が入っている月の売上と、その月の目標 */
+export function unitFiscalToDate(finance: import("./types").FinanceMonthly[], unitId: BusinessUnitId, today = todayString()) {
+  const [y, m] = today.split("-").map(Number);
+  const fy = m >= 4 ? y : y - 1;
+  const from = `${fy}-04`;
+  const to = `${fy + 1}-03`;
+  const rows = finance.filter((x) => x.unitId === unitId && x.month >= from && x.month <= to);
+  const filled = rows.filter((x) => x.revenue !== null);
+  const latest = [...filled].sort((a, b) => b.month.localeCompare(a.month))[0];
+  return {
+    fy,
+    revenue: sum(filled.map((x) => x.revenue)),
+    target: sum(filled.map((x) => x.revenueTarget)),
+    yearTarget: sum(rows.map((x) => x.revenueTarget)),
+    latestMonth: latest?.month ?? null,
+    latestRevenue: latest?.revenue ?? null,
+    latestTarget: latest?.revenueTarget ?? null,
+  };
 }

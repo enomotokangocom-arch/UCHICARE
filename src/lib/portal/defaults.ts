@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Minutes,
   FinanceMonthly,
+  Goal,
   JobDescription,
   NanbyoEntry,
   NanbyoPatient,
@@ -556,5 +557,18 @@ export function sampleSalesActivities(): SalesActivity[] {
       nextDate: daysAgo(-4),
       createdAt: `${daysAgo(3)}T15:00:00`,
     },
+  ];
+}
+
+export function sampleGoals(): Goal[] {
+  const month = toDateString(new Date()).slice(0, 7);
+  const now = `${toDateString(new Date())}T09:00:00`;
+  const base = { note: "", updatedAt: now };
+  return [
+    { ...base, id: "g-1", scope: "personal", staffId: "s-ns1", unitId: "houkan", period: month, title: "訪問件数 月95件", category: "訪問・件数", targetValue: 95, currentValue: 60, valueUnit: "件", status: "進行中" },
+    { ...base, id: "g-2", scope: "personal", staffId: "s-ns1", unitId: "houkan", period: month, title: "新人の同行訪問を4回行う", category: "研修・教育", targetValue: 4, currentValue: 2, valueUnit: "回", status: "進行中" },
+    { ...base, id: "g-3", scope: "personal", staffId: "s-admin", unitId: "houkan", period: month, title: "病院の地域連携室への営業 8件", category: "新規獲得", targetValue: 8, currentValue: 3, valueUnit: "件", status: "進行中" },
+    { ...base, id: "g-4", scope: "unit", staffId: "", unitId: "houkan", period: month, title: "新規利用者 5名", category: "新規獲得", targetValue: 5, currentValue: 2, valueUnit: "名", status: "進行中" },
+    { ...base, id: "g-5", scope: "unit", staffId: "", unitId: "kyotaku", period: month, title: "担当件数 1人あたり38件", category: "訪問・件数", targetValue: 38, currentValue: 35, valueUnit: "件", status: "進行中" },
   ];
 }

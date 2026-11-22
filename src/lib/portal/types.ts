@@ -344,3 +344,27 @@ export interface PersonalSales {
   target: number | null;
   visits: number | null;
 }
+
+export type GoalCategory = "売上" | "訪問・件数" | "新規獲得" | "スキル・資格" | "業務改善" | "研修・教育" | "その他";
+export type GoalStatus = "未着手" | "進行中" | "達成" | "未達";
+
+/** 目標(個人・部門) */
+export interface Goal {
+  id: string;
+  scope: "personal" | "unit";
+  /** 個人目標の本人(部門目標は空) */
+  staffId: string;
+  unitId: BusinessUnitId;
+  /** 対象期間: 月("2026-11")または半期("2026年度 下期") */
+  period: string;
+  title: string;
+  category: GoalCategory;
+  /** 数値目標(任意) */
+  targetValue: number | null;
+  currentValue: number | null;
+  /** 単位(件・円・回・% など) */
+  valueUnit: string;
+  status: GoalStatus;
+  note: string;
+  updatedAt: string;
+}

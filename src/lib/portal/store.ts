@@ -12,6 +12,7 @@ import {
   DEFAULT_VEHICLES,
   sampleAlcoholChecks,
   sampleFinance,
+  sampleGoals,
   sampleNanbyo,
   samplePersonalSales,
   sampleSalesActivities,
@@ -27,6 +28,7 @@ import {
   EvaluationCriterion,
   ExternalLink,
   FinanceMonthly,
+  Goal,
   JobDescription,
   Minutes,
   NanbyoEntry,
@@ -70,6 +72,7 @@ interface PortalData {
   finance: FinanceMonthly[];
   subsidies: Subsidy[];
   personalSales: PersonalSales[];
+  goals: Goal[];
   /** 経営数値がサンプルのままか(バナー表示用) */
   financeIsSample: boolean;
   /** Google連携の設定(OAuthクライアントIDと、書類を保存するルートフォルダ) */
@@ -113,6 +116,7 @@ function initialData(): PortalData {
     finance: sampleFinance(),
     subsidies: sampleSubsidies(),
     personalSales: samplePersonalSales(),
+    goals: sampleGoals(),
     financeIsSample: true,
     googleClientId: "",
     driveRootFolderId: "",
