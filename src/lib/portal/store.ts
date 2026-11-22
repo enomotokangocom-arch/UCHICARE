@@ -5,6 +5,7 @@ import {
   DEFAULT_CRITERIA,
   DEFAULT_JOB_DESCRIPTIONS,
   DEFAULT_LINKS,
+  LEGACY_DEFAULT_LINK_URLS,
   DEFAULT_PARKING_LOTS,
   DEFAULT_PARKING_SPACES,
   DEFAULT_STAFF,
@@ -71,9 +72,12 @@ interface PortalData {
   personalSales: PersonalSales[];
   /** 経営数値がサンプルのままか(バナー表示用) */
   financeIsSample: boolean;
+  /** Google連携の設定(OAuthクライアントIDと、書類を保存するルートフォルダ) */
+  googleClientId: string;
+  driveRootFolderId: string;
 }
 
-type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample">;
+type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId">;
 
 interface PortalState extends PortalData {
   setCurrentStaffId: (id: string) => void;
@@ -81,6 +85,7 @@ interface PortalState extends PortalData {
   resetAll: () => void;
   resetLinks: () => void;
   resetJobDescriptions: () => void;
+  setGoogleSettings: (patch: Partial<Pick<PortalData, "googleClientId" | "driveRootFolderId">>) => void;
   /** サンプルの経営数値(月次・補助金・個人売上)を消去する */
   clearFinanceSamples: () => void;
   collection: <K extends CollectionKey>(key: K) => Collection<PortalData[K][number]>;
@@ -109,6 +114,8 @@ function initialData(): PortalData {
     subsidies: sampleSubsidies(),
     personalSales: samplePersonalSales(),
     financeIsSample: true,
+    googleClientId: "",
+    driveRootFolderId: "",
   };
 }
 
@@ -126,6 +133,7 @@ export const usePortalStore = create<PortalState>()(
       resetAll: () => set(initialData()),
       resetLinks: () => set({ links: DEFAULT_LINKS }),
       resetJobDescriptions: () => set({ jobDescriptions: DEFAULT_JOB_DESCRIPTIONS }),
+      setGoogleSettings: (patch) => set(patch),
       clearFinanceSamples: () => set({ finance: [], subsidies: [], personalSales: [], financeIsSample: false }),
       collection: (key) => ({
         add: (item) =>
@@ -147,7 +155,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 1,
+      version: 2,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -156,6 +164,19 @@ export const usePortalStore = create<PortalState>()(
             ...s,
             position: s.position ?? (s.role === "管理者" ? "経営者" : "スタッフ"),
           }));
+        }
+        // v1 → v2: 外部システムの実際のログインURL・アプリURLを反映(利用者が編集したURLはそのまま)
+        if (version < 2 && Array.isArray(state.links)) {
+          const defaults = new Map(DEFAULT_LINKS.map((l) => [l.id, l]));
+          state.links = state.links.map((l) => {
+            const d = defaults.get(l.id);
+            if (!d) return l;
+            const untouched = l.id in LEGACY_DEFAULT_LINK_URLS && l.url === LEGACY_DEFAULT_LINK_URLS[l.id];
+            return { ...l, url: untouched ? d.url : l.url, appUrl: l.appUrl ?? d.appUrl };
+          });
+          for (const d of DEFAULT_LINKS) {
+            if (d.id === "uchicare-hp" && !state.links.some((l) => l.id === d.id)) state.links.push(d);
+          }
         }
         return state as PortalState;
       },
@@ -167,6 +188,7 @@ export const usePortalStore = create<PortalState>()(
           resetAll,
           resetLinks,
           resetJobDescriptions,
+          setGoogleSettings,
           clearFinanceSamples,
           collection,
           /* eslint-enable @typescript-eslint/no-unused-vars */

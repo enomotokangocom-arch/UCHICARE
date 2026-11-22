@@ -44,9 +44,9 @@ const CARE: BusinessUnitId[] = ["houkan", "kyotaku"];
  * 実際のログインURLは「設定 > 外部システム」から変更する想定。
  */
 export const DEFAULT_LINKS: ExternalLink[] = [
-  { id: "ibow", name: "iBow", description: "訪問看護 電子カルテ", category: "カルテ", url: "https://ewellibow.jp/", icon: "🩺", units: ["houkan"] },
-  { id: "kaipoke", name: "カイポケ", description: "居宅介護支援 カルテ・請求", category: "カルテ", url: "https://kaipoke.biz/", icon: "📋", units: ["kyotaku"] },
-  { id: "zest", name: "ZEST(ゼスト)", description: "訪問スケジュール管理", category: "スケジュール", url: "https://zest.jp/", icon: "🗓️", units: CARE },
+  { id: "ibow", name: "iBow", description: "訪問看護 電子カルテ", category: "カルテ", url: "https://login.ibowservice.jp/", appUrl: "https://apps.apple.com/app/id1201622229", icon: "🩺", units: ["houkan"] },
+  { id: "kaipoke", name: "カイポケ", description: "居宅介護支援 カルテ・請求", category: "カルテ", url: "https://r.kaipoke.biz/kaipokebiz/login/COM020102.do?code=login/", icon: "📋", units: ["kyotaku"] },
+  { id: "zest", name: "ZEST(ゼスト)", description: "訪問スケジュール管理", category: "スケジュール", url: "https://homecare.zest.jp/login?r=/office?", appUrl: "https://apps.apple.com/app/id1375392167", icon: "🗓️", units: CARE },
   { id: "kingoftime", name: "KING OF TIME", description: "勤怠管理(打刻・休暇申請)", category: "勤怠", url: "https://www.kingoftime.jp/", icon: "⏰", units: ["houkan", "kyotaku", "uchinowa", "uchiwell"] },
   { id: "gdrive", name: "Googleドライブ", description: "共有フォルダ・書類保管", category: "書類管理", url: "https://drive.google.com/", icon: "📁", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "gsheets", name: "Googleスプレッドシート", description: "各種管理表", category: "書類管理", url: "https://docs.google.com/spreadsheets/", icon: "📊", units: ["houkan", "kyotaku", "uchiwell"] },
@@ -56,10 +56,19 @@ export const DEFAULT_LINKS: ExternalLink[] = [
   { id: "mybridge", name: "myBridge", description: "名刺管理", category: "名刺", url: "https://mybridge.com/", icon: "📇", units: CARE },
   { id: "mcs", name: "MCS", description: "医療介護専用SNS(多職種連携)", category: "連携・コミュニケーション", url: "https://www.medical-care.net/", icon: "🤝", units: CARE },
   { id: "lineworks", name: "LINE WORKS", description: "社内チャット・連絡", category: "連携・コミュニケーション", url: "https://line-works.com/", icon: "💬", units: ["houkan", "kyotaku", "uchiwell"] },
-  { id: "enursing", name: "e-nursing 福利厚生", description: "福利厚生サービス", category: "福利厚生", url: "", icon: "🎁", units: CARE },
+  { id: "enursing", name: "e-nursing 福利厚生", description: "福利厚生サービス", category: "福利厚生", url: "", appUrl: "https://apps.apple.com/app/id6744298649", icon: "🎁", units: CARE },
   { id: "airregi", name: "Airレジ", description: "POSレジ・売上管理", category: "店舗・レジ", url: "https://airregi.jp/", icon: "🧾", units: ["uchinowa"] },
+  { id: "uchicare-hp", name: "Uchi care ホームページ", description: "自社ホームページ", category: "その他", url: "https://uchicare.net/", icon: "🏠", units: ["houkan", "kyotaku", "uchinowa", "uchiwell"] },
   { id: "canva", name: "Canva", description: "チラシ・SNS画像作成", category: "デザイン", url: "https://www.canva.com/", icon: "🎨", units: ["uchinowa"] },
 ];
+
+/** 以前の初期URL(保存済みデータの移行で、未編集のものだけ新しいURLに置き換えるために使う) */
+export const LEGACY_DEFAULT_LINK_URLS: Record<string, string> = {
+  ibow: "https://ewellibow.jp/",
+  kaipoke: "https://kaipoke.biz/",
+  zest: "https://zest.jp/",
+  enursing: "",
+};
 
 export const DEFAULT_STAFF: Staff[] = [
   { id: "s-admin", name: "管理者(本部)", unitId: "houkan", role: "管理者", position: "経営者", isDriver: true, isSafetyManager: true, isEvaluator: true, active: true },

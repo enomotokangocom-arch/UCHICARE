@@ -55,7 +55,8 @@ export default function SettingsPage() {
 
   function exportBackup() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { setCurrentStaffId, markNoticeRead, resetAll, resetLinks, collection, ...data } = usePortalStore.getState();
+    const { setCurrentStaffId, markNoticeRead, resetAll, resetLinks, resetJobDescriptions, setGoogleSettings, clearFinanceSamples, collection, ...data } =
+      usePortalStore.getState();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -135,8 +136,15 @@ export default function SettingsPage() {
                         <option key={c}>{c}</option>
                       ))}
                     </select>
-                    <input className={`${cell} col-span-12 sm:col-span-6`} placeholder="説明" value={l.description} onChange={(e) => up({ description: e.target.value })} />
-                    <div className="col-span-12 flex items-center justify-between gap-2 sm:col-span-6">
+                    <input className={`${cell} col-span-12 sm:col-span-4`} placeholder="説明" value={l.description} onChange={(e) => up({ description: e.target.value })} />
+                    <input
+                      className={`${cell} col-span-12 sm:col-span-8`}
+                      placeholder="スマホアプリのURL(App Store など・任意)"
+                      value={l.appUrl ?? ""}
+                      onChange={(e) => up({ appUrl: e.target.value.trim() })}
+                      aria-label="アプリURL"
+                    />
+                    <div className="col-span-12 flex items-center justify-between gap-2">
                       <UnitCheckboxes value={l.units} onChange={(units) => up({ units })} />
                       <button type="button" className={buttonClass.danger} onClick={() => confirm(`「${l.name}」を削除しますか?`) && collection("links").remove(l.id)}>
                         削除

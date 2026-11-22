@@ -26,8 +26,10 @@ export interface ExternalLink {
   name: string;
   description: string;
   category: LinkCategory;
-  /** 空文字の場合は「URL未設定」として表示する */
+  /** 空文字の場合は「URL未設定」として表示する(appUrl があればそちらを開く) */
   url: string;
+  /** スマートフォンアプリ(App Store 等)のURL */
+  appUrl?: string;
   icon: string;
   units: BusinessUnitId[];
 }
@@ -154,7 +156,22 @@ export interface Minutes {
   decisions: string;
   nextDate: string;
   attachmentUrl: string;
+  /** AIによる要約 */
+  summary?: string;
+  /** 録音の文字起こし */
+  transcript?: string;
+  /** Googleドライブに保存した添付ファイル(資料・録音) */
+  attachments?: DriveFileRef[];
+  /** Googleドキュメントとして保存した議事録 */
+  driveDocUrl?: string;
   createdAt: string;
+}
+
+export interface DriveFileRef {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
 }
 
 export interface EvaluationCriterion {

@@ -184,6 +184,7 @@ export default function PortalHome() {
           { href: "/portal/sales", icon: "🤝", label: "営業管理表" },
           { href: "/portal/management", icon: "📈", label: "経営数値" },
           { href: "/portal/minutes", icon: "🗂️", label: "委員会議事録" },
+          { href: "/portal/drive", icon: "🗄️", label: "書類フォルダ" },
           { href: "/portal/evaluations", icon: "⭐", label: "人事評価" },
           { href: "/portal/job-descriptions", icon: "📘", label: "職務記述書" },
         ].map((m) => (

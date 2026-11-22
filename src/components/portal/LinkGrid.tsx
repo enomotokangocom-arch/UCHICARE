@@ -5,7 +5,10 @@ import { ExternalLink } from "@/lib/portal/types";
 import { UnitBadges } from "./ui";
 
 export function LinkCard({ link, compact }: { link: ExternalLink; compact?: boolean }) {
-  if (!link.url) {
+  // Web のURLがなくアプリだけのサービスは、アプリのページを開く
+  const href = link.url || link.appUrl || "";
+  const appOnly = !link.url && !!link.appUrl;
+  if (!href) {
     return (
       <Link
         href="/portal/settings#links"
@@ -22,12 +25,8 @@ export function LinkCard({ link, compact }: { link: ExternalLink; compact?: bool
     );
   }
   return (
-    <a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-400 hover:shadow"
-    >
+    <div className="group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-400 hover:shadow">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="absolute inset-0 rounded-xl" aria-label={`${link.name}を開く`} />
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-xl">
         {link.icon}
       </span>
@@ -36,14 +35,28 @@ export function LinkCard({ link, compact }: { link: ExternalLink; compact?: bool
           <span className="truncate">{link.name}</span>
           <span className="text-xs text-slate-300 group-hover:text-teal-500">↗</span>
         </span>
-        <span className="block truncate text-[11px] text-slate-500">{link.description}</span>
+        <span className="block truncate text-[11px] text-slate-500">
+          {appOnly && "📱 アプリ ・ "}
+          {link.description}
+        </span>
         {!compact && (
           <span className="mt-1 block">
             <UnitBadges units={link.units} />
           </span>
         )}
       </span>
-    </a>
+      {link.url && link.appUrl && (
+        <a
+          href={link.appUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative z-10 shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-teal-400 hover:text-teal-700"
+          title="スマホアプリ(App Store)を開く"
+        >
+          📱 アプリ
+        </a>
+      )}
+    </div>
   );
 }
 
