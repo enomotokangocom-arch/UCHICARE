@@ -600,7 +600,11 @@ export const DEFAULT_DRIVE_ROOT_FOLDER_ID = "1GDxEcuPi_xrEl4iBaiiAlFtOYUo1g6gW";
 export const DEFAULT_PHILOSOPHY: CompanyPhilosophy = {
   mission: "医療福祉の力で健康と幸せを創造する",
   missionEn: "Creating health & happiness",
-  vision: "すべての人が自分らしくいられる共生社会",
+  vision: "すべての人が自分らしくいられる共生社会を創る",
   visionEn: "",
-  values: ["挑戦", "変革", "専門性", "誠意", "貢献"].join("\n"),
+  values: ["挑戦", "専門性", "変革", "誠意", "貢献"].join("\n"),
 };
+
+/** 以前の理念の初期値(保存済みデータが未編集なら新しい初期値に置き換える) */
+export const LEGACY_PHILOSOPHY_VISION = "すべての人が自分らしくいられる共生社会";
+export const LEGACY_PHILOSOPHY_VALUES = ["挑戦", "変革", "専門性", "誠意", "貢献"].join("\n");

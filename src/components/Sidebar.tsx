@@ -17,6 +17,7 @@ const portalNavItems: { href: string; label: string; icon: string; external?: bo
   { href: "/portal/vehicle-log", label: "運行管理表", icon: "🚗" },
   { href: "/portal/links", label: "外部システム", icon: "🔗" },
   { href: "/portal/notices", label: "社内のお知らせ", icon: "📢" },
+  { href: "/portal/philosophy", label: "理念(MVV)", icon: "🧭" },
   { href: MANUAL_URL, label: "マニュアル", icon: "📖", external: true },
   { href: "/portal/parking", label: "駐車場管理", icon: "🅿️" },
   { href: "/portal/nanbyo", label: "難病 上限管理表", icon: "📑" },

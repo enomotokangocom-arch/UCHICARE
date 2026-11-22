@@ -11,6 +11,8 @@ import {
   DEFAULT_GOAL_SHEET_TEMPLATES,
   DEFAULT_DRIVE_ROOT_FOLDER_ID,
   DEFAULT_PHILOSOPHY,
+  LEGACY_PHILOSOPHY_VALUES,
+  LEGACY_PHILOSOPHY_VISION,
   DEFAULT_PARKING_LOTS,
   DEFAULT_PARKING_SPACES,
   DEFAULT_STAFF,
@@ -178,7 +180,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 9,
+      version: 10,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -213,6 +215,11 @@ export const usePortalStore = create<PortalState>()(
         }
         // v8: 保存先フォルダが未設定なら「Uchi care全体共有」を使う
         if (version < 8 && !state.driveRootFolderId) state.driveRootFolderId = DEFAULT_DRIVE_ROOT_FOLDER_ID;
+        // v10: 理念ブック(PDF)に合わせて、未編集のビジョン・バリューを更新
+        if (version < 10 && state.philosophy) {
+          if (state.philosophy.vision === LEGACY_PHILOSOPHY_VISION) state.philosophy.vision = DEFAULT_PHILOSOPHY.vision;
+          if (state.philosophy.values === LEGACY_PHILOSOPHY_VALUES) state.philosophy.values = DEFAULT_PHILOSOPHY.values;
+        }
         return state as PortalState;
       },
       partialize: (state) => {

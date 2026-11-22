@@ -97,6 +97,9 @@ export default function PortalHome() {
             </div>
           )}
         </dl>
+        <Link href="/portal/philosophy" className="mt-3 inline-block text-xs font-semibold text-gold-300 hover:text-gold-200 hover:underline">
+          理念をくわしく見る(理念ブック) →
+        </Link>
       </BrandHero>
 
       {current?.isDriver ? (
