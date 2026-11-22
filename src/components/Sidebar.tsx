@@ -19,7 +19,7 @@ const portalNavItems: { href: string; label: string; icon: string; external?: bo
   { href: "/portal/notices", label: "社内のお知らせ", icon: "📢" },
   { href: "/portal/philosophy", label: "理念(MVV)", icon: "🧭" },
   { href: MANUAL_URL, label: "マニュアル", icon: "📖", external: true },
-  { href: "/portal/parking", label: "駐車場管理", icon: "🅿️" },
+  { href: "/portal/parking", label: "車両・駐車場", icon: "🚙" },
   { href: "/portal/nanbyo", label: "難病 上限管理表", icon: "📑" },
   { href: "/portal/sales", label: "営業管理表", icon: "🤝" },
   { href: "/portal/management", label: "経営数値", icon: "📈" },

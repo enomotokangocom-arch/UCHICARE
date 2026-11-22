@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ChangeEvent, ReactNode } from "react";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { isAdmin } from "@/lib/portal/logic";
@@ -52,7 +53,7 @@ function Check({ checked, onChange, label }: { checked: boolean; onChange: (v: b
 
 export default function SettingsPage() {
   const state = usePortalStore();
-  const { links, staff, vehicles, committees, criteria, collection, resetLinks, resetAll, philosophy, setPhilosophy } = state;
+  const { links, staff, committees, criteria, collection, resetLinks, resetAll, philosophy, setPhilosophy } = state;
   const canEditPhilosophy = isAdmin(useCurrentStaff());
 
   function exportBackup() {
@@ -237,36 +238,10 @@ export default function SettingsPage() {
           <p className="mt-2 text-[11px] text-slate-400">退職者は削除せず「在籍」のチェックを外してください(過去の記録に名前が残ります)。</p>
         </Section>
 
-        <Section
-          id="vehicles"
-          title="車両"
-          action={
-            <button
-              type="button"
-              className={buttonClass.secondary}
-              onClick={() => collection("vehicles").add({ id: newId("v"), name: "新しい車両", plate: "", unitId: "houkan", active: true })}
-            >
-              ＋ 追加
-            </button>
-          }
-        >
-          <div className="space-y-2">
-            {vehicles.map((v) => {
-              const up = (patch: Partial<typeof v>) => collection("vehicles").update(v.id, patch);
-              return (
-                <div key={v.id} className={`grid grid-cols-2 items-center gap-2 rounded-lg border border-slate-200 p-2 md:grid-cols-12 ${v.active ? "" : "opacity-50"}`}>
-                  <input className={`${cell} md:col-span-4`} value={v.name} onChange={(e) => up({ name: e.target.value })} aria-label="車両名" />
-                  <input className={`${cell} md:col-span-4`} placeholder="自動車登録番号" value={v.plate} onChange={(e) => up({ plate: e.target.value })} aria-label="ナンバー" />
-                  <div className="md:col-span-2">
-                    <UnitSelect value={v.unitId} onChange={(unitId) => up({ unitId })} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Check label="使用中" checked={v.active} onChange={(active) => up({ active })} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <Section id="vehicles" title="車両" description="車両の登録・車検や保険の期限・駐車区画は「車両・駐車場」画面でまとめて管理します。">
+          <Link href="/portal/parking" className={buttonClass.secondary}>
+            🚙 車両・駐車場管理を開く
+          </Link>
         </Section>
 
         <Section

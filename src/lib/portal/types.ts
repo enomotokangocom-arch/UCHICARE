@@ -68,6 +68,8 @@ export interface Staff {
   active: boolean;
 }
 
+export type VehicleOwnership = "自社所有" | "リース" | "その他";
+
 export interface Vehicle {
   id: string;
   name: string;
@@ -75,6 +77,20 @@ export interface Vehicle {
   plate: string;
   unitId: BusinessUnitId;
   active: boolean;
+  /** 車種・色など */
+  model?: string;
+  ownership?: VehicleOwnership;
+  /** リース会社・購入先 */
+  leaseCompany?: string;
+  leaseEnd?: string;
+  /** 車検満了日 */
+  inspectionDue?: string;
+  /** 自賠責保険の期限 */
+  compulsoryInsuranceEnd?: string;
+  /** 任意保険の期限 */
+  voluntaryInsuranceEnd?: string;
+  insuranceCompany?: string;
+  notes?: string;
 }
 
 /** 運行管理表(運転日報) */

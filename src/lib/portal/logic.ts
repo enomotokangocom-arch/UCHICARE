@@ -1,6 +1,6 @@
 import { AlcoholCheck, Committee, Evaluation, EvaluationCriterion, Minutes, Notice, ParkingLot, ParkingSpace, Staff, VehicleLog } from "./types";
 import { addMonths, todayString } from "./util";
-import { BusinessUnitId, Goal, NanbyoEntry, NanbyoPatient } from "./types";
+import { BusinessUnitId, Goal, NanbyoEntry, NanbyoPatient, Vehicle } from "./types";
 
 export function noticeVisibleTo(notice: Notice, staff: Staff | undefined): boolean {
   if (!staff) return true;
@@ -256,4 +256,24 @@ export const HEALTH_TOOL_PATHS = ["/health", "/dashboard", "/chat", "/articles",
 
 export function isHealthToolPath(pathname: string): boolean {
   return HEALTH_TOOL_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+export const VEHICLE_DATE_FIELDS = [
+  ["inspectionDue", "車検"],
+  ["compulsoryInsuranceEnd", "自賠責保険"],
+  ["voluntaryInsuranceEnd", "任意保険"],
+  ["leaseEnd", "リース契約"],
+] as const;
+
+/** 車検・保険・リースの期限が過ぎた/60日以内の車両 */
+export function vehicleAlerts(vehicles: Vehicle[], today = todayString()) {
+  const limit = addMonths(today, 2);
+  const out: { vehicle: Vehicle; label: string; date: string; overdue: boolean }[] = [];
+  for (const v of vehicles.filter((x) => x.active)) {
+    for (const [key, label] of VEHICLE_DATE_FIELDS) {
+      const date = v[key];
+      if (date && date <= limit) out.push({ vehicle: v, label, date, overdue: date < today });
+    }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
 }

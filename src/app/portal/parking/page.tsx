@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import clsx from "clsx";
+import { VehiclesTab } from "@/components/portal/VehiclesTab";
 import { usePortalStore, useCurrentStaff, useStaffName, useVehicleName } from "@/lib/portal/store";
 import { parkingContractAlerts, parkingSpaceStatus } from "@/lib/portal/logic";
 import { BUSINESS_UNITS } from "@/lib/portal/defaults";
@@ -228,7 +229,7 @@ function SpaceEditor({ space, onClose }: { space: ParkingSpace; onClose: () => v
   );
 }
 
-export default function ParkingPage() {
+function ParkingTab() {
   const lots = usePortalStore((s) => s.parkingLots);
   const spaces = usePortalStore((s) => s.parkingSpaces);
   const vehicles = usePortalStore((s) => s.vehicles);
@@ -281,17 +282,15 @@ export default function ParkingPage() {
   }
 
   return (
-    <PageContainer>
-      <PageHeader
-        icon="🅿️"
-        title="駐車場管理"
-        description={`自社の駐車場と区画の割り当て、現在の利用状況を確認します。社用車は運行管理表(帰着時刻が未入力)から外出中を判定します。 ${nowTimeString()} 時点`}
-        actions={
-          <button type="button" className={buttonClass.primary} onClick={() => setLotEditing("new")}>
-            ＋ 駐車場を追加
-          </button>
-        }
-      />
+    <>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-slate-500">
+          社用車の「駐車中/外出中」は運行管理表(帰着時刻が未入力の記録)から判定します。{nowTimeString()} 時点
+        </p>
+        <button type="button" className={buttonClass.primary} onClick={() => setLotEditing("new")}>
+          ＋ 駐車場を追加
+        </button>
+      </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
@@ -455,6 +454,35 @@ export default function ParkingPage() {
           })}
         </div>
       )}
+    </>
+  );
+}
+
+type Tab = "vehicles" | "parking";
+
+export default function VehiclesAndParkingPage() {
+  const [tab, setTab] = useState<Tab>("vehicles");
+  return (
+    <PageContainer>
+      <PageHeader icon="🚙" title="車両・駐車場管理" description="社用車の情報(車検・保険・リース)と、駐車場・区画の割り当てをまとめて管理します。" />
+      <div className="mb-5 flex gap-1 border-b border-slate-200">
+        {(
+          [
+            ["vehicles", "🚗 車両"],
+            ["parking", "🅿️ 駐車場"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={clsx("-mb-px border-b-2 px-4 py-2 text-sm font-semibold", tab === id ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-800")}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === "vehicles" ? <VehiclesTab /> : <ParkingTab />}
     </PageContainer>
   );
 }

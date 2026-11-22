@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { unitName } from "@/lib/portal/defaults";
-import { alcoholChecksFor, committeeStatuses, noticeVisibleTo, parkingContractAlerts, sortNotices } from "@/lib/portal/logic";
+import { alcoholChecksFor, committeeStatuses, noticeVisibleTo, parkingContractAlerts, sortNotices, vehicleAlerts } from "@/lib/portal/logic";
 import { formatDate, formatDateTime, todayString } from "@/lib/portal/util";
 import { LinkGrid } from "@/components/portal/LinkGrid";
+import { isAdmin } from "@/lib/portal/logic";
 import { HomeGoalCards } from "@/components/portal/HomeGoalCards";
 import { BrandHero } from "@/components/portal/BrandHero";
 import { TodayVehicleCard } from "@/components/portal/TodayVehicleCard";
@@ -21,6 +22,7 @@ export default function PortalHome() {
   const minutes = usePortalStore((s) => s.minutes);
   const evaluations = usePortalStore((s) => s.evaluations);
   const parkingLots = usePortalStore((s) => s.parkingLots);
+  const vehicles = usePortalStore((s) => s.vehicles);
   const philosophy = usePortalStore((s) => s.philosophy);
   const today = todayString();
 
@@ -47,6 +49,7 @@ export default function PortalHome() {
     : [];
 
   const parkingAlerts = parkingContractAlerts(parkingLots);
+  const carAlerts = vehicleAlerts(vehicles).filter((a) => !current || isAdmin(current) || a.vehicle.unitId === current.unitId);
 
   const values = philosophy.values
     .split("\n")
@@ -186,7 +189,7 @@ export default function PortalHome() {
 
       <HomeGoalCards />
 
-      {(committeeAlerts.length > 0 || myEvalTodos.length > 0 || parkingAlerts.length > 0) && (
+      {(committeeAlerts.length > 0 || myEvalTodos.length > 0 || parkingAlerts.length > 0 || carAlerts.length > 0) && (
         <Card className="mt-4">
           <h2 className="text-sm font-bold text-slate-900">✅ やることリスト</h2>
           <ul className="mt-2 space-y-2 text-sm">
@@ -196,6 +199,15 @@ export default function PortalHome() {
                 <Link href={`/portal/evaluations?id=${e.id}`} className="text-slate-700 hover:text-brand-700 hover:underline">
                   {e.period}:{e.staffId === current?.id ? "自己評価を入力してください" : "評価者評価を入力してください"}
                 </Link>
+              </li>
+            ))}
+            {carAlerts.map((a) => (
+              <li key={`${a.vehicle.id}-${a.label}`} className="flex flex-wrap items-center gap-2">
+                <StatusPill tone={a.overdue ? "danger" : "warn"}>{a.overdue ? `${a.label} 期限切れ` : `${a.label} 期限が近い`}</StatusPill>
+                <Link href="/portal/parking" className="text-slate-700 hover:text-brand-700 hover:underline">
+                  {a.vehicle.name}
+                </Link>
+                <span className="text-xs text-slate-400">期限 {formatDate(a.date)}</span>
               </li>
             ))}
             {parkingAlerts.map(({ lot, overdue }) => (
@@ -237,7 +249,7 @@ export default function PortalHome() {
       <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { href: "/portal/vehicle-log", icon: "🚗", label: "運行管理表" },
-          { href: "/portal/parking", icon: "🅿️", label: "駐車場管理" },
+          { href: "/portal/parking", icon: "🚙", label: "車両・駐車場" },
           { href: "/portal/nanbyo", icon: "📑", label: "難病 上限管理表" },
           { href: "/portal/sales", icon: "🤝", label: "営業管理表" },
           { href: "/portal/management", icon: "📈", label: "経営数値" },
