@@ -118,6 +118,20 @@ function loadGis(): Promise<void> {
   return gisLoading;
 }
 
+/** ログイン時のエラーを、原因と対処がわかる日本語にする */
+function loginErrorMessage(code?: string, detail?: string): string {
+  switch (code) {
+    case "popup_failed_to_open":
+      return "Googleのログイン画面(ポップアップ)が開けませんでした。ブラウザの設定でこのサイトのポップアップを許可してから、もう一度お試しください。";
+    case "popup_closed":
+      return "ログイン画面が閉じられました。もう一度「Googleでログインして接続」を押してください。";
+    case "access_denied":
+      return "Googleドライブへのアクセスが許可されませんでした。ログイン画面で「許可」を押すか、OAuth 同意画面の「対象」(内部/テストユーザー)を確認してください。";
+    default:
+      return `Googleへのログインに失敗しました(${code ?? "不明なエラー"}${detail ? `: ${detail}` : ""})。`;
+  }
+}
+
 /** Googleアカウントでログインし、ドライブへのアクセストークンを取得する */
 export async function connectDrive(clientId: string): Promise<void> {
   if (!clientId) throw new Error("GoogleのOAuthクライアントIDが設定されていません。");
@@ -132,14 +146,14 @@ export async function connectDrive(clientId: string): Promise<void> {
         scope: DRIVE_SCOPE,
         callback: (resp) => {
           if (resp.error || !resp.access_token) {
-            reject(new Error(resp.error_description || resp.error || "ログインに失敗しました。"));
+            reject(new Error(loginErrorMessage(resp.error, resp.error_description)));
             return;
           }
           // 期限の少し前に切れたものとして扱う
           setToken(resp.access_token, Date.now() + ((resp.expires_in ?? 3600) - 60) * 1000);
           resolve();
         },
-        error_callback: (err) => reject(new Error(err.type === "popup_closed" ? "ログインがキャンセルされました。" : err.message || err.type)),
+        error_callback: (err) => reject(new Error(loginErrorMessage(err.type, err.message))),
       });
       client.requestAccessToken();
     });
@@ -175,7 +189,16 @@ async function driveFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
     let message = `Googleドライブのエラー(${res.status})`;
     try {
       const body = await res.json();
-      message = body?.error?.message ? `${message}: ${body.error.message}` : message;
+      const reason: string | undefined = body?.error?.errors?.[0]?.reason ?? body?.error?.status;
+      if (reason === "accessNotConfigured" || reason === "SERVICE_DISABLED") {
+        message = "Google Cloud のプロジェクトで「Google Drive API」が有効になっていません。APIを有効にしてから数分待って、もう一度お試しください。";
+      } else if (reason === "insufficientPermissions" || reason === "PERMISSION_DENIED" || res.status === 403) {
+        message = `Googleドライブの権限がありません。ログイン時にドライブへのアクセスを許可したか、フォルダの共有設定を確認してください。(${body?.error?.message ?? res.status})`;
+      } else if (res.status === 404) {
+        message = "フォルダまたはファイルが見つかりません。URLが正しいか、このアカウントに共有されているか確認してください。";
+      } else if (body?.error?.message) {
+        message = `${message}: ${body.error.message}`;
+      }
     } catch {
       /* JSONでないエラー本文は無視 */
     }
