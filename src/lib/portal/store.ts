@@ -9,6 +9,7 @@ import {
   ADDED_DEFAULT_LINK_IDS,
   DEFAULT_LINK_ORDER,
   DEFAULT_GOAL_SHEET_TEMPLATES,
+  DEFAULT_DRIVE_ROOT_FOLDER_ID,
   DEFAULT_PARKING_LOTS,
   DEFAULT_PARKING_SPACES,
   DEFAULT_STAFF,
@@ -130,7 +131,7 @@ function initialData(): PortalData {
     goalSheetTemplates: DEFAULT_GOAL_SHEET_TEMPLATES,
     financeIsSample: true,
     googleClientId: "",
-    driveRootFolderId: "",
+    driveRootFolderId: DEFAULT_DRIVE_ROOT_FOLDER_ID,
   };
 }
 
@@ -171,7 +172,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 7,
+      version: 8,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -204,6 +205,8 @@ export const usePortalStore = create<PortalState>()(
             .sort((a, b) => rank(a.l.id) - rank(b.l.id) || a.i - b.i)
             .map(({ l }) => l);
         }
+        // v8: 保存先フォルダが未設定なら「Uchi care全体共有」を使う
+        if (version < 8 && !state.driveRootFolderId) state.driveRootFolderId = DEFAULT_DRIVE_ROOT_FOLDER_ID;
         return state as PortalState;
       },
       partialize: (state) => {

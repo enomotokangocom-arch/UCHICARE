@@ -101,7 +101,7 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
 
           <Field
             label="保存先のルートフォルダ(URL または ID)"
-            hint="共有ドライブや共有フォルダのURLを貼り付けると、職員全員で同じフォルダを使えます"
+            hint="初期値は Googleドライブの「Uchi care全体共有」フォルダです。職員全員で同じフォルダを使うには、このフォルダを職員に共有してください"
           >
             <div className="flex flex-col gap-2 sm:flex-row">
               <input

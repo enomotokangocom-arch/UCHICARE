@@ -591,3 +591,6 @@ export function sampleGoals(): Goal[] {
 export const DEFAULT_GOAL_SHEET_TEMPLATES: Partial<Record<BusinessUnitId, string>> = {
   houkan: "https://docs.google.com/spreadsheets/d/1tL4ed9Z_JWmFwA1qJ-ARWQ1cOBKI4hQvtFd7Ep0bjII/edit",
 };
+
+/** 書類の保存先(ルートフォルダ)の初期値: Googleドライブ「Uchi care全体共有」 */
+export const DEFAULT_DRIVE_ROOT_FOLDER_ID = "1GDxEcuPi_xrEl4iBaiiAlFtOYUo1g6gW";
