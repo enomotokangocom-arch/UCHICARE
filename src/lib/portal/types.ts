@@ -423,3 +423,17 @@ export interface CompanyPhilosophy {
   /** 1行1項目 */
   values: string;
 }
+
+/** 相談窓口の設定 */
+export interface ConsultationDesk {
+  id: string;
+  name: string;
+  /** 担当者名 */
+  owner: string;
+  /** 相談を届けるメールアドレス */
+  email: string;
+  /** Googleフォームで受け付ける場合のURL(匿名相談向け) */
+  formUrl: string;
+  description: string;
+  icon: string;
+}

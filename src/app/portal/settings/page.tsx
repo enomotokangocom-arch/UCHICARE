@@ -53,7 +53,7 @@ function Check({ checked, onChange, label }: { checked: boolean; onChange: (v: b
 
 export default function SettingsPage() {
   const state = usePortalStore();
-  const { links, staff, committees, criteria, collection, resetLinks, resetAll, philosophy, setPhilosophy } = state;
+  const { links, staff, committees, criteria, collection, resetLinks, resetAll, philosophy, setPhilosophy, consultationDesks } = state;
   const canEditPhilosophy = isAdmin(useCurrentStaff());
 
   function exportBackup() {
@@ -91,6 +91,7 @@ export default function SettingsPage() {
       <nav className="mb-5 flex flex-wrap gap-2 text-xs">
         {[
           ["#philosophy", "理念"],
+          ["#consultation", "相談窓口"],
           ["#links", "外部システム"],
           ["#staff", "職員"],
           ["#vehicles", "車両"],
@@ -131,6 +132,28 @@ export default function SettingsPage() {
               バリュー(1行に1つ)
               <textarea className={`${cell} mt-1 min-h-28`} value={philosophy.values} onChange={(e) => setPhilosophy({ values: e.target.value })} />
             </label>
+          </fieldset>
+        </Section>
+
+        <Section
+          id="consultation"
+          title="相談窓口"
+          description="相談はここで設定したメールアドレス(またはGoogleフォーム)に届きます。完全に匿名で受け付けたい窓口は、メールアドレスを収集しない設定のGoogleフォームのURLも入れてください。変更は経営者・統括部長・事務長のみ。"
+        >
+          <fieldset disabled={!canEditPhilosophy} className="space-y-3">
+            {consultationDesks.map((d) => {
+              const up = (patch: Partial<typeof d>) => collection("consultationDesks").update(d.id, patch);
+              return (
+                <div key={d.id} className="grid grid-cols-12 gap-2 rounded-lg border border-slate-200 p-3">
+                  <input className={`${cell} col-span-2 text-center sm:col-span-1`} value={d.icon} onChange={(e) => up({ icon: e.target.value })} aria-label="アイコン" />
+                  <input className={`${cell} col-span-10 sm:col-span-5`} value={d.name} onChange={(e) => up({ name: e.target.value })} aria-label="窓口名" />
+                  <input className={`${cell} col-span-12 sm:col-span-6`} placeholder="担当者名" value={d.owner} onChange={(e) => up({ owner: e.target.value })} aria-label="担当者名" />
+                  <input className={`${cell} col-span-12 sm:col-span-6`} type="email" placeholder="相談を届けるメールアドレス" value={d.email} onChange={(e) => up({ email: e.target.value.trim() })} aria-label="メールアドレス" />
+                  <input className={`${cell} col-span-12 sm:col-span-6`} placeholder="GoogleフォームのURL(任意)" value={d.formUrl} onChange={(e) => up({ formUrl: e.target.value.trim() })} aria-label="フォームURL" />
+                  <input className={`${cell} col-span-12`} placeholder="窓口の説明" value={d.description} onChange={(e) => up({ description: e.target.value })} aria-label="説明" />
+                </div>
+              );
+            })}
           </fieldset>
         </Section>
 

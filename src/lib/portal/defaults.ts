@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Minutes,
   CompanyPhilosophy,
+  ConsultationDesk,
   FinanceMonthly,
   Goal,
   JobDescription,
@@ -608,3 +609,34 @@ export const DEFAULT_PHILOSOPHY: CompanyPhilosophy = {
 /** 以前の理念の初期値(保存済みデータが未編集なら新しい初期値に置き換える) */
 export const LEGACY_PHILOSOPHY_VISION = "すべての人が自分らしくいられる共生社会";
 export const LEGACY_PHILOSOPHY_VALUES = ["挑戦", "変革", "専門性", "誠意", "貢献"].join("\n");
+
+/** 相談窓口の初期設定(メールアドレス・フォームは「設定・マスタ」で入力する) */
+export const DEFAULT_CONSULTATION_DESKS: ConsultationDesk[] = [
+  {
+    id: "desk-women",
+    name: "女性の相談窓口",
+    owner: "鳴海",
+    email: "",
+    formUrl: "",
+    description: "妊娠・出産・育児、体調、職場で女性として困っていることなど",
+    icon: "🌷",
+  },
+  {
+    id: "desk-harassment",
+    name: "ハラスメント相談窓口",
+    owner: "安住",
+    email: "",
+    formUrl: "",
+    description: "パワハラ・セクハラ・マタハラ、利用者や家族からのハラスメントなど",
+    icon: "🛡️",
+  },
+  {
+    id: "desk-employment",
+    name: "雇用に関する相談窓口",
+    owner: "安住",
+    email: "",
+    formUrl: "",
+    description: "勤務時間・休暇・給与・雇用契約・働き方の希望など",
+    icon: "📋",
+  },
+];

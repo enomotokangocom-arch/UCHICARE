@@ -43,7 +43,7 @@ function VehicleLogInner() {
     date: todayString(),
     vehicleId,
     driverId: current?.isDriver ? current.id : "",
-    startTime: "",
+    startTime: nowTimeString(),
     endTime: "",
     startOdometer: lastOdometer(vehicleId),
     endOdometer: null,
@@ -65,6 +65,8 @@ function VehicleLogInner() {
     return { ...rest, endTime: rest.endTime || nowTimeString() };
   });
   const [editingId, setEditingId] = useState<string | null>(initialEdit?.id ?? null);
+  /** true の間は、記録ボタンを押した時点の日付・時刻を出発として使う */
+  const [autoStart, setAutoStart] = useState(true);
   const [month, setMonth] = useState(todayString().slice(0, 7));
   const [vehicleFilter, setVehicleFilter] = useState("");
 
@@ -79,10 +81,13 @@ function VehicleLogInner() {
     if (editingId) {
       collection("vehicleLogs").update(editingId, form);
     } else {
-      collection("vehicleLogs").add({ ...form, id: newId("vl"), createdAt: nowIsoLocal() });
+      // 出発時刻を手で変えていなければ、記録したタイミングの日時を自動で入れる
+      const stamped = autoStart ? { ...form, date: todayString(), startTime: nowTimeString() } : form;
+      collection("vehicleLogs").add({ ...stamped, id: newId("vl"), createdAt: nowIsoLocal() });
     }
     setEditingId(null);
     setForm(blank(form.vehicleId));
+    setAutoStart(true);
   }
 
   const filtered = useMemo(
@@ -140,7 +145,16 @@ function VehicleLogInner() {
           <h2 className="text-sm font-bold text-slate-900">{editingId ? "運行記録を編集" : "運行記録を入力"}</h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <Field label="日付" required>
-              <input type="date" className={inputClass} required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <input
+                type="date"
+                className={inputClass}
+                required
+                value={form.date}
+                onChange={(e) => {
+                  setAutoStart(false);
+                  setForm({ ...form, date: e.target.value });
+                }}
+              />
             </Field>
             <Field label="自動車" required>
               <select
@@ -170,7 +184,16 @@ function VehicleLogInner() {
               </select>
             </Field>
             <Field label="出発時刻" required>
-              <input type="time" className={inputClass} required value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
+              <input
+                type="time"
+                className={inputClass}
+                required
+                value={form.startTime}
+                onChange={(e) => {
+                  setAutoStart(false);
+                  setForm({ ...form, startTime: e.target.value });
+                }}
+              />
             </Field>
             <Field label="帰着時刻" hint="出発時に記録し、帰着後に入力すると駐車場管理に反映されます">
               <input type="time" className={inputClass} value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} />

@@ -246,27 +246,44 @@ export default function PortalHome() {
         <LinkGrid links={myLinks} compact />
       </section>
 
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section className="mt-8 space-y-4">
         {[
-          { href: "/portal/vehicle-log", icon: "🚗", label: "運行管理表" },
-          { href: "/portal/parking", icon: "🚙", label: "車両・駐車場" },
-          { href: "/portal/nanbyo", icon: "📑", label: "難病 上限管理表" },
-          { href: "/portal/sales", icon: "🤝", label: "営業管理表" },
-          { href: "/portal/management", icon: "📈", label: "経営数値" },
-          { href: "/portal/minutes", icon: "🗂️", label: "委員会議事録" },
-          { href: "/portal/drive", icon: "🗄️", label: "書類フォルダ" },
-          { href: "/portal/goals", icon: "🎯", label: "目標管理" },
-          { href: "/portal/evaluations", icon: "⭐", label: "人事評価" },
-          { href: "/portal/job-descriptions", icon: "📘", label: "職務記述書" },
-        ].map((m) => (
-          <Link
-            key={m.href}
-            href={m.href}
-            className="flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 shadow-sm hover:border-brand-400 hover:text-brand-700"
-          >
-            <span className="text-2xl">{m.icon}</span>
-            {m.label}
-          </Link>
+          {
+            title: "記録・管理",
+            items: [
+              { href: "/portal/minutes", icon: "🗂️", label: "委員会議事録" },
+              { href: "/portal/nanbyo", icon: "📑", label: "難病 上限管理表" },
+              { href: "/portal/sales", icon: "🤝", label: "営業管理表" },
+              { href: "/portal/parking", icon: "🚙", label: "車両・駐車場" },
+              { href: "/portal/drive", icon: "🗄️", label: "書類フォルダ" },
+            ],
+          },
+          {
+            title: "人・組織",
+            items: [
+              { href: "/portal/consultation", icon: "💬", label: "相談窓口" },
+              { href: "/portal/goals", icon: "🎯", label: "目標管理" },
+              { href: "/portal/evaluations", icon: "⭐", label: "人事評価" },
+              { href: "/portal/philosophy", icon: "🧭", label: "理念(MVV)" },
+              { href: "/portal/job-descriptions", icon: "📘", label: "職務記述書" },
+            ],
+          },
+        ].map((g) => (
+          <div key={g.title}>
+            <h2 className="mb-2 text-xs font-bold tracking-wide text-slate-400">{g.title}</h2>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {g.items.map((m) => (
+                <Link
+                  key={m.href}
+                  href={m.href}
+                  className="flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 py-3 text-center text-xs font-semibold text-slate-700 shadow-sm hover:border-brand-300 hover:text-brand-700"
+                >
+                  <span className="text-xl">{m.icon}</span>
+                  {m.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </section>
     </PageContainer>

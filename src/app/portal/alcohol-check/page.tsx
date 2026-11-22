@@ -57,6 +57,8 @@ export default function AlcoholCheckPage() {
     emptyForm(current?.isDriver ? current.id : "", checkers[0]?.id ?? "", defaultVehicle)
   );
   const [valueText, setValueText] = useState("0.00");
+  /** true の間は、記録ボタンを押した時点の日時を自動で使う */
+  const [autoTime, setAutoTime] = useState(true);
   const [saved, setSaved] = useState<string | null>(null);
   const [month, setMonth] = useState(todayString().slice(0, 7));
   const [driverFilter, setDriverFilter] = useState("");
@@ -67,14 +69,17 @@ export default function AlcoholCheckPage() {
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!form.detectorUsed && !confirm("アルコール検知器を使用していません。このまま記録しますか?")) return;
-    const record: AlcoholCheck = { ...form, id: newId("ac"), createdAt: nowIsoLocal() };
+    // 日時を手で変えていなければ、記録したタイミングの日時を自動で入れる
+    const stamped = autoTime ? { ...form, date: todayString(), time: nowTimeString() } : form;
+    const record: AlcoholCheck = { ...stamped, id: newId("ac"), createdAt: nowIsoLocal() };
     collection("alcoholChecks").add(record);
     setSaved(
       isAlcoholDetected(record)
         ? "⚠ アルコールが検知されました。運転は禁止です。直ちに安全運転管理者へ報告してください。"
         : `${staffName(record.driverId)} さんの${record.timing === "before" ? "運転前" : "運転後"}チェックを記録しました。`
     );
-    setForm({ ...form, time: nowTimeString(), timing: form.timing === "before" ? "after" : "before", instructions: "", notes: "" });
+    setForm({ ...form, date: todayString(), time: nowTimeString(), timing: form.timing === "before" ? "after" : "before", instructions: "", notes: "" });
+    setAutoTime(true);
   }
 
   const filtered = useMemo(
@@ -142,11 +147,29 @@ export default function AlcoholCheckPage() {
               ))}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="確認日" required>
-                <input type="date" className={inputClass} required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <Field label="確認日" required hint={autoTime ? "記録した時点の日時が自動で入ります" : "手入力した日時で記録します"}>
+                <input
+                  type="date"
+                  className={inputClass}
+                  required
+                  value={form.date}
+                  onChange={(e) => {
+                    setAutoTime(false);
+                    setForm({ ...form, date: e.target.value });
+                  }}
+                />
               </Field>
               <Field label="確認時刻" required>
-                <input type="time" className={inputClass} required value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+                <input
+                  type="time"
+                  className={inputClass}
+                  required
+                  value={form.time}
+                  onChange={(e) => {
+                    setAutoTime(false);
+                    setForm({ ...form, time: e.target.value });
+                  }}
+                />
               </Field>
               <Field label="運転者" required>
                 <StaffSelect staff={drivers} value={form.driverId} onChange={(v) => setForm({ ...form, driverId: v })} required />

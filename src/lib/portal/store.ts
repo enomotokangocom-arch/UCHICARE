@@ -11,6 +11,7 @@ import {
   DEFAULT_GOAL_SHEET_TEMPLATES,
   DEFAULT_DRIVE_ROOT_FOLDER_ID,
   DEFAULT_PHILOSOPHY,
+  DEFAULT_CONSULTATION_DESKS,
   LEGACY_PHILOSOPHY_VALUES,
   LEGACY_PHILOSOPHY_VISION,
   DEFAULT_PARKING_LOTS,
@@ -31,6 +32,7 @@ import {
 import {
   AlcoholCheck,
   CompanyPhilosophy,
+  ConsultationDesk,
   BusinessUnitId,
   Committee,
   Evaluation,
@@ -87,6 +89,7 @@ interface PortalData {
   /** 事業所ごとの目標管理シートの原本(スプレッドシートのURL) */
   goalSheetTemplates: Partial<Record<BusinessUnitId, string>>;
   philosophy: CompanyPhilosophy;
+  consultationDesks: ConsultationDesk[];
   /** 経営数値がサンプルのままか(バナー表示用) */
   financeIsSample: boolean;
   /** Google連携の設定(OAuthクライアントIDと、書類を保存するルートフォルダ) */
@@ -136,6 +139,7 @@ function initialData(): PortalData {
     goalSheets: [],
     goalSheetTemplates: DEFAULT_GOAL_SHEET_TEMPLATES,
     philosophy: DEFAULT_PHILOSOPHY,
+    consultationDesks: DEFAULT_CONSULTATION_DESKS,
     financeIsSample: true,
     googleClientId: "",
     driveRootFolderId: DEFAULT_DRIVE_ROOT_FOLDER_ID,

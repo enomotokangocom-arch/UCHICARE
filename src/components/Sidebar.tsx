@@ -11,24 +11,48 @@ import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { MANUAL_URL, unitName } from "@/lib/portal/defaults";
 import { canViewHealthTool } from "@/lib/portal/logic";
 
-const portalNavItems: { href: string; label: string; icon: string; external?: boolean }[] = [
-  { href: "/portal", label: "ポータルホーム", icon: "🏢" },
-  { href: "/portal/alcohol-check", label: "アルコールチェック", icon: "🌬️" },
-  { href: "/portal/vehicle-log", label: "運行管理表", icon: "🚗" },
-  { href: "/portal/links", label: "外部システム", icon: "🔗" },
-  { href: "/portal/notices", label: "社内のお知らせ", icon: "📢" },
-  { href: "/portal/philosophy", label: "理念(MVV)", icon: "🧭" },
-  { href: MANUAL_URL, label: "マニュアル", icon: "📖", external: true },
-  { href: "/portal/parking", label: "車両・駐車場", icon: "🚙" },
-  { href: "/portal/nanbyo", label: "難病 上限管理表", icon: "📑" },
-  { href: "/portal/sales", label: "営業管理表", icon: "🤝" },
-  { href: "/portal/management", label: "経営数値", icon: "📈" },
-  { href: "/portal/minutes", label: "委員会議事録", icon: "🗂️" },
-  { href: "/portal/drive", label: "書類フォルダ", icon: "🗄️" },
-  { href: "/portal/goals", label: "目標管理", icon: "🎯" },
-  { href: "/portal/evaluations", label: "人事評価", icon: "⭐" },
-  { href: "/portal/job-descriptions", label: "職務記述書", icon: "📘" },
-  { href: "/portal/settings", label: "設定・マスタ", icon: "⚙️" },
+type NavItem = { href: string; label: string; icon: string; external?: boolean };
+
+/** 業務の種類ごとにまとめたメニュー(よく使うものほど上) */
+const portalNavGroups: { title: string; items: NavItem[] }[] = [
+  {
+    title: "毎日の業務",
+    items: [
+      { href: "/portal", label: "ポータルホーム", icon: "🏢" },
+      { href: "/portal/alcohol-check", label: "アルコールチェック", icon: "🌬️" },
+      { href: "/portal/vehicle-log", label: "運行管理表", icon: "🚗" },
+      { href: "/portal/notices", label: "社内のお知らせ", icon: "📢" },
+      { href: "/portal/links", label: "外部システム", icon: "🔗" },
+      { href: MANUAL_URL, label: "マニュアル", icon: "📖", external: true },
+    ],
+  },
+  {
+    title: "記録・管理",
+    items: [
+      { href: "/portal/minutes", label: "委員会議事録", icon: "🗂️" },
+      { href: "/portal/nanbyo", label: "難病 上限管理表", icon: "📑" },
+      { href: "/portal/sales", label: "営業管理表", icon: "🤝" },
+      { href: "/portal/parking", label: "車両・駐車場", icon: "🚙" },
+      { href: "/portal/drive", label: "書類フォルダ", icon: "🗄️" },
+    ],
+  },
+  {
+    title: "人・組織",
+    items: [
+      { href: "/portal/consultation", label: "相談窓口", icon: "💬" },
+      { href: "/portal/goals", label: "目標管理", icon: "🎯" },
+      { href: "/portal/evaluations", label: "人事評価", icon: "⭐" },
+      { href: "/portal/philosophy", label: "理念(MVV)", icon: "🧭" },
+      { href: "/portal/job-descriptions", label: "職務記述書", icon: "📘" },
+    ],
+  },
+  {
+    title: "経営・設定",
+    items: [
+      { href: "/portal/management", label: "経営数値", icon: "📈" },
+      { href: "/portal/settings", label: "設定・マスタ", icon: "⚙️" },
+    ],
+  },
 ];
 
 const healthNavItems = [
@@ -169,18 +193,22 @@ export function Sidebar() {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">社内ポータル</p>
-          <ul className="space-y-1">
-            {portalNavItems.map((item) => (
-              <NavLink
-                key={item.href}
-                {...item}
-                active={isActive(item.href)}
-                badge={item.href === "/portal/notices" ? unreadCount : undefined}
-                onClick={close}
-              />
-            ))}
-          </ul>
+          {portalNavGroups.map((group, gi) => (
+            <div key={group.title} className={gi > 0 ? "mt-5" : ""}>
+              <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wide text-slate-400">{group.title}</p>
+              <ul className="space-y-0.5">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    {...item}
+                    active={isActive(item.href)}
+                    badge={item.href === "/portal/notices" ? unreadCount : undefined}
+                    onClick={close}
+                  />
+                ))}
+              </ul>
+            </div>
+          ))}
 
           {canViewHealthTool(current) && (
           <>
