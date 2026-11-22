@@ -4,6 +4,7 @@ import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePortalStore, useCurrentStaff, useStaffName } from "@/lib/portal/store";
 import { noticeVisibleTo, sortNotices } from "@/lib/portal/logic";
+import { isAdmin } from "@/lib/portal/logic";
 import { BusinessUnitId, Notice, NoticeCategory } from "@/lib/portal/types";
 import { formatDateTime, newId, nowIsoLocal } from "@/lib/portal/util";
 import {
@@ -54,7 +55,7 @@ function NoticesInner() {
     if (openId && current) markNoticeRead(openId, current.id);
   }, [openId, current, markNoticeRead]);
 
-  const canEdit = (n: Notice) => current && (n.authorId === current.id || current.role === "管理者");
+  const canEdit = (n: Notice) => current && (n.authorId === current.id || isAdmin(current));
   const activeStaff = staff.filter((s) => s.active);
 
   function submit(e: FormEvent) {

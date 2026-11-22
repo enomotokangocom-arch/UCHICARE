@@ -53,7 +53,7 @@ export default function PortalHome() {
         </h1>
         {current && (
           <p className="mt-1 flex items-center gap-2 text-sm text-teal-50">
-            所属: {unitName(current.unitId)} / {current.role}
+            所属: {unitName(current.unitId)} / {current.role} / {current.position}
           </p>
         )}
       </div>
@@ -180,8 +180,12 @@ export default function PortalHome() {
         {[
           { href: "/portal/vehicle-log", icon: "🚗", label: "運行管理表" },
           { href: "/portal/parking", icon: "🅿️", label: "駐車場管理" },
+          { href: "/portal/nanbyo", icon: "📑", label: "難病 上限管理表" },
+          { href: "/portal/sales", icon: "🤝", label: "営業管理表" },
+          { href: "/portal/management", icon: "📈", label: "経営数値" },
           { href: "/portal/minutes", icon: "🗂️", label: "委員会議事録" },
           { href: "/portal/evaluations", icon: "⭐", label: "人事評価" },
+          { href: "/portal/job-descriptions", icon: "📘", label: "職務記述書" },
         ].map((m) => (
           <Link
             key={m.href}

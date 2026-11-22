@@ -16,8 +16,12 @@ const portalNavItems = [
   { href: "/portal/alcohol-check", label: "アルコールチェック", icon: "🌬️" },
   { href: "/portal/vehicle-log", label: "運行管理表", icon: "🚗" },
   { href: "/portal/parking", label: "駐車場管理", icon: "🅿️" },
+  { href: "/portal/nanbyo", label: "難病 上限管理表", icon: "📑" },
+  { href: "/portal/sales", label: "営業管理表", icon: "🤝" },
+  { href: "/portal/management", label: "経営数値", icon: "📈" },
   { href: "/portal/minutes", label: "委員会議事録", icon: "🗂️" },
   { href: "/portal/evaluations", label: "人事評価", icon: "⭐" },
+  { href: "/portal/job-descriptions", label: "職務記述書", icon: "📘" },
   { href: "/portal/settings", label: "設定・マスタ", icon: "⚙️" },
 ];
 
@@ -188,7 +192,7 @@ export function Sidebar() {
                 .filter((s) => s.active)
                 .map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name}({unitName(s.unitId)})
+                    {s.name}({s.position}・{unitName(s.unitId)})
                   </option>
                 ))}
             </select>

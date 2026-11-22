@@ -1,5 +1,6 @@
 import { AlcoholCheck, Committee, Evaluation, EvaluationCriterion, Minutes, Notice, ParkingLot, ParkingSpace, Staff, VehicleLog } from "./types";
 import { addMonths, todayString } from "./util";
+import { BusinessUnitId, NanbyoEntry, NanbyoPatient } from "./types";
 
 export function noticeVisibleTo(notice: Notice, staff: Staff | undefined): boolean {
   if (!staff) return true;
@@ -128,4 +129,62 @@ export function parkingContractAlerts(lots: ParkingLot[], today = todayString())
   return lots
     .filter((l) => l.contractEnd && l.contractEnd <= limit)
     .map((l) => ({ lot: l, overdue: l.contractEnd < today }));
+}
+
+/** 全社の管理権限(お知らせの編集・人事評価の管理など) */
+export function isAdmin(staff: Staff | undefined): boolean {
+  if (!staff) return false;
+  return staff.role === "管理者" || ["経営者", "統括部長", "事務長"].includes(staff.position);
+}
+
+/**
+ * 経営数値を見られる範囲。
+ * 経営者・統括部長・事務長 = 全事業所 / 所長 = 自分の事業所 / それ以外 = 自分の個人売上のみ
+ */
+export function financeScope(staff: Staff | undefined): { all: boolean; units: BusinessUnitId[] } {
+  if (!staff) return { all: false, units: [] };
+  if (isAdmin(staff)) return { all: true, units: [] };
+  if (staff.position === "所長") return { all: false, units: [staff.unitId] };
+  return { all: false, units: [] };
+}
+
+export function sum(nums: (number | null | undefined)[]): number {
+  return nums.reduce<number>((a, b) => a + (b ?? 0), 0);
+}
+
+export function yen(n: number | null | undefined): string {
+  if (n === null || n === undefined) return "-";
+  return `¥${Math.round(n).toLocaleString()}`;
+}
+
+/** 万円表記(グラフ・タイル用) */
+export function manYen(n: number): string {
+  return `${(n / 10000).toLocaleString(undefined, { maximumFractionDigits: 1 })}万円`;
+}
+
+export function pct(n: number | null): string {
+  return n === null || !Number.isFinite(n) ? "-" : `${(n * 100).toFixed(1)}%`;
+}
+
+/** 医療費の自己負担額は10円未満四捨五入 */
+export function roundTo10(n: number): number {
+  return Math.round(n / 10) * 10;
+}
+
+export function nanbyoMonthSummary(patient: NanbyoPatient, entries: NanbyoEntry[], month: string) {
+  const list = entries
+    .filter((e) => e.patientId === patient.id && e.date.startsWith(month))
+    .sort((a, b) => `${a.date}${a.createdAt}`.localeCompare(`${b.date}${b.createdAt}`));
+  let cumulative = 0;
+  const rows = list.map((e) => {
+    cumulative += e.copay;
+    return { entry: e, cumulative };
+  });
+  const remaining = Math.max(0, patient.monthlyCap - cumulative);
+  return { rows, cumulative, remaining, reached: cumulative >= patient.monthlyCap };
+}
+
+/** 今回徴収する自己負担額の目安 = min(医療費総額 × 負担割合, 上限額までの残り) */
+export function suggestedCopay(totalCost: number, burdenRate: number, remaining: number): number {
+  return Math.min(roundTo10(totalCost * burdenRate), remaining);
 }

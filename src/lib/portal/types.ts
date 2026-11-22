@@ -44,11 +44,17 @@ export type StaffRole =
   | "店舗スタッフ"
   | "その他";
 
+/** 役職(ジョブディスクリプションと閲覧権限に使う) */
+export type Position = "経営者" | "統括部長" | "所長" | "リハ責任者" | "主任" | "事務長" | "リーダー" | "スタッフ";
+
 export interface Staff {
   id: string;
   name: string;
   unitId: BusinessUnitId;
+  /** 職種 */
   role: StaffRole;
+  /** 役職 */
+  position: Position;
   /** 社用車を運転する */
   isDriver: boolean;
   /** 安全運転管理者(またはその代行者)としてアルコールチェックの確認者になれる */
@@ -218,4 +224,106 @@ export interface ParkingSpace {
   occupiedBy: string;
   occupiedUntil: string;
   notes: string;
+}
+
+/** 職務記述書(ジョブディスクリプション) */
+export interface JobDescription {
+  id: string;
+  position: Position;
+  reportsTo: string;
+  mission: string;
+  /** 1行1項目 */
+  responsibilities: string;
+  authority: string;
+  qualifications: string;
+  kpis: string;
+}
+
+/** 難病(特定医療費)受給者 */
+export interface NanbyoPatient {
+  id: string;
+  /** 表示名(個人情報保護のためイニシャルや利用者番号を推奨) */
+  name: string;
+  unitId: BusinessUnitId;
+  recipientNumber: string;
+  validFrom: string;
+  validTo: string;
+  /** 月額自己負担上限額(円) */
+  monthlyCap: number;
+  /** 負担割合(0.2 = 2割) */
+  burdenRate: number;
+  notes: string;
+  active: boolean;
+}
+
+/** 自己負担上限額管理票への記載(1回分) */
+export interface NanbyoEntry {
+  id: string;
+  patientId: string;
+  date: string;
+  /** 記載した医療機関等(当ステーション・病院・薬局など) */
+  provider: string;
+  /** 医療費総額(10割) */
+  totalCost: number;
+  /** 徴収した自己負担額 */
+  copay: number;
+  createdAt: string;
+}
+
+export type SalesOrgType = "病院(地域連携室)" | "診療所・クリニック" | "居宅介護支援事業所" | "地域包括支援センター" | "訪問看護・介護事業所" | "行政" | "その他";
+export type SalesMethod = "訪問" | "電話" | "オンライン" | "メール・FAX" | "その他";
+export type SalesResult = "情報提供" | "依頼あり" | "検討中" | "関係構築" | "その他";
+
+/** 営業活動の記録 */
+export interface SalesActivity {
+  id: string;
+  date: string;
+  staffId: string;
+  unitId: BusinessUnitId;
+  orgName: string;
+  orgType: SalesOrgType;
+  contactPerson: string;
+  method: SalesMethod;
+  content: string;
+  result: SalesResult;
+  /** 新規の紹介・依頼件数 */
+  referrals: number;
+  nextAction: string;
+  nextDate: string;
+  createdAt: string;
+}
+
+/** 事業所の月次の数字 */
+export interface FinanceMonthly {
+  id: string;
+  unitId: BusinessUnitId;
+  month: string; // YYYY-MM
+  revenue: number | null;
+  revenueTarget: number | null;
+  laborCost: number | null;
+  otherCost: number | null;
+  notes: string;
+}
+
+export type SubsidyStatus = "申請予定" | "申請中" | "採択・交付決定" | "入金済" | "不採択";
+
+export interface Subsidy {
+  id: string;
+  name: string;
+  units: BusinessUnitId[];
+  amount: number;
+  status: SubsidyStatus;
+  appliedDate: string;
+  receivedDate: string;
+  notes: string;
+}
+
+/** 個人の月次の売上と目標 */
+export interface PersonalSales {
+  id: string;
+  staffId: string;
+  month: string;
+  revenue: number | null;
+  target: number | null;
+  visits: number | null;
 }

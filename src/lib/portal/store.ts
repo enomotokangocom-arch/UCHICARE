@@ -3,12 +3,18 @@ import { persist } from "zustand/middleware";
 import {
   DEFAULT_COMMITTEES,
   DEFAULT_CRITERIA,
+  DEFAULT_JOB_DESCRIPTIONS,
   DEFAULT_LINKS,
   DEFAULT_PARKING_LOTS,
   DEFAULT_PARKING_SPACES,
   DEFAULT_STAFF,
   DEFAULT_VEHICLES,
   sampleAlcoholChecks,
+  sampleFinance,
+  sampleNanbyo,
+  samplePersonalSales,
+  sampleSalesActivities,
+  sampleSubsidies,
   sampleMinutes,
   sampleNotices,
   sampleVehicleLogs,
@@ -19,11 +25,18 @@ import {
   Evaluation,
   EvaluationCriterion,
   ExternalLink,
+  FinanceMonthly,
+  JobDescription,
   Minutes,
+  NanbyoEntry,
+  NanbyoPatient,
   Notice,
   ParkingLot,
   ParkingSpace,
+  PersonalSales,
+  SalesActivity,
   Staff,
+  Subsidy,
   Vehicle,
   VehicleLog,
 } from "./types";
@@ -49,15 +62,27 @@ interface PortalData {
   evaluations: Evaluation[];
   parkingLots: ParkingLot[];
   parkingSpaces: ParkingSpace[];
+  jobDescriptions: JobDescription[];
+  nanbyoPatients: NanbyoPatient[];
+  nanbyoEntries: NanbyoEntry[];
+  salesActivities: SalesActivity[];
+  finance: FinanceMonthly[];
+  subsidies: Subsidy[];
+  personalSales: PersonalSales[];
+  /** 経営数値がサンプルのままか(バナー表示用) */
+  financeIsSample: boolean;
 }
 
-type CollectionKey = Exclude<keyof PortalData, "currentStaffId">;
+type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample">;
 
 interface PortalState extends PortalData {
   setCurrentStaffId: (id: string) => void;
   markNoticeRead: (noticeId: string, staffId: string) => void;
   resetAll: () => void;
   resetLinks: () => void;
+  resetJobDescriptions: () => void;
+  /** サンプルの経営数値(月次・補助金・個人売上)を消去する */
+  clearFinanceSamples: () => void;
   collection: <K extends CollectionKey>(key: K) => Collection<PortalData[K][number]>;
 }
 
@@ -76,6 +101,14 @@ function initialData(): PortalData {
     evaluations: [],
     parkingLots: DEFAULT_PARKING_LOTS,
     parkingSpaces: DEFAULT_PARKING_SPACES,
+    jobDescriptions: DEFAULT_JOB_DESCRIPTIONS,
+    nanbyoPatients: sampleNanbyo().patients,
+    nanbyoEntries: sampleNanbyo().entries,
+    salesActivities: sampleSalesActivities(),
+    finance: sampleFinance(),
+    subsidies: sampleSubsidies(),
+    personalSales: samplePersonalSales(),
+    financeIsSample: true,
   };
 }
 
@@ -92,6 +125,8 @@ export const usePortalStore = create<PortalState>()(
         })),
       resetAll: () => set(initialData()),
       resetLinks: () => set({ links: DEFAULT_LINKS }),
+      resetJobDescriptions: () => set({ jobDescriptions: DEFAULT_JOB_DESCRIPTIONS }),
+      clearFinanceSamples: () => set({ finance: [], subsidies: [], personalSales: [], financeIsSample: false }),
       collection: (key) => ({
         add: (item) =>
           set((state) => ({ [key]: [item, ...(state[key] as { id: string }[])] }) as Partial<PortalState>),
@@ -112,9 +147,31 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
+      version: 1,
+      // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<PortalData>;
+        if (version < 1 && Array.isArray(state.staff)) {
+          state.staff = state.staff.map((s) => ({
+            ...s,
+            position: s.position ?? (s.role === "管理者" ? "経営者" : "スタッフ"),
+          }));
+        }
+        return state as PortalState;
+      },
       partialize: (state) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { setCurrentStaffId, markNoticeRead, resetAll, resetLinks, collection, ...data } = state;
+        const {
+          /* eslint-disable @typescript-eslint/no-unused-vars */
+          setCurrentStaffId,
+          markNoticeRead,
+          resetAll,
+          resetLinks,
+          resetJobDescriptions,
+          clearFinanceSamples,
+          collection,
+          /* eslint-enable @typescript-eslint/no-unused-vars */
+          ...data
+        } = state;
         return data;
       },
     }

@@ -2,8 +2,8 @@
 
 import { ChangeEvent, ReactNode } from "react";
 import { usePortalStore } from "@/lib/portal/store";
-import { BUSINESS_UNITS } from "@/lib/portal/defaults";
-import { BusinessUnitId, LinkCategory, StaffRole } from "@/lib/portal/types";
+import { BUSINESS_UNITS, POSITIONS } from "@/lib/portal/defaults";
+import { BusinessUnitId, LinkCategory, Position, StaffRole } from "@/lib/portal/types";
 import { newId, todayString } from "@/lib/portal/util";
 import { Card, PageContainer, PageHeader, UnitCheckboxes, buttonClass, inputClass } from "@/components/portal/ui";
 
@@ -152,13 +152,13 @@ export default function SettingsPage() {
         <Section
           id="staff"
           title="職員"
-          description="「運転者」はアルコールチェック・運行管理表の運転者に、「安全運転管理者」は確認者に、「評価者」は人事評価の評価者に表示されます。"
+          description="役職は職務記述書と経営数値の閲覧範囲に使います(経営者・統括部長・事務長=全社、所長=自事業所、その他=自分の個人売上のみ)。「運転者」はアルコールチェック・運行管理表の運転者に、「安全運転管理者」は確認者に、「評価者」は人事評価の評価者に表示されます。"
           action={
             <button
               type="button"
               className={buttonClass.secondary}
               onClick={() =>
-                collection("staff").add({ id: newId("s"), name: "新しい職員", unitId: "houkan", role: "看護師", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true })
+                collection("staff").add({ id: newId("s"), name: "新しい職員", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true })
               }
             >
               ＋ 追加
@@ -174,12 +174,17 @@ export default function SettingsPage() {
                   <div className="md:col-span-2">
                     <UnitSelect value={s.unitId} onChange={(unitId) => up({ unitId })} />
                   </div>
-                  <select className={`${cell} md:col-span-2`} value={s.role} onChange={(e) => up({ role: e.target.value as StaffRole })}>
+                  <select className={`${cell} md:col-span-2`} value={s.role} onChange={(e) => up({ role: e.target.value as StaffRole })} aria-label="職種">
                     {ROLES.map((r) => (
                       <option key={r}>{r}</option>
                     ))}
                   </select>
-                  <div className="col-span-2 flex flex-wrap items-center gap-3 md:col-span-5">
+                  <select className={`${cell} md:col-span-2`} value={s.position} onChange={(e) => up({ position: e.target.value as Position })} aria-label="役職">
+                    {POSITIONS.map((p) => (
+                      <option key={p}>{p}</option>
+                    ))}
+                  </select>
+                  <div className="flex flex-wrap items-center gap-3 md:col-span-3">
                     <Check label="運転者" checked={s.isDriver} onChange={(v) => up({ isDriver: v })} />
                     <Check label="安全運転管理者" checked={s.isSafetyManager} onChange={(v) => up({ isSafetyManager: v })} />
                     <Check label="評価者" checked={s.isEvaluator} onChange={(v) => up({ isEvaluator: v })} />

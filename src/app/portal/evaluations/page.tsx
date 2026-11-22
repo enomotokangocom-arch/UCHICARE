@@ -5,6 +5,7 @@ import { FormEvent, Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePortalStore, useCurrentStaff, useStaffName } from "@/lib/portal/store";
 import { RANK_GUIDE, currentPeriod, evaluationAverages, periodOptions, rankFromAverage } from "@/lib/portal/logic";
+import { isAdmin as isAdminStaff } from "@/lib/portal/logic";
 import { unitName } from "@/lib/portal/defaults";
 import { Evaluation, EvaluationScore, EvaluationStatus } from "@/lib/portal/types";
 import { formatDateTime, newId, nowIsoLocal } from "@/lib/portal/util";
@@ -56,7 +57,7 @@ function EvaluationDetail({ ev }: { ev: Evaluation }) {
 
   const isSelf = current?.id === ev.staffId;
   const isEvaluator = current?.id === ev.evaluatorId;
-  const isAdmin = current?.role === "管理者";
+  const isAdmin = isAdminStaff(current);
   const canEditSelf = isSelf && draft.status === "draft";
   const canEditEvaluator = (isEvaluator || isAdmin) && draft.status !== "completed";
   const avgs = evaluationAverages(draft, criteria);
@@ -226,7 +227,7 @@ function EvaluationsInner() {
   const router = useRouter();
   const id = useSearchParams().get("id");
 
-  const isAdmin = current?.role === "管理者";
+  const isAdmin = isAdminStaff(current);
   const canCreate = isAdmin || current?.isEvaluator;
   const [period, setPeriod] = useState(currentPeriod());
   const [creating, setCreating] = useState(false);
@@ -276,7 +277,7 @@ function EvaluationsInner() {
     );
   }
 
-  const evaluators = staff.filter((s) => s.active && (s.isEvaluator || s.role === "管理者"));
+  const evaluators = staff.filter((s) => s.active && (s.isEvaluator || isAdminStaff(s)));
 
   return (
     <PageContainer>
