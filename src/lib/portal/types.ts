@@ -18,6 +18,7 @@ export type LinkCategory =
   | "連携・コミュニケーション"
   | "福利厚生"
   | "研修・eラーニング"
+  | "マニュアル"
   | "店舗・レジ"
   | "デザイン"
   | "その他";
@@ -368,4 +369,31 @@ export interface Goal {
   status: GoalStatus;
   note: string;
   updatedAt: string;
+}
+
+/** 目標管理シート(Googleスプレッドシート)から読み込んだ進捗 */
+export interface GoalSheetSync {
+  sheetStaffName: string;
+  cdpStage: string;
+  self6: string;
+  mentor6: string;
+  self1y: string;
+  mentor1y: string;
+  /** 0〜1 */
+  selfProgress: number | null;
+  mentorProgress: number | null;
+  selfAvg: string;
+  mentorAvg: string;
+  syncedAt: string;
+}
+
+/** 職員ごとの目標管理シート(原本をコピーしたもの) */
+export interface GoalSheet {
+  id: string;
+  staffId: string;
+  fiscalYear: number;
+  fileId: string;
+  url: string;
+  name: string;
+  sync?: GoalSheetSync;
 }

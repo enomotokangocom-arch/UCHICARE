@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { usePortalStore, useCurrentStaff, useStaffName, useVehicleName } from "@/lib/portal/store";
 import { alcoholChecksFor, isAlcoholDetected } from "@/lib/portal/logic";
 import { VehicleLog } from "@/lib/portal/types";
-import { downloadCsv, formatDate, newId, nowIsoLocal, todayString } from "@/lib/portal/util";
+import { downloadCsv, formatDate, newId, nowIsoLocal, nowTimeString, todayString } from "@/lib/portal/util";
 import { Card, EmptyState, Field, PageContainer, PageHeader, StaffSelect, StatusPill, buttonClass, inputClass } from "@/components/portal/ui";
 
 type Form = Omit<VehicleLog, "id" | "createdAt">;
@@ -18,7 +19,8 @@ function distance(l: Pick<VehicleLog, "startOdometer" | "endOdometer">): number 
 
 const numOrNull = (v: string) => (v === "" ? null : Number(v));
 
-export default function VehicleLogPage() {
+function VehicleLogInner() {
+  const searchParams = useSearchParams();
   const logs = usePortalStore((s) => s.vehicleLogs);
   const staff = usePortalStore((s) => s.staff);
   const vehicles = usePortalStore((s) => s.vehicles);
@@ -51,8 +53,18 @@ export default function VehicleLogPage() {
     notes: "",
   });
 
-  const [form, setForm] = useState<Form>(() => blank(initialVehicle));
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // ホームの「帰着を記録する」から ?edit=<id> で来たときは、その運行記録を編集状態で開く(帰着時刻は今の時刻)
+  const [initialEdit] = useState(() => {
+    const id = searchParams.get("edit");
+    return logs.find((l) => l.id === id) ?? null;
+  });
+  const [form, setForm] = useState<Form>(() => {
+    if (!initialEdit) return blank(initialVehicle);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, createdAt, ...rest } = initialEdit;
+    return { ...rest, endTime: rest.endTime || nowTimeString() };
+  });
+  const [editingId, setEditingId] = useState<string | null>(initialEdit?.id ?? null);
   const [month, setMonth] = useState(todayString().slice(0, 7));
   const [vehicleFilter, setVehicleFilter] = useState("");
 
@@ -340,5 +352,13 @@ export default function VehicleLogPage() {
         </div>
       )}
     </PageContainer>
+  );
+}
+
+export default function VehicleLogPage() {
+  return (
+    <Suspense fallback={null}>
+      <VehicleLogInner />
+    </Suspense>
   );
 }

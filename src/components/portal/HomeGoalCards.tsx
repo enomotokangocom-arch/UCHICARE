@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { goalPeriodLabel, goalProgress, isAdmin, isCurrentGoal, pct, unitFiscalToDate, yen } from "@/lib/portal/logic";
 import { canSeeUnitAmounts } from "@/lib/portal/permissions";
-import { BUSINESS_UNITS, unitName } from "@/lib/portal/defaults";
+import { BUSINESS_UNITS, currentFiscalYear, unitName } from "@/lib/portal/defaults";
+import { GoalSheetSummary } from "./GoalSheetPanel";
 import { Goal } from "@/lib/portal/types";
 import { todayString } from "@/lib/portal/util";
 import { Card, ProgressBar, UnitBadge } from "./ui";
@@ -51,6 +52,7 @@ export function HomeGoalCards() {
   const personalSales = usePortalStore((s) => s.personalSales);
   const goals = usePortalStore((s) => s.goals);
   const finance = usePortalStore((s) => s.finance);
+  const goalSheets = usePortalStore((s) => s.goalSheets);
   if (!current) return null;
 
   const thisMonth = todayString().slice(0, 7);
@@ -58,6 +60,7 @@ export function HomeGoalCards() {
   const mySales = personalSales
     .filter((p) => p.staffId === current.id && p.month <= thisMonth && (p.revenue !== null || p.target !== null))
     .sort((a, b) => b.month.localeCompare(a.month))[0];
+  const mySheet = goalSheets.find((g) => g.staffId === current.id && g.fiscalYear === currentFiscalYear());
   const myGoals = goals.filter((g) => g.scope === "personal" && g.staffId === current.id && isCurrentGoal(g));
   const units = isAdmin(current) ? BUSINESS_UNITS.map((u) => u.id) : [current.unitId];
 
@@ -82,8 +85,19 @@ export function HomeGoalCards() {
 
       <Card>
         <CardHeader title="🎯 私の目標" href="/portal/goals" linkLabel="目標を入力" />
+        {mySheet && (
+          <div className="mb-3 rounded-lg bg-gold-50 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-700">📄 目標管理シート</span>
+              <a href={mySheet.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-brand-700 hover:underline">
+                開く ↗
+              </a>
+            </div>
+            <GoalSheetSummary sheet={mySheet} compact />
+          </div>
+        )}
         {myGoals.length === 0 ? (
-          <p className="text-sm text-slate-400">今月・今期の目標はまだありません。「目標を入力」から立ててみましょう。</p>
+          <p className="text-sm text-slate-400">今月・今期の行動目標はまだありません。「目標を入力」から立ててみましょう。</p>
         ) : (
           <GoalLines goals={myGoals} />
         )}

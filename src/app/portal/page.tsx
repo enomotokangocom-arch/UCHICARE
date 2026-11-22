@@ -9,6 +9,7 @@ import { formatDate, formatDateTime, todayString } from "@/lib/portal/util";
 import { LinkGrid } from "@/components/portal/LinkGrid";
 import { HomeGoalCards } from "@/components/portal/HomeGoalCards";
 import { BrandHero } from "@/components/portal/BrandHero";
+import { TodayVehicleCard } from "@/components/portal/TodayVehicleCard";
 import { Card, PageContainer, StatusPill, UnitBadge, UnitBadges, buttonClass } from "@/components/portal/ui";
 
 export default function PortalHome() {
@@ -64,8 +65,8 @@ export default function PortalHome() {
         </p>
       </BrandHero>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {current?.isDriver && (
+      {current?.isDriver ? (
+        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
           <Card>
             <h2 className="text-sm font-bold text-slate-900">🌬️ 今日のアルコールチェック</h2>
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -90,9 +91,21 @@ export default function PortalHome() {
               記録する
             </Link>
           </Card>
-        )}
+          <TodayVehicleCard />
+        </div>
+      ) : (
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <Link href="/portal/alcohol-check" className={`${buttonClass.secondary} py-3`}>
+            🌬️ アルコールチェック
+          </Link>
+          <Link href="/portal/vehicle-log" className={`${buttonClass.secondary} py-3`}>
+            🚗 運行管理表
+          </Link>
+        </div>
+      )}
 
-        <Card className={current?.isDriver ? "lg:col-span-2" : "lg:col-span-3"}>
+      <div className="mt-4">
+        <Card>
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-900">📢 社内のお知らせ</h2>
             <Link href="/portal/notices" className="text-xs font-semibold text-brand-700 hover:underline">

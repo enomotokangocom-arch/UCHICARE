@@ -9,6 +9,7 @@ import { BUSINESS_UNITS, unitName } from "@/lib/portal/defaults";
 import { BusinessUnitId } from "@/lib/portal/types";
 import { todayString } from "@/lib/portal/util";
 import { GoalList } from "@/components/portal/GoalList";
+import { GoalSheetOverview, GoalSheetPanel } from "@/components/portal/GoalSheetPanel";
 import { Card, PageContainer, PageHeader, ProgressBar, UnitBadge, inputClass } from "@/components/portal/ui";
 
 type Tab = "personal" | "unit";
@@ -83,7 +84,7 @@ export default function GoalsPage() {
       <PageHeader
         icon="🎯"
         title="目標管理"
-        description="個人と部門(事業所)の目標を立て、進み具合を記録します。今月・今の半期の目標はポータルホームに表示されます。"
+        description="目標管理シート(Googleスプレッドシートが原本)の進捗と、月ごとの行動目標・部門の目標を管理します。今月・今の半期の目標はポータルホームに表示されます。"
         actions={
           <select className={`${inputClass} w-auto`} value={period} onChange={(e) => setPeriod(e.target.value)}>
             {goalPeriodOptions().map((o) => (
@@ -124,6 +125,7 @@ export default function GoalsPage() {
               ))}
             </select>
           )}
+          <GoalSheetPanel target={target} canEdit={canEditPersonal(current, target)} />
           {isMonth && (
             <SalesSummary
               label={`${target.name} さんの ${goalPeriodLabel(period)} の売上(経営数値より)`}
@@ -133,12 +135,14 @@ export default function GoalsPage() {
               showAmounts={canSeePersonalAmounts(current, target)}
             />
           )}
+          <h2 className="mb-2 mt-2 text-sm font-bold text-slate-900">🗒️ {goalPeriodLabel(period)} の行動目標</h2>
           <GoalList
             goals={personalGoals}
             canEdit={canEditPersonal(current, target)}
             base={{ scope: "personal", staffId: target.id, unitId: target.unitId, period }}
             emptyText={`${goalPeriodLabel(period)} の個人目標はまだありません。`}
           />
+          {viewableStaff.length > 1 && <GoalSheetOverview staff={viewableStaff} />}
         </>
       )}
 

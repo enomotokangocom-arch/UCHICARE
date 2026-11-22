@@ -336,3 +336,24 @@ export function minutesFolderPath(committeeName: string, date: string): string[]
   const fy = m >= 4 ? y : y - 1;
   return [MINUTES_FOLDER, committeeName, `${fy}年度`];
 }
+
+/** ファイルをコピーする(目標管理シートの原本から職員ごとのシートを作る) */
+export function copyFile(fileId: string, name: string, parentId: string) {
+  return driveFetch<DriveItem>(`${API}/files/${encodeURIComponent(fileId)}/copy?fields=${FILE_FIELDS}&${ALL_DRIVES}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, parents: [parentId] }),
+  });
+}
+
+/** Googleスプレッドシートの先頭シートをCSVで取得する */
+export async function exportSpreadsheetCsv(fileId: string): Promise<string> {
+  const res = await fetch(`${API}/files/${encodeURIComponent(fileId)}/export?mimeType=text/csv`, { headers: authHeader() });
+  if (res.status === 401) {
+    setToken(null);
+    throw new Error("Googleドライブの接続の期限が切れました。もう一度接続してください。");
+  }
+  if (res.status === 404) throw new Error("シートが見つかりません。URLが正しいか、このアカウントに共有されているか確認してください。");
+  if (!res.ok) throw new Error(`シートを読み込めませんでした(${res.status})。`);
+  return res.text();
+}

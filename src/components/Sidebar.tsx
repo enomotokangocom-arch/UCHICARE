@@ -8,14 +8,16 @@ import clsx from "clsx";
 import { surveyList } from "@/lib/surveyDefs";
 import { surveyTypeToSlug } from "@/lib/surveySlug";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
-import { unitName } from "@/lib/portal/defaults";
+import { MANUAL_URL, unitName } from "@/lib/portal/defaults";
+import { canViewHealthTool } from "@/lib/portal/logic";
 
-const portalNavItems = [
+const portalNavItems: { href: string; label: string; icon: string; external?: boolean }[] = [
   { href: "/portal", label: "ポータルホーム", icon: "🏢" },
-  { href: "/portal/links", label: "外部システム", icon: "🔗" },
-  { href: "/portal/notices", label: "社内のお知らせ", icon: "📢" },
   { href: "/portal/alcohol-check", label: "アルコールチェック", icon: "🌬️" },
   { href: "/portal/vehicle-log", label: "運行管理表", icon: "🚗" },
+  { href: "/portal/links", label: "外部システム", icon: "🔗" },
+  { href: "/portal/notices", label: "社内のお知らせ", icon: "📢" },
+  { href: MANUAL_URL, label: "マニュアル", icon: "📖", external: true },
   { href: "/portal/parking", label: "駐車場管理", icon: "🅿️" },
   { href: "/portal/nanbyo", label: "難病 上限管理表", icon: "📑" },
   { href: "/portal/sales", label: "営業管理表", icon: "🤝" },
@@ -41,6 +43,7 @@ function NavLink({
   label,
   active,
   badge,
+  external,
   onClick,
 }: {
   href: string;
@@ -48,8 +51,26 @@ function NavLink({
   label: string;
   active: boolean;
   badge?: number;
+  external?: boolean;
   onClick: () => void;
 }) {
+  if (external) {
+    return (
+      <li>
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onClick}
+          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-brand-700"
+        >
+          <span>{icon}</span>
+          <span className="flex-1">{label}</span>
+          <span className="text-xs text-slate-300">↗</span>
+        </a>
+      </li>
+    );
+  }
   return (
     <li>
       <Link
@@ -160,8 +181,10 @@ export function Sidebar() {
             ))}
           </ul>
 
+          {canViewHealthTool(current) && (
+          <>
           <p className="mt-6 mb-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-            健康経営ツール
+            健康経営ツール(責任者以上)
           </p>
           <ul className="space-y-1">
             {healthNavItems.map((item) => (
@@ -181,6 +204,8 @@ export function Sidebar() {
               );
             })}
           </ul>
+          </>
+          )}
         </nav>
 
         <div className="border-t border-slate-200 px-4 py-3">

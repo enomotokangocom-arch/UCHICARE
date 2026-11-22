@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { StoreHydration } from "@/components/StoreHydration";
+import { AccessGuard } from "@/components/portal/AccessGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +35,9 @@ export default function RootLayout({
         <StoreHydration>
           <div className="flex min-h-screen">
             <Sidebar />
-            <main className="min-w-0 flex-1 pt-14 lg:pt-0">{children}</main>
+            <main className="min-w-0 flex-1 pt-14 lg:pt-0">
+              <AccessGuard>{children}</AccessGuard>
+            </main>
           </div>
         </StoreHydration>
       </body>

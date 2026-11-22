@@ -244,3 +244,16 @@ export function unitFiscalToDate(finance: import("./types").FinanceMonthly[], un
     latestTarget: latest?.revenueTarget ?? null,
   };
 }
+
+/** 健康経営ツールを閲覧できる「責任者以上」: 経営者・統括部長・事務長・所長・リハ責任者 */
+export function canViewHealthTool(staff: Staff | undefined): boolean {
+  if (!staff) return false;
+  return isAdmin(staff) || staff.position === "所長" || staff.position === "リハ責任者";
+}
+
+/** 健康経営ツールの画面のパス */
+export const HEALTH_TOOL_PATHS = ["/health", "/dashboard", "/chat", "/articles", "/survey"];
+
+export function isHealthToolPath(pathname: string): boolean {
+  return HEALTH_TOOL_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}

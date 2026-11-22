@@ -7,7 +7,7 @@ import { BusinessUnitId, LinkCategory, Position, StaffRole } from "@/lib/portal/
 import { newId, todayString } from "@/lib/portal/util";
 import { Card, PageContainer, PageHeader, UnitCheckboxes, buttonClass, inputClass } from "@/components/portal/ui";
 
-const CATEGORIES: LinkCategory[] = ["カルテ", "スケジュール", "勤怠", "書類管理", "名刺", "連携・コミュニケーション", "福利厚生", "研修・eラーニング", "店舗・レジ", "デザイン", "その他"];
+const CATEGORIES: LinkCategory[] = ["カルテ", "スケジュール", "勤怠", "書類管理", "名刺", "連携・コミュニケーション", "福利厚生", "研修・eラーニング", "マニュアル", "店舗・レジ", "デザイン", "その他"];
 const ROLES: StaffRole[] = ["管理者", "看護師", "准看護師", "理学療法士", "作業療法士", "言語聴覚士", "ケアマネジャー", "事務", "店舗スタッフ", "その他"];
 const cell = `${inputClass} py-1.5`;
 

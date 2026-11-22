@@ -52,6 +52,7 @@ export const DEFAULT_LINKS: ExternalLink[] = [
   { id: "mcs", name: "MCS", description: "医療介護専用SNS(多職種連携)", category: "連携・コミュニケーション", url: "https://www.medical-care.net/authentication/login", icon: "🤝", units: CARE },
   { id: "lineworks", name: "LINE WORKS", description: "社内チャット・連絡", category: "連携・コミュニケーション", url: "https://talk.worksmobile.com/#/", icon: "💬", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "elearning", name: "E-ラーニング(訪問看護)", description: "看護師・リハ・事務向けの研修", category: "研修・eラーニング", url: "https://cl.s-que.jp/vn/login", icon: "🎓", units: ["houkan"] },
+  { id: "manual", name: "Uchi care マニュアル", description: "業務マニュアル(Notion)", category: "マニュアル", url: "https://app.notion.com/p/Uchi-care-262a1e3b053080aa9dcdcc54afe0ecf8", icon: "📖", units: ["houkan", "kyotaku", "uchinowa", "uchiwell"] },
   { id: "gdrive", name: "Googleドライブ", description: "共有フォルダ・書類保管", category: "書類管理", url: "https://drive.google.com/", icon: "📁", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "gsheets", name: "Googleスプレッドシート", description: "各種管理表", category: "書類管理", url: "https://docs.google.com/spreadsheets/", icon: "📊", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "gdocs", name: "Googleドキュメント", description: "文書・マニュアル", category: "書類管理", url: "https://docs.google.com/document/", icon: "📄", units: ["houkan", "kyotaku", "uchiwell"] },
@@ -80,7 +81,9 @@ export const LEGACY_DEFAULT_LINK_URLS: Record<string, string[]> = {
 export const DEFAULT_LINK_ORDER = DEFAULT_LINKS.map((l) => l.id);
 
 /** 後から追加した初期リンク(保存済みデータにない場合に追加する) */
-export const ADDED_DEFAULT_LINK_IDS = ["uchicare-hp", "elearning"];
+export const ADDED_DEFAULT_LINK_IDS = ["uchicare-hp", "elearning", "manual"];
+
+export const MANUAL_URL = "https://app.notion.com/p/Uchi-care-262a1e3b053080aa9dcdcc54afe0ecf8";
 
 export const DEFAULT_STAFF: Staff[] = [
   { id: "s-admin", name: "管理者(本部)", unitId: "houkan", role: "管理者", position: "経営者", isDriver: true, isSafetyManager: true, isEvaluator: true, active: true },
@@ -583,3 +586,8 @@ export function sampleGoals(): Goal[] {
     { ...base, id: "g-5", scope: "unit", staffId: "", unitId: "kyotaku", period: month, title: "担当件数 1人あたり38件", category: "訪問・件数", targetValue: 38, currentValue: 35, valueUnit: "件", status: "進行中" },
   ];
 }
+
+/** 目標管理シートの原本(事業所ごと)。今は訪問看護のみ */
+export const DEFAULT_GOAL_SHEET_TEMPLATES: Partial<Record<BusinessUnitId, string>> = {
+  houkan: "https://docs.google.com/spreadsheets/d/1tL4ed9Z_JWmFwA1qJ-ARWQ1cOBKI4hQvtFd7Ep0bjII/edit",
+};
