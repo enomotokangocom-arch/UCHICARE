@@ -106,7 +106,7 @@ export default function GoalsPage() {
             key={id}
             type="button"
             onClick={() => setTab(id)}
-            className={clsx("-mb-px border-b-2 px-3 py-2 text-sm font-semibold", tab === id ? "border-teal-600 text-teal-700" : "border-transparent text-slate-500 hover:text-slate-800")}
+            className={clsx("-mb-px border-b-2 px-3 py-2 text-sm font-semibold", tab === id ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-800")}
           >
             {label}
           </button>
@@ -151,7 +151,7 @@ export default function GoalsPage() {
                   key={u}
                   type="button"
                   onClick={() => setUnitId(u)}
-                  className={clsx("rounded-full px-3 py-1.5 text-xs font-semibold", unit === u ? "bg-teal-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200")}
+                  className={clsx("rounded-full px-3 py-1.5 text-xs font-semibold", unit === u ? "bg-brand-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200")}
                 >
                   {unitName(u)}
                 </button>

@@ -14,9 +14,9 @@ import {
   YAxis,
 } from "recharts";
 
-// バリデーション済みの2色(売上=青、目標=オレンジ)。目標は破線でも区別する。
-const SERIES_REVENUE = "#2a78d6";
-const SERIES_TARGET = "#eb6834";
+// ブランドの紺・金に寄せたうえで、色覚の違いでも見分けられることを検証済みの2色(売上=紺、目標=金)。目標は破線でも区別する。
+const SERIES_REVENUE = "#2f5b94";
+const SERIES_TARGET = "#c2a14e";
 const AXIS = { fontSize: 11, fill: "#64748b" };
 const GRID = "#e2e8f0";
 
@@ -37,7 +37,7 @@ export function RevenueTargetChart({ data, height = 260 }: { data: MonthPoint[];
           cursor={{ fill: "rgba(100,116,139,0.08)" }}
           contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: GRID }}
         />
-        <Legend wrapperStyle={{ fontSize: 12, color: "#475569" }} iconSize={10} />
+        <Legend wrapperStyle={{ fontSize: 12 }} iconSize={10} formatter={(value) => <span style={{ color: "#475569" }}>{value}</span>} />
         <Bar isAnimationActive={false} dataKey="revenue" name="売上" fill={SERIES_REVENUE} radius={[4, 4, 0, 0]} maxBarSize={28} />
         <Line
           isAnimationActive={false}

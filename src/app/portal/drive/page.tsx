@@ -254,7 +254,7 @@ export default function DrivePage() {
                   {i > 0 && <span className="text-slate-300">/</span>}
                   <button
                     type="button"
-                    className={i === path.length - 1 ? "font-bold text-slate-900" : "font-semibold text-teal-700 hover:underline"}
+                    className={i === path.length - 1 ? "font-bold text-slate-900" : "font-semibold text-brand-700 hover:underline"}
                     onClick={() => setPath(path.slice(0, i + 1))}
                   >
                     {i === 0 ? `📁 ${c.name}` : c.name}
@@ -307,7 +307,7 @@ export default function DrivePage() {
                     {isFolder ? (
                       <button
                         type="button"
-                        className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-slate-800 hover:text-teal-700"
+                        className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-slate-800 hover:text-brand-700"
                         onClick={() => setPath([...path, { id: it.id, name: it.name }])}
                       >
                         {it.name}
@@ -317,7 +317,7 @@ export default function DrivePage() {
                         href={it.webViewLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="min-w-0 flex-1 truncate text-sm text-slate-800 hover:text-teal-700 hover:underline"
+                        className="min-w-0 flex-1 truncate text-sm text-slate-800 hover:text-brand-700 hover:underline"
                       >
                         {it.name}
                       </a>

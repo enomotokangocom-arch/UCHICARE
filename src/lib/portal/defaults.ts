@@ -25,7 +25,7 @@ import {
 import { daysAgo, toDateString } from "./util";
 
 export const BUSINESS_UNITS: BusinessUnit[] = [
-  { id: "houkan", name: "訪問看護", shortName: "訪看", badgeClass: "bg-teal-50 text-teal-700 ring-teal-200" },
+  { id: "houkan", name: "訪問看護", shortName: "訪看", badgeClass: "bg-brand-50 text-brand-700 ring-brand-200" },
   { id: "kyotaku", name: "居宅介護支援", shortName: "居宅", badgeClass: "bg-sky-50 text-sky-700 ring-sky-200" },
   { id: "uchinowa", name: "UCHINOWA", shortName: "UCHINOWA", badgeClass: "bg-amber-50 text-amber-700 ring-amber-200" },
   { id: "uchiwell", name: "Uchi Well", shortName: "Uchi Well", badgeClass: "bg-violet-50 text-violet-700 ring-violet-200" },

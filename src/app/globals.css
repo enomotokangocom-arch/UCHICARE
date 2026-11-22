@@ -1,8 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f7f9;
+  --foreground: #1d2a39;
+}
+
+/* Uchi care ブランドカラー(ロゴの紺 #30445C と金 #D8C484 を基準にした段階) */
+@theme {
+  --color-brand-50: #f3f6f9;
+  --color-brand-100: #e4eaf1;
+  --color-brand-200: #c9d4e1;
+  --color-brand-300: #a1b2c8;
+  --color-brand-400: #7389a6;
+  --color-brand-500: #526b8b;
+  --color-brand-600: #3d5573;
+  --color-brand-700: #30445c;
+  --color-brand-800: #26374a;
+  --color-brand-900: #1d2a39;
+  --color-brand-950: #131c26;
+
+  --color-gold-50: #fbf8ef;
+  --color-gold-100: #f6efda;
+  --color-gold-200: #ede1ba;
+  --color-gold-300: #e3d29e;
+  --color-gold-400: #d8c484;
+  --color-gold-500: #c6ab5f;
+  --color-gold-600: #a88d44;
+  --color-gold-700: #846e37;
 }
 
 @theme inline {
@@ -12,15 +36,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, var(--font-geist-sans), sans-serif;
 }

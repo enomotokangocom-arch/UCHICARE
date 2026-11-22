@@ -223,7 +223,7 @@ export function MeetingRecorder({
             <a
               href={audioUrl ?? undefined}
               download={`録音.${recording.extension}`}
-              className="font-semibold text-teal-700 hover:underline"
+              className="font-semibold text-brand-700 hover:underline"
             >
               端末に保存
             </a>

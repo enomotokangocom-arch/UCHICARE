@@ -6,11 +6,11 @@ import { BUSINESS_UNITS } from "@/lib/portal/defaults";
 import { BusinessUnitId, Staff } from "@/lib/portal/types";
 
 export const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 disabled:bg-slate-50";
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50";
 
 export const buttonClass = {
   primary:
-    "inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50",
   secondary:
     "inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none",
   danger:
@@ -33,11 +33,12 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900 sm:text-2xl">
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand-700 sm:text-2xl">
           <span>{icon}</span>
           {title}
         </h1>
-        {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+        <span className="mt-2 block h-0.5 w-10 rounded-full bg-gold-400" aria-hidden />
+        {description && <p className="mt-2 text-sm text-slate-500">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -138,7 +139,7 @@ export function UnitFilter({
           onClick={() => onChange(o.id)}
           className={clsx(
             "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-            value === o.id ? "bg-teal-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+            value === o.id ? "bg-brand-700 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
           )}
         >
           {o.label}
@@ -162,7 +163,7 @@ export function UnitCheckboxes({
         <label key={u.id} className="flex items-center gap-1.5 text-sm text-slate-700">
           <input
             type="checkbox"
-            className="h-4 w-4 accent-teal-600"
+            className="h-4 w-4 accent-brand-600"
             checked={value.includes(u.id)}
             onChange={(e) =>
               onChange(e.target.checked ? [...value, u.id] : value.filter((x) => x !== u.id))
@@ -230,7 +231,7 @@ export function ProgressBar({ ratio, label, className }: { ratio: number | null;
   return (
     <span className={clsx("flex items-center gap-2", className)}>
       <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-        <span className={clsx("block h-full rounded-full", done ? "bg-emerald-500" : "bg-teal-500")} style={{ width: `${Math.min(1, ratio) * 100}%` }} />
+        <span className={clsx("block h-full rounded-full", done ? "bg-emerald-500" : "bg-brand-500")} style={{ width: `${Math.min(1, ratio) * 100}%` }} />
       </span>
       <span className={clsx("w-12 text-right text-xs font-bold", done ? "text-emerald-700" : "text-slate-700")}>{label ?? `${Math.round(ratio * 100)}%`}</span>
     </span>

@@ -153,7 +153,7 @@ export default function SalesPage() {
       />
 
       {showForm && (
-        <Card className="mb-5 border-teal-300">
+        <Card className="mb-5 border-brand-300">
           <form onSubmit={submit} className="space-y-4">
             <h2 className="text-sm font-bold text-slate-900">{editingId ? "営業活動を編集" : "営業活動を記録"}</h2>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -261,9 +261,9 @@ export default function SalesPage() {
               <p className="text-[11px] text-slate-500">活動件数</p>
               <p className="text-2xl font-bold text-slate-900">{filtered.length}</p>
             </div>
-            <div className="rounded-lg bg-teal-50 p-3">
-              <p className="text-[11px] text-teal-700">紹介・依頼</p>
-              <p className="text-2xl font-bold text-teal-700">{totalReferrals}</p>
+            <div className="rounded-lg bg-brand-50 p-3">
+              <p className="text-[11px] text-brand-700">紹介・依頼</p>
+              <p className="text-2xl font-bold text-brand-700">{totalReferrals}</p>
             </div>
           </div>
           {byStaff.length > 0 && (
@@ -287,7 +287,7 @@ export default function SalesPage() {
             <ul className="mt-2 divide-y divide-slate-100 text-sm">
               {upcoming.map((a) => (
                 <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-2">
-                  <span className="w-28 shrink-0 font-semibold text-teal-700">{formatDate(a.nextDate)}</span>
+                  <span className="w-28 shrink-0 font-semibold text-brand-700">{formatDate(a.nextDate)}</span>
                   <span className="font-medium text-slate-800">{a.orgName}</span>
                   <span className="text-slate-500">{a.nextAction}</span>
                   <span className="ml-auto text-xs text-slate-400">{staffName(a.staffId)}</span>
@@ -318,7 +318,7 @@ export default function SalesPage() {
                     <td className="px-2 py-1.5 font-medium">{name}</td>
                     <td className="px-2 py-1.5 text-xs text-slate-500">{x.type}</td>
                     <td className="px-2 py-1.5">{x.count}</td>
-                    <td className="px-2 py-1.5 font-bold text-teal-700">{x.referrals}</td>
+                    <td className="px-2 py-1.5 font-bold text-brand-700">{x.referrals}</td>
                     <td className="px-2 py-1.5 text-xs">{formatDate(x.last)}</td>
                   </tr>
                 ))}

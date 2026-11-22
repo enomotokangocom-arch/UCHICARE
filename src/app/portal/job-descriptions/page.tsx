@@ -53,7 +53,7 @@ export default function JobDescriptionsPage() {
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>職務記述書 株式会社Uchi care</title>
-<style>body{font-family:sans-serif;padding:24px;color:#111}h1{text-align:center;font-size:20px}section{page-break-after:always;margin-bottom:32px}h2{font-size:18px;border-bottom:2px solid #0d9488;padding-bottom:4px;margin-bottom:2px}
+<style>body{font-family:sans-serif;padding:24px;color:#111}h1{text-align:center;font-size:20px}section{page-break-after:always;margin-bottom:32px}h2{font-size:18px;border-bottom:2px solid #30445c;padding-bottom:4px;margin-bottom:2px}
 .sub{color:#555;font-size:12px;margin-top:2px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:8px;font-size:13px;vertical-align:top;text-align:left}th{width:22%;background:#f3f3f3}ul{margin:0;padding-left:18px}</style></head>
 <body><h1>職務記述書(ジョブディスクリプション) 株式会社Uchi care</h1>${body}</body></html>`);
     w.document.close();
@@ -104,11 +104,11 @@ export default function JobDescriptionsPage() {
                       }}
                       className={clsx(
                         "min-w-28 rounded-lg border px-4 py-2 text-sm font-bold transition",
-                        selected === p ? "border-teal-600 bg-teal-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-teal-400"
+                        selected === p ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-brand-400"
                       )}
                     >
                       {p}
-                      <span className={clsx("ml-1.5 text-[11px] font-normal", selected === p ? "text-teal-100" : "text-slate-400")}>{count}名</span>
+                      <span className={clsx("ml-1.5 text-[11px] font-normal", selected === p ? "text-brand-100" : "text-slate-400")}>{count}名</span>
                     </button>
                   );
                 })}
@@ -164,7 +164,7 @@ export default function JobDescriptionsPage() {
               }
               return (
                 <section key={sec.key}>
-                  <h3 className="mb-1.5 text-xs font-bold text-teal-700">{sec.label}</h3>
+                  <h3 className="mb-1.5 text-xs font-bold text-brand-700">{sec.label}</h3>
                   {sec.list ? (
                     <ul className="space-y-1.5">
                       {value
@@ -172,7 +172,7 @@ export default function JobDescriptionsPage() {
                         .filter(Boolean)
                         .map((line, i) => (
                           <li key={i} className="flex gap-2 text-sm text-slate-800">
-                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-500" />
+                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
                             {line}
                           </li>
                         ))}

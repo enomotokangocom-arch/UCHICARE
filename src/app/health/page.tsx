@@ -28,8 +28,8 @@ const PILLARS = [
 export default function Home() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
-      <div className="rounded-2xl bg-gradient-to-br from-teal-600 to-teal-800 p-8 text-white shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-teal-100">
+      <div className="rounded-2xl bg-brand-700 p-8 text-white shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-100">
           健康経営 データ可視化ツール
         </p>
         <h1 className="mt-2 text-2xl font-bold sm:text-3xl">
@@ -37,20 +37,20 @@ export default function Home() {
           <br />
           企業の健康経営指標を、ひとつのダッシュボードに。
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-teal-50">
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-50">
           労働環境・ストレスチェック・腰痛リスク・介護リスクの4つの視点を統合し、
           企業の健康経営の課題をデータで捉え、チャットで手軽に相談できます。
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/dashboard"
-            className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-teal-700 hover:bg-teal-50"
+            className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50"
           >
             ダッシュボードを見る
           </Link>
           <Link
             href="/chat"
-            className="rounded-lg border border-teal-300 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700"
+            className="rounded-lg border border-brand-300 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
           >
             企業課題をチャットで相談する
           </Link>
@@ -80,7 +80,7 @@ export default function Home() {
               </p>
               <Link
                 href={`/survey/${surveyTypeToSlug(survey.type)}`}
-                className="mt-3 inline-block text-sm font-semibold text-teal-700 hover:underline"
+                className="mt-3 inline-block text-sm font-semibold text-brand-700 hover:underline"
               >
                 調査票に回答する →
               </Link>
@@ -93,19 +93,19 @@ export default function Home() {
         <h2 className="text-sm font-bold text-slate-900">利用の流れ</h2>
         <ol className="mt-4 grid grid-cols-1 gap-4 text-sm text-slate-600 sm:grid-cols-4">
           <li>
-            <p className="text-xs font-semibold text-teal-700">STEP 1</p>
+            <p className="text-xs font-semibold text-brand-700">STEP 1</p>
             <p className="mt-1">従業員が4つの調査票に回答</p>
           </li>
           <li>
-            <p className="text-xs font-semibold text-teal-700">STEP 2</p>
+            <p className="text-xs font-semibold text-brand-700">STEP 2</p>
             <p className="mt-1">回答が自動でスコア化・集計</p>
           </li>
           <li>
-            <p className="text-xs font-semibold text-teal-700">STEP 3</p>
+            <p className="text-xs font-semibold text-brand-700">STEP 3</p>
             <p className="mt-1">ダッシュボードで指標を可視化</p>
           </li>
           <li>
-            <p className="text-xs font-semibold text-teal-700">STEP 4</p>
+            <p className="text-xs font-semibold text-brand-700">STEP 4</p>
             <p className="mt-1">チャットで課題を相談・深掘り</p>
           </li>
         </ol>

@@ -251,7 +251,7 @@ ${attachments ? `<tr><th>添付ファイル</th><td>${attachments}</td></tr>` : 
       />
 
       {editing && (
-        <Card className="mb-6 border-teal-300">
+        <Card className="mb-6 border-brand-300">
           <form onSubmit={submit} className="space-y-4">
             <h2 className="text-sm font-bold text-slate-900">{editing.id ? "議事録を編集" : "新しい議事録"}</h2>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -313,7 +313,7 @@ ${attachments ? `<tr><th>添付ファイル</th><td>${attachments}</td></tr>` : 
                   <label key={s.id} className="flex items-center gap-1.5 text-sm text-slate-700">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 accent-teal-600"
+                      className="h-4 w-4 accent-brand-600"
                       checked={editing.form.attendeeIds.includes(s.id)}
                       onChange={(e) =>
                         set(
@@ -354,7 +354,7 @@ ${attachments ? `<tr><th>添付ファイル</th><td>${attachments}</td></tr>` : 
                     {(editing.form.attachments ?? []).map((a) => (
                       <li key={a.id} className="flex items-center gap-2 text-sm">
                         <span>{fileIcon(a.mimeType)}</span>
-                        <a href={a.webViewLink} target="_blank" rel="noopener noreferrer" className="truncate text-teal-700 hover:underline">
+                        <a href={a.webViewLink} target="_blank" rel="noopener noreferrer" className="truncate text-brand-700 hover:underline">
                           {a.name}
                         </a>
                         <button
@@ -400,8 +400,8 @@ ${attachments ? `<tr><th>添付ファイル</th><td>${attachments}</td></tr>` : 
               key={s.committee.id}
               type="button"
               onClick={() => setFilter(filter === s.committee.id ? "" : s.committee.id)}
-              className={`rounded-xl border bg-white p-3 text-left shadow-sm transition hover:border-teal-400 ${
-                filter === s.committee.id ? "border-teal-500 ring-2 ring-teal-500/20" : "border-slate-200"
+              className={`rounded-xl border bg-white p-3 text-left shadow-sm transition hover:border-brand-400 ${
+                filter === s.committee.id ? "border-brand-500 ring-2 ring-brand-500/20" : "border-slate-200"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
@@ -468,7 +468,7 @@ ${attachments ? `<tr><th>添付ファイル</th><td>${attachments}</td></tr>` : 
                         </div>
                       ))}
                     {m.attachmentUrl && (
-                      <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-block font-semibold text-teal-700 hover:underline">
+                      <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-block font-semibold text-brand-700 hover:underline">
                         📎 関連資料を開く ↗
                       </a>
                     )}
@@ -478,7 +478,7 @@ ${attachments ? `<tr><th>添付ファイル</th><td>${attachments}</td></tr>` : 
                         <ul className="mt-1 space-y-1">
                           {(m.attachments ?? []).map((a) => (
                             <li key={a.id}>
-                              <a href={a.webViewLink} target="_blank" rel="noopener noreferrer" className="text-teal-700 hover:underline">
+                              <a href={a.webViewLink} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">
                                 {fileIcon(a.mimeType)} {a.name}
                               </a>
                             </li>
@@ -493,7 +493,7 @@ ${attachments ? `<tr><th>添付ファイル</th><td>${attachments}</td></tr>` : 
                       </details>
                     )}
                     {m.driveDocUrl && (
-                      <a href={m.driveDocUrl} target="_blank" rel="noopener noreferrer" className="inline-block font-semibold text-teal-700 hover:underline">
+                      <a href={m.driveDocUrl} target="_blank" rel="noopener noreferrer" className="inline-block font-semibold text-brand-700 hover:underline">
                         📄 Googleドキュメント版を開く ↗
                       </a>
                     )}

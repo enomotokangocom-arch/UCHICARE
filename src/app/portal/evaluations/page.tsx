@@ -92,11 +92,11 @@ function EvaluationDetail({ ev }: { ev: Evaluation }) {
             </div>
             <div className="text-center">
               <p className="text-[11px] text-slate-500">評価者平均</p>
-              <p className="text-lg font-bold text-teal-700">{avgs.evaluator?.toFixed(1) ?? "-"}</p>
+              <p className="text-lg font-bold text-brand-700">{avgs.evaluator?.toFixed(1) ?? "-"}</p>
             </div>
             <div className="text-center">
               <p className="text-[11px] text-slate-500">総合ランク</p>
-              <p className="text-2xl font-black text-teal-700">{rankFromAverage(avgs.evaluator)}</p>
+              <p className="text-2xl font-black text-brand-700">{rankFromAverage(avgs.evaluator)}</p>
             </div>
           </div>
         </div>
@@ -269,7 +269,7 @@ function EvaluationsInner() {
   if (id) {
     return (
       <PageContainer>
-        <Link href="/portal/evaluations" className="mb-4 inline-block text-sm font-semibold text-teal-700 hover:underline">
+        <Link href="/portal/evaluations" className="mb-4 inline-block text-sm font-semibold text-brand-700 hover:underline">
           ← 評価表一覧に戻る
         </Link>
         {selected ? <EvaluationDetail key={selected.id} ev={selected} /> : <EmptyState>評価表が見つからないか、閲覧権限がありません。</EmptyState>}
@@ -295,7 +295,7 @@ function EvaluationsInner() {
       />
 
       {creating && (
-        <Card className="mb-5 border-teal-300">
+        <Card className="mb-5 border-brand-300">
           <form onSubmit={create} className="space-y-4">
             <h2 className="text-sm font-bold text-slate-900">評価表を作成</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -318,7 +318,7 @@ function EvaluationsInner() {
                     <label key={s.id} className="flex items-center gap-1.5 text-sm text-slate-700">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 accent-teal-600"
+                        className="h-4 w-4 accent-brand-600"
                         checked={newForm.staffIds.includes(s.id)}
                         onChange={(e) =>
                           setNewForm({
@@ -381,7 +381,7 @@ function EvaluationsInner() {
                     </td>
                     <td className="px-3 py-2">{avg.self?.toFixed(1) ?? "-"}</td>
                     <td className="px-3 py-2">{avg.evaluator?.toFixed(1) ?? "-"}</td>
-                    <td className="px-3 py-2 font-bold text-teal-700">{rankFromAverage(avg.evaluator)}</td>
+                    <td className="px-3 py-2 font-bold text-brand-700">{rankFromAverage(avg.evaluator)}</td>
                     <td className="px-3 py-2 text-right" onClick={(ev) => ev.stopPropagation()}>
                       {isAdmin && (
                         <button

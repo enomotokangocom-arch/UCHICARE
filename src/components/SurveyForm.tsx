@@ -87,7 +87,7 @@ export function SurveyForm({ type }: { type: SurveyType }) {
             </button>
             <Link
               href="/dashboard"
-              className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
               ダッシュボードで確認する
             </Link>
@@ -112,7 +112,7 @@ export function SurveyForm({ type }: { type: SurveyType }) {
         <select
           value={department}
           onChange={(e) => setDepartment(e.target.value as Department)}
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-teal-500 focus:outline-none"
+          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none"
         >
           {DEPARTMENTS.map((d) => (
             <option key={d} value={d}>
@@ -130,7 +130,7 @@ export function SurveyForm({ type }: { type: SurveyType }) {
       </div>
       <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
         <div
-          className="h-full bg-teal-600 transition-all"
+          className="h-full bg-brand-600 transition-all"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -156,8 +156,8 @@ export function SurveyForm({ type }: { type: SurveyType }) {
                     className={clsx(
                       "rounded-lg border px-2 py-2 text-xs font-medium transition-colors",
                       selected
-                        ? "border-teal-600 bg-teal-600 text-white"
-                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-teal-300"
+                        ? "border-brand-600 bg-brand-600 text-white"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-brand-300"
                     )}
                   >
                     {label}
@@ -177,7 +177,7 @@ export function SurveyForm({ type }: { type: SurveyType }) {
           className={clsx(
             "rounded-lg px-6 py-2.5 text-sm font-semibold transition-colors",
             allAnswered
-              ? "bg-teal-600 text-white hover:bg-teal-700"
+              ? "bg-brand-600 text-white hover:bg-brand-700"
               : "cursor-not-allowed bg-slate-200 text-slate-400"
           )}
         >

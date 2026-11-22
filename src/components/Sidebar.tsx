@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -55,8 +56,10 @@ function NavLink({
         href={href}
         onClick={onClick}
         className={clsx(
-          "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-          active ? "bg-teal-50 text-teal-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          active
+            ? "bg-brand-50 font-semibold text-brand-700 before:absolute before:inset-y-1.5 before:left-0 before:w-1 before:rounded-full before:bg-gold-400"
+            : "text-slate-600 hover:bg-slate-50 hover:text-brand-700"
         )}
       >
         <span>{icon}</span>
@@ -104,10 +107,8 @@ export function Sidebar() {
           </svg>
         </button>
         <Link href="/portal" className="flex items-center gap-2" onClick={close}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600 text-sm font-bold text-white">
-            U
-          </span>
-          <span className="text-sm font-bold text-slate-900">Uchi care ポータル</span>
+          <Image src="/brand/uchicare-logo.png" alt="Uchi care" width={509} height={121} className="h-7 w-auto" loading="eager" />
+          <span className="text-[11px] font-semibold tracking-wide text-gold-600">社内ポータル</span>
         </Link>
         {unreadCount > 0 && (
           <Link
@@ -128,13 +129,13 @@ export function Sidebar() {
         )}
       >
         <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600 text-lg font-bold text-white">
-            U
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold leading-tight text-slate-900">Uchi care</p>
-            <p className="text-[11px] leading-tight text-slate-500">社内ポータル</p>
-          </div>
+          <Link href="/portal" onClick={close} className="flex-1">
+            <Image src="/brand/uchicare-logo.png" alt="Uchi care" width={509} height={121} className="h-9 w-auto" loading="eager" />
+            <span className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold tracking-widest text-gold-600">
+              <span className="h-px w-4 bg-gold-400" />
+              社内ポータル
+            </span>
+          </Link>
           <button
             type="button"
             onClick={close}

@@ -32,7 +32,7 @@ function GoalFormFields({ initial, onSave, onCancel }: { initial: GoalForm; onSa
         e.preventDefault();
         onSave(f);
       }}
-      className="space-y-3 rounded-lg border border-teal-300 bg-white p-3"
+      className="space-y-3 rounded-lg border border-brand-300 bg-white p-3"
     >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
         <Field label="目標" required className="col-span-2 md:col-span-4">

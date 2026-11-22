@@ -12,7 +12,7 @@ export function LinkCard({ link, compact }: { link: ExternalLink; compact?: bool
     return (
       <Link
         href="/portal/settings#links"
-        className="flex items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white p-3 text-left hover:border-teal-400"
+        className="flex items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white p-3 text-left hover:border-brand-400"
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xl grayscale">
           {link.icon}
@@ -25,15 +25,15 @@ export function LinkCard({ link, compact }: { link: ExternalLink; compact?: bool
     );
   }
   return (
-    <div className="group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-400 hover:shadow">
+    <div className="group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-400 hover:shadow">
       <a href={href} target="_blank" rel="noopener noreferrer" className="absolute inset-0 rounded-xl" aria-label={`${link.name}を開く`} />
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-xl">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xl">
         {link.icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1 text-sm font-bold text-slate-900 group-hover:text-teal-700">
+        <span className="flex items-center gap-1 text-sm font-bold text-slate-900 group-hover:text-brand-700">
           <span className="truncate">{link.name}</span>
-          <span className="text-xs text-slate-300 group-hover:text-teal-500">↗</span>
+          <span className="text-xs text-slate-300 group-hover:text-brand-500">↗</span>
         </span>
         <span className="block truncate text-[11px] text-slate-500">
           {appOnly && "📱 アプリ ・ "}
@@ -50,7 +50,7 @@ export function LinkCard({ link, compact }: { link: ExternalLink; compact?: bool
           href={link.appUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="relative z-10 shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-teal-400 hover:text-teal-700"
+          className="relative z-10 shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-brand-400 hover:text-brand-700"
           title="スマホアプリ(App Store)を開く"
         >
           📱 アプリ

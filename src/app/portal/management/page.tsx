@@ -181,7 +181,7 @@ export default function ManagementPage() {
               onClick={() => setTab(t.id)}
               className={clsx(
                 "-mb-px border-b-2 px-3 py-2 text-sm font-semibold",
-                tab === t.id ? "border-teal-600 text-teal-700" : "border-transparent text-slate-500 hover:text-slate-800"
+                tab === t.id ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-800"
               )}
             >
               {t.label}
@@ -199,7 +199,7 @@ export default function ManagementPage() {
               disabled={tab === "monthly" && u === "all"}
               className={clsx(
                 "rounded-full px-3 py-1.5 text-xs font-semibold disabled:hidden",
-                unitSel === u ? "bg-teal-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+                unitSel === u ? "bg-brand-600 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
               )}
             >
               {u === "all" ? "全社合計" : unitName(u)}
@@ -622,7 +622,7 @@ function SubsidyTab({ subsidies, canEdit }: { subsidies: Subsidy[]; canEdit: boo
         </button>
       )}
       {show && (
-        <Card className="border-teal-300">
+        <Card className="border-brand-300">
           <form onSubmit={submit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <Field label="名称" required className="col-span-2">

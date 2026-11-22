@@ -28,8 +28,8 @@ export function CategoryRadarChart({ data }: { data: CategoryAggregate[] }) {
         <Radar
           name="健康スコア"
           dataKey="score"
-          stroke="#0d9488"
-          fill="#0d9488"
+          stroke="#30445c"
+          fill="#30445c"
           fillOpacity={0.35}
         />
         <Tooltip formatter={(value) => [`${value}点`, "健康スコア"]} />

@@ -38,7 +38,7 @@ function CardHeader({ title, href, linkLabel }: { title: string; href: string; l
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
       <h2 className="text-sm font-bold text-slate-900">{title}</h2>
-      <Link href={href} className="whitespace-nowrap text-xs font-semibold text-teal-700 hover:underline">
+      <Link href={href} className="whitespace-nowrap text-xs font-semibold text-brand-700 hover:underline">
         {linkLabel} →
       </Link>
     </div>

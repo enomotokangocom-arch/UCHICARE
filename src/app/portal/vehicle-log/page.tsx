@@ -123,7 +123,7 @@ export default function VehicleLogPage() {
     <PageContainer>
       <PageHeader icon="🚗" title="運行管理表" description="社用車の運行(運転日報)を記録します。メーターから走行距離を自動計算します。" />
 
-      <Card className={editingId ? "border-teal-300" : ""}>
+      <Card className={editingId ? "border-brand-300" : ""}>
         <form onSubmit={submit} className="space-y-4">
           <h2 className="text-sm font-bold text-slate-900">{editingId ? "運行記録を編集" : "運行記録を入力"}</h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -247,7 +247,7 @@ export default function VehicleLogPage() {
             <div key={vid} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
               <p className="font-semibold text-slate-800">{vehicleName(vid)}</p>
               <p className="mt-0.5">
-                今月 {t.count}回 ・ 走行 <span className="font-bold text-teal-700">{t.km.toLocaleString()} km</span>
+                今月 {t.count}回 ・ 走行 <span className="font-bold text-brand-700">{t.km.toLocaleString()} km</span>
                 {t.fuel > 0 && ` ・ 給油 ${t.fuel.toFixed(1)} L`}
               </p>
             </div>

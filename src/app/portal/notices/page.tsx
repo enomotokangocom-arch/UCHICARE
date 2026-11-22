@@ -90,7 +90,7 @@ function NoticesInner() {
       />
 
       {editing && (
-        <Card className="mb-5 border-teal-300">
+        <Card className="mb-5 border-brand-300">
           <form onSubmit={submit} className="space-y-4">
             <h2 className="text-sm font-bold text-slate-900">{editing.id ? "お知らせを編集" : "新しいお知らせ"}</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -142,7 +142,7 @@ function NoticesInner() {
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
-                className="h-4 w-4 accent-teal-600"
+                className="h-4 w-4 accent-brand-600"
                 checked={editing.form.pinned}
                 onChange={(e) => setEditing({ ...editing, form: { ...editing.form, pinned: e.target.checked } })}
               />
@@ -163,7 +163,7 @@ function NoticesInner() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <UnitFilter value={unit} onChange={setUnit} />
         <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
-          <input type="checkbox" className="h-4 w-4 accent-teal-600" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
+          <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
           自分の所属向けのみ表示
         </label>
       </div>
@@ -178,7 +178,7 @@ function NoticesInner() {
             const targetStaff = activeStaff.filter((s) => n.units.length === 0 || n.units.includes(s.unitId));
             const readers = targetStaff.filter((s) => n.readBy.includes(s.id));
             return (
-              <Card key={n.id} className={open ? "border-teal-300" : ""}>
+              <Card key={n.id} className={open ? "border-brand-300" : ""}>
                 <button
                   type="button"
                   className="flex w-full items-start gap-3 text-left"
@@ -208,7 +208,7 @@ function NoticesInner() {
                         href={n.linkUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-3 inline-block text-sm font-semibold text-teal-700 hover:underline"
+                        className="mt-3 inline-block text-sm font-semibold text-brand-700 hover:underline"
                       >
                         📎 関連資料を開く ↗
                       </a>

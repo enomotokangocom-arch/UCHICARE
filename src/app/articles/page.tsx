@@ -118,7 +118,7 @@ export default function ArticlesPage() {
       </div>
 
       {autoPublishedArticle && (
-        <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
+        <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800">
           本日、承認済みキューから「{autoPublishedArticle.title}」をWordPressに下書きとして送信しました。
           WordPress管理画面で内容を確認し、問題なければ公開ボタンを押してください。
           {autoPublishedArticle.wordpressEditUrl && (
@@ -162,7 +162,7 @@ export default function ArticlesPage() {
               value={form.mainKeyword}
               onChange={(e) => setForm((p) => ({ ...p, mainKeyword: e.target.value }))}
               placeholder="例: ◯◯市 訪問看護"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
               required
             />
           </div>
@@ -172,7 +172,7 @@ export default function ArticlesPage() {
               value={subKeywordsText}
               onChange={(e) => setSubKeywordsText(e.target.value)}
               placeholder="例: 在宅療養, 退院支援, 24時間対応"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
             />
           </div>
         </div>
@@ -189,8 +189,8 @@ export default function ArticlesPage() {
                   onClick={() => toggleAudience(key)}
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     active
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
-                      : "border-slate-300 bg-white text-slate-600 hover:border-teal-400"
+                      ? "border-brand-500 bg-brand-50 text-brand-700"
+                      : "border-slate-300 bg-white text-slate-600 hover:border-brand-400"
                   }`}
                 >
                   {def.label}
@@ -206,7 +206,7 @@ export default function ArticlesPage() {
             <select
               value={form.topicCategory}
               onChange={(e) => setForm((p) => ({ ...p, topicCategory: e.target.value as ArticleTopicCategory }))}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
             >
               {TOPIC_OPTIONS.map(([key, def]) => (
                 <option key={key} value={key}>
@@ -222,7 +222,7 @@ export default function ArticlesPage() {
               onChange={(e) =>
                 setForm((p) => ({ ...p, lengthHint: e.target.value as ArticleGenerationInput["lengthHint"] }))
               }
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
             >
               {LENGTH_OPTIONS.map(([key, def]) => (
                 <option key={key} value={key}>
@@ -240,7 +240,7 @@ export default function ArticlesPage() {
             onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
             rows={2}
             placeholder="例: 夜間対応の安心感を強調してほしい"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
           />
         </div>
 
@@ -249,7 +249,7 @@ export default function ArticlesPage() {
         <button
           type="submit"
           disabled={isGenerating || !form.mainKeyword.trim()}
-          className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+          className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
         >
           {isGenerating ? "生成中..." : "記事を生成する"}
         </button>
@@ -351,10 +351,10 @@ function ArticleCard({
     }
   }
 
-  const scoreColor = score >= 90 ? "bg-teal-50 text-teal-700" : score >= 70 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
+  const scoreColor = score >= 90 ? "bg-brand-50 text-brand-700" : score >= 70 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
   const statusColor =
     article.status === "published"
-      ? "bg-teal-50 text-teal-700"
+      ? "bg-brand-50 text-brand-700"
       : article.status === "approved"
         ? "bg-blue-50 text-blue-700"
         : "bg-slate-100 text-slate-500";
@@ -399,7 +399,7 @@ function ArticleCard({
             </p>
           )}
           {article.status === "published" && article.publishedAt && (
-            <p className="mt-2 text-[11px] text-teal-700">
+            <p className="mt-2 text-[11px] text-brand-700">
               WordPress送信日: {article.publishedAt}
               {article.wordpressEditUrl && (
                 <>
@@ -429,7 +429,7 @@ function ArticleCard({
             <button
               onClick={handleApprove}
               disabled={!meetsThreshold}
-              className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               承認する
             </button>
@@ -439,7 +439,7 @@ function ArticleCard({
               <button
                 onClick={handlePublishNow}
                 disabled={isSending}
-                className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+                className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
               >
                 {isSending ? "送信中..." : "今すぐWordPressへ送信する"}
               </button>
@@ -479,7 +479,7 @@ function ArticleCard({
             value={article.body}
             onChange={(e) => onUpdate({ body: e.target.value })}
             rows={14}
-            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs leading-relaxed focus:border-teal-500 focus:outline-none"
+            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs leading-relaxed focus:border-brand-500 focus:outline-none"
           />
 
           <label className="mt-3 block text-xs font-semibold text-slate-600">行動喚起(CTA)</label>
@@ -487,13 +487,13 @@ function ArticleCard({
             value={article.callToAction}
             onChange={(e) => onUpdate({ callToAction: e.target.value })}
             rows={2}
-            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs leading-relaxed focus:border-teal-500 focus:outline-none"
+            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs leading-relaxed focus:border-brand-500 focus:outline-none"
           />
 
           <div className="mt-3 flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700"
+              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
             >
               {copied ? "コピーしました" : "本文をコピー"}
             </button>

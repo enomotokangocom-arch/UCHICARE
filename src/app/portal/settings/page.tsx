@@ -43,7 +43,7 @@ function UnitSelect({ value, onChange }: { value: BusinessUnitId; onChange: (v: 
 function Check({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-700">
-      <input type="checkbox" className="h-4 w-4 accent-teal-600" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {label}
     </label>
   );

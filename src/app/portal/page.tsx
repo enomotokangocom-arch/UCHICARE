@@ -8,6 +8,7 @@ import { alcoholChecksFor, committeeStatuses, noticeVisibleTo, parkingContractAl
 import { formatDate, formatDateTime, todayString } from "@/lib/portal/util";
 import { LinkGrid } from "@/components/portal/LinkGrid";
 import { HomeGoalCards } from "@/components/portal/HomeGoalCards";
+import { BrandHero } from "@/components/portal/BrandHero";
 import { Card, PageContainer, StatusPill, UnitBadge, UnitBadges, buttonClass } from "@/components/portal/ui";
 
 export default function PortalHome() {
@@ -47,17 +48,21 @@ export default function PortalHome() {
 
   return (
     <PageContainer>
-      <div className="rounded-2xl bg-gradient-to-br from-teal-600 to-teal-800 p-5 text-white shadow-sm sm:p-7">
-        <p className="text-xs font-semibold text-teal-100">{formatDate(today)}</p>
+      <BrandHero>
+        <p className="text-xs font-semibold tracking-wide text-gold-300">{formatDate(today)}</p>
         <h1 className="mt-1 text-xl font-bold sm:text-2xl">
           {current ? `${current.name} さん、お疲れさまです` : "株式会社Uchi care 社内ポータル"}
         </h1>
         {current && (
-          <p className="mt-1 flex items-center gap-2 text-sm text-teal-50">
+          <p className="mt-1 text-sm text-brand-100">
             所属: {unitName(current.unitId)} / {current.role} / {current.position}
           </p>
         )}
-      </div>
+        <span className="mt-4 block h-0.5 w-10 rounded-full bg-gold-400" aria-hidden />
+        <p className="mt-2 text-xs tracking-wide text-brand-100">
+          医療福祉の力で、健康と幸せを創造する <span className="ml-1 text-brand-200">Creating health &amp; happiness</span>
+        </p>
+      </BrandHero>
 
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {current?.isDriver && (
@@ -90,7 +95,7 @@ export default function PortalHome() {
         <Card className={current?.isDriver ? "lg:col-span-2" : "lg:col-span-3"}>
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-900">📢 社内のお知らせ</h2>
-            <Link href="/portal/notices" className="text-xs font-semibold text-teal-700 hover:underline">
+            <Link href="/portal/notices" className="text-xs font-semibold text-brand-700 hover:underline">
               すべて見る →
             </Link>
           </div>
@@ -138,7 +143,7 @@ export default function PortalHome() {
             {myEvalTodos.map((e) => (
               <li key={e.id} className="flex items-center gap-2">
                 <StatusPill tone="info">人事評価</StatusPill>
-                <Link href={`/portal/evaluations?id=${e.id}`} className="text-slate-700 hover:text-teal-700 hover:underline">
+                <Link href={`/portal/evaluations?id=${e.id}`} className="text-slate-700 hover:text-brand-700 hover:underline">
                   {e.period}:{e.staffId === current?.id ? "自己評価を入力してください" : "評価者評価を入力してください"}
                 </Link>
               </li>
@@ -146,7 +151,7 @@ export default function PortalHome() {
             {parkingAlerts.map(({ lot, overdue }) => (
               <li key={lot.id} className="flex flex-wrap items-center gap-2">
                 <StatusPill tone={overdue ? "danger" : "warn"}>{overdue ? "駐車場 契約期限切れ" : "駐車場 契約更新が近い"}</StatusPill>
-                <Link href="/portal/parking" className="text-slate-700 hover:text-teal-700 hover:underline">
+                <Link href="/portal/parking" className="text-slate-700 hover:text-brand-700 hover:underline">
                   {lot.name}
                 </Link>
                 <span className="text-xs text-slate-400">期限 {formatDate(lot.contractEnd)}</span>
@@ -157,7 +162,7 @@ export default function PortalHome() {
                 <StatusPill tone={s.state === "soon" ? "warn" : "danger"}>
                   {s.state === "overdue" ? "開催期限超過" : s.state === "soon" ? "開催期限間近" : "開催記録なし"}
                 </StatusPill>
-                <Link href="/portal/minutes" className="text-slate-700 hover:text-teal-700 hover:underline">
+                <Link href="/portal/minutes" className="text-slate-700 hover:text-brand-700 hover:underline">
                   {s.committee.name}
                 </Link>
                 {s.nextDue && <span className="text-xs text-slate-400">期限目安 {formatDate(s.nextDue)}</span>}
@@ -172,7 +177,7 @@ export default function PortalHome() {
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
             🔗 よく使うシステム {current && <UnitBadge unitId={current.unitId} />}
           </h2>
-          <Link href="/portal/links" className="text-xs font-semibold text-teal-700 hover:underline">
+          <Link href="/portal/links" className="text-xs font-semibold text-brand-700 hover:underline">
             すべてのシステム →
           </Link>
         </div>
@@ -195,7 +200,7 @@ export default function PortalHome() {
           <Link
             key={m.href}
             href={m.href}
-            className="flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 shadow-sm hover:border-teal-400 hover:text-teal-700"
+            className="flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 shadow-sm hover:border-brand-400 hover:text-brand-700"
           >
             <span className="text-2xl">{m.icon}</span>
             {m.label}

@@ -50,7 +50,7 @@ function LotFormCard({ initial, onSave, onCancel }: { initial: LotForm; onSave: 
     onSave(f);
   };
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-lg border border-teal-300 bg-teal-50/30 p-4">
+    <form onSubmit={submit} className="space-y-4 rounded-lg border border-brand-300 bg-brand-50/30 p-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="駐車場名" required className="sm:col-span-2">
           <input className={inputClass} required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
@@ -125,7 +125,7 @@ function SpaceEditor({ space, onClose }: { space: ParkingSpace; onClose: () => v
   const temporary = space.usage === "来客用" || space.usage === "予備";
 
   return (
-    <div className="mt-3 space-y-4 rounded-lg border border-teal-300 bg-white p-4">
+    <div className="mt-3 space-y-4 rounded-lg border border-brand-300 bg-white p-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-900">区画「{space.label}」</h3>
         <button type="button" className={buttonClass.ghost} onClick={onClose}>
@@ -378,7 +378,7 @@ export default function ParkingPage() {
                     <p className="mt-1 text-xs text-slate-500">
                       {lot.address || "所在地未登録"}
                       {href && (
-                        <a href={href} target="_blank" rel="noopener noreferrer" className="ml-2 font-semibold text-teal-700 hover:underline">
+                        <a href={href} target="_blank" rel="noopener noreferrer" className="ml-2 font-semibold text-brand-700 hover:underline">
                           📍 地図 ↗
                         </a>
                       )}
@@ -435,7 +435,7 @@ export default function ParkingPage() {
                             className={clsx(
                               "rounded-lg border-2 p-2.5 text-left transition hover:shadow",
                               TILE_TONE[st.tone],
-                              selectedSpace === s.id && "ring-2 ring-teal-500 ring-offset-1"
+                              selectedSpace === s.id && "ring-2 ring-brand-500 ring-offset-1"
                             )}
                           >
                             <div className="flex items-center justify-between gap-1">

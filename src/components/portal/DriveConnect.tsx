@@ -12,7 +12,7 @@ export function DriveConnect({ compact }: { compact?: boolean }) {
     return (
       <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
         Googleドライブ連携が未設定です。
-        <Link href="/portal/drive#setup" className="ml-1 font-semibold text-teal-700 hover:underline">
+        <Link href="/portal/drive#setup" className="ml-1 font-semibold text-brand-700 hover:underline">
           連携の設定をする →
         </Link>
       </p>
@@ -38,7 +38,7 @@ export function DriveConnect({ compact }: { compact?: boolean }) {
     return (
       <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
         ● Googleドライブに接続中です。保存先のルートフォルダが未設定です。
-        <Link href="/portal/drive#setup" className="ml-1 font-semibold text-teal-700 hover:underline">
+        <Link href="/portal/drive#setup" className="ml-1 font-semibold text-brand-700 hover:underline">
           設定する →
         </Link>
       </p>

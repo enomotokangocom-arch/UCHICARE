@@ -103,7 +103,7 @@ export default function ChatPage() {
             key={prompt}
             onClick={() => sendMessage(prompt)}
             disabled={isTyping}
-            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-teal-400 hover:text-teal-700 disabled:opacity-50"
+            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-brand-400 hover:text-brand-700 disabled:opacity-50"
           >
             {prompt}
           </button>
@@ -115,12 +115,12 @@ export default function ChatPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="質問を入力してください(例: 腰痛リスクが高い部署は?)"
-          className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:outline-none"
+          className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none"
         />
         <button
           type="submit"
           disabled={isTyping || !input.trim()}
-          className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+          className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
         >
           送信
         </button>
@@ -136,7 +136,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       <div
         className={`max-w-[80%] whitespace-pre-line rounded-2xl px-4 py-3 text-sm leading-relaxed ${
           isUser
-            ? "rounded-br-sm bg-teal-600 text-white"
+            ? "rounded-br-sm bg-brand-600 text-white"
             : "rounded-bl-sm bg-slate-100 text-slate-800"
         }`}
       >

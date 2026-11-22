@@ -134,7 +134,7 @@ export default function AlcoholCheckPage() {
                   type="button"
                   onClick={() => setForm({ ...form, timing: t })}
                   className={`rounded-lg py-3 text-sm font-bold ${
-                    form.timing === t ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"
+                    form.timing === t ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {t === "before" ? "🚗 運転前" : "🏁 運転後"}
@@ -190,7 +190,7 @@ export default function AlcoholCheckPage() {
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
-                className="h-4 w-4 accent-teal-600"
+                className="h-4 w-4 accent-brand-600"
                 checked={form.detectorUsed}
                 onChange={(e) => setForm({ ...form, detectorUsed: e.target.checked })}
               />

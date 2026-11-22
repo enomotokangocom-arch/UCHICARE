@@ -37,7 +37,7 @@ function PatientFormCard({ initial, onSave, onCancel }: { initial: PatientForm; 
         e.preventDefault();
         onSave(f);
       }}
-      className="space-y-4 rounded-xl border border-teal-300 bg-white p-4"
+      className="space-y-4 rounded-xl border border-brand-300 bg-white p-4"
     >
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Field label="表示名" required hint="イニシャルや利用者番号を推奨" className="col-span-2">
@@ -195,7 +195,7 @@ export default function NanbyoPage() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
         <div className="space-y-2 lg:col-span-2">
           <label className="flex items-center gap-2 text-xs text-slate-600">
-            <input type="checkbox" className="h-4 w-4 accent-teal-600" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
+            <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
             終了した受給者も表示
           </label>
           {list.length === 0 ? (
@@ -211,8 +211,8 @@ export default function NanbyoPage() {
                   type="button"
                   onClick={() => setSelectedId(p.id)}
                   className={clsx(
-                    "w-full rounded-xl border bg-white p-3 text-left shadow-sm transition hover:border-teal-400",
-                    selectedId === p.id ? "border-teal-500 ring-2 ring-teal-500/20" : "border-slate-200",
+                    "w-full rounded-xl border bg-white p-3 text-left shadow-sm transition hover:border-brand-400",
+                    selectedId === p.id ? "border-brand-500 ring-2 ring-brand-500/20" : "border-slate-200",
                     !p.active && "opacity-60"
                   )}
                 >
@@ -227,7 +227,7 @@ export default function NanbyoPage() {
                     上限 {yen(p.monthlyCap)} ・ 負担 {p.burdenRate * 10}割{p.validTo && ` ・ 〜${formatDate(p.validTo)}`}
                   </p>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div className={clsx("h-full rounded-full", s.reached ? "bg-sky-500" : "bg-teal-500")} style={{ width: `${ratio * 100}%` }} />
+                    <div className={clsx("h-full rounded-full", s.reached ? "bg-sky-500" : "bg-brand-500")} style={{ width: `${ratio * 100}%` }} />
                   </div>
                   <p className="mt-1 text-[11px] text-slate-600">
                     今月の累積 <span className="font-bold">{yen(s.cumulative)}</span> ・ 残り <span className="font-bold">{yen(s.remaining)}</span>
@@ -367,7 +367,7 @@ export default function NanbyoPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {summary.rows.map(({ entry: e, cumulative }) => (
-                        <tr key={e.id} className={e.provider === SELF_PROVIDER ? "bg-teal-50/40" : ""}>
+                        <tr key={e.id} className={e.provider === SELF_PROVIDER ? "bg-brand-50/40" : ""}>
                           <td className="whitespace-nowrap px-2 py-2">{formatDate(e.date)}</td>
                           <td className="px-2 py-2">{e.provider}</td>
                           <td className="px-2 py-2 text-right font-mono">{yen(e.totalCost)}</td>
