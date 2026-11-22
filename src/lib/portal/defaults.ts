@@ -6,6 +6,7 @@ import {
   EvaluationCriterion,
   ExternalLink,
   Minutes,
+  CompanyPhilosophy,
   FinanceMonthly,
   Goal,
   JobDescription,
@@ -594,3 +595,12 @@ export const DEFAULT_GOAL_SHEET_TEMPLATES: Partial<Record<BusinessUnitId, string
 
 /** 書類の保存先(ルートフォルダ)の初期値: Googleドライブ「Uchi care全体共有」 */
 export const DEFAULT_DRIVE_ROOT_FOLDER_ID = "1GDxEcuPi_xrEl4iBaiiAlFtOYUo1g6gW";
+
+/** 理念(ミッション・ビジョン・バリュー)の初期値。「設定・マスタ」で変更できる */
+export const DEFAULT_PHILOSOPHY: CompanyPhilosophy = {
+  mission: "医療福祉の力で健康と幸せを創造する",
+  missionEn: "Creating health & happiness",
+  vision: "すべての人が自分らしくいられる共生社会",
+  visionEn: "",
+  values: ["挑戦", "変革", "専門性", "誠意", "貢献"].join("\n"),
+};

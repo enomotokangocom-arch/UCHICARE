@@ -10,6 +10,7 @@ import {
   DEFAULT_LINK_ORDER,
   DEFAULT_GOAL_SHEET_TEMPLATES,
   DEFAULT_DRIVE_ROOT_FOLDER_ID,
+  DEFAULT_PHILOSOPHY,
   DEFAULT_PARKING_LOTS,
   DEFAULT_PARKING_SPACES,
   DEFAULT_STAFF,
@@ -27,6 +28,7 @@ import {
 } from "./defaults";
 import {
   AlcoholCheck,
+  CompanyPhilosophy,
   BusinessUnitId,
   Committee,
   Evaluation,
@@ -82,6 +84,7 @@ interface PortalData {
   goalSheets: GoalSheet[];
   /** 事業所ごとの目標管理シートの原本(スプレッドシートのURL) */
   goalSheetTemplates: Partial<Record<BusinessUnitId, string>>;
+  philosophy: CompanyPhilosophy;
   /** 経営数値がサンプルのままか(バナー表示用) */
   financeIsSample: boolean;
   /** Google連携の設定(OAuthクライアントIDと、書類を保存するルートフォルダ) */
@@ -89,7 +92,7 @@ interface PortalData {
   driveRootFolderId: string;
 }
 
-type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates">;
+type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates" | "philosophy">;
 
 interface PortalState extends PortalData {
   setCurrentStaffId: (id: string) => void;
@@ -99,6 +102,7 @@ interface PortalState extends PortalData {
   resetJobDescriptions: () => void;
   setGoogleSettings: (patch: Partial<Pick<PortalData, "googleClientId" | "driveRootFolderId">>) => void;
   setGoalSheetTemplate: (unitId: BusinessUnitId, url: string) => void;
+  setPhilosophy: (patch: Partial<CompanyPhilosophy>) => void;
   /** サンプルの経営数値(月次・補助金・個人売上)を消去する */
   clearFinanceSamples: () => void;
   collection: <K extends CollectionKey>(key: K) => Collection<PortalData[K][number]>;
@@ -129,6 +133,7 @@ function initialData(): PortalData {
     goals: sampleGoals(),
     goalSheets: [],
     goalSheetTemplates: DEFAULT_GOAL_SHEET_TEMPLATES,
+    philosophy: DEFAULT_PHILOSOPHY,
     financeIsSample: true,
     googleClientId: "",
     driveRootFolderId: DEFAULT_DRIVE_ROOT_FOLDER_ID,
@@ -150,6 +155,7 @@ export const usePortalStore = create<PortalState>()(
       resetLinks: () => set({ links: DEFAULT_LINKS }),
       resetJobDescriptions: () => set({ jobDescriptions: DEFAULT_JOB_DESCRIPTIONS }),
       setGoogleSettings: (patch) => set(patch),
+      setPhilosophy: (patch) => set((state) => ({ philosophy: { ...state.philosophy, ...patch } })),
       setGoalSheetTemplate: (unitId, url) => set((state) => ({ goalSheetTemplates: { ...state.goalSheetTemplates, [unitId]: url } })),
       clearFinanceSamples: () => set({ finance: [], subsidies: [], personalSales: [], financeIsSample: false }),
       collection: (key) => ({
@@ -172,7 +178,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 8,
+      version: 9,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -219,6 +225,7 @@ export const usePortalStore = create<PortalState>()(
           resetJobDescriptions,
           setGoogleSettings,
           setGoalSheetTemplate,
+          setPhilosophy,
           clearFinanceSamples,
           collection,
           /* eslint-enable @typescript-eslint/no-unused-vars */

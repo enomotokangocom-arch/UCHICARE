@@ -1,7 +1,8 @@
 "use client";
 
 import { ChangeEvent, ReactNode } from "react";
-import { usePortalStore } from "@/lib/portal/store";
+import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
+import { isAdmin } from "@/lib/portal/logic";
 import { BUSINESS_UNITS, POSITIONS } from "@/lib/portal/defaults";
 import { BusinessUnitId, LinkCategory, Position, StaffRole } from "@/lib/portal/types";
 import { newId, todayString } from "@/lib/portal/util";
@@ -51,11 +52,12 @@ function Check({ checked, onChange, label }: { checked: boolean; onChange: (v: b
 
 export default function SettingsPage() {
   const state = usePortalStore();
-  const { links, staff, vehicles, committees, criteria, collection, resetLinks, resetAll } = state;
+  const { links, staff, vehicles, committees, criteria, collection, resetLinks, resetAll, philosophy, setPhilosophy } = state;
+  const canEditPhilosophy = isAdmin(useCurrentStaff());
 
   function exportBackup() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { setCurrentStaffId, markNoticeRead, resetAll, resetLinks, resetJobDescriptions, setGoogleSettings, clearFinanceSamples, collection, ...data } =
+    const { setCurrentStaffId, markNoticeRead, resetAll, resetLinks, resetJobDescriptions, setGoogleSettings, setGoalSheetTemplate, setPhilosophy, clearFinanceSamples, collection, ...data } =
       usePortalStore.getState();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -87,6 +89,7 @@ export default function SettingsPage() {
 
       <nav className="mb-5 flex flex-wrap gap-2 text-xs">
         {[
+          ["#philosophy", "理念"],
           ["#links", "外部システム"],
           ["#staff", "職員"],
           ["#vehicles", "車両"],
@@ -101,6 +104,35 @@ export default function SettingsPage() {
       </nav>
 
       <div className="space-y-6">
+        <Section
+          id="philosophy"
+          title="理念(ミッション・ビジョン・バリュー)"
+          description={canEditPhilosophy ? "ポータルホームの見出しに表示されます。" : "ポータルホームの見出しに表示されます(変更は経営者・統括部長・事務長のみ)。"}
+        >
+          <fieldset disabled={!canEditPhilosophy} className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="block text-xs font-semibold text-slate-600">
+              ミッション
+              <input className={`${cell} mt-1`} value={philosophy.mission} onChange={(e) => setPhilosophy({ mission: e.target.value })} />
+            </label>
+            <label className="block text-xs font-semibold text-slate-600">
+              ミッション(英語・任意)
+              <input className={`${cell} mt-1`} value={philosophy.missionEn} onChange={(e) => setPhilosophy({ missionEn: e.target.value })} />
+            </label>
+            <label className="block text-xs font-semibold text-slate-600">
+              ビジョン
+              <input className={`${cell} mt-1`} value={philosophy.vision} onChange={(e) => setPhilosophy({ vision: e.target.value })} />
+            </label>
+            <label className="block text-xs font-semibold text-slate-600">
+              ビジョン(英語・任意)
+              <input className={`${cell} mt-1`} value={philosophy.visionEn} onChange={(e) => setPhilosophy({ visionEn: e.target.value })} />
+            </label>
+            <label className="block text-xs font-semibold text-slate-600 md:col-span-2">
+              バリュー(1行に1つ)
+              <textarea className={`${cell} mt-1 min-h-28`} value={philosophy.values} onChange={(e) => setPhilosophy({ values: e.target.value })} />
+            </label>
+          </fieldset>
+        </Section>
+
         <Section
           id="links"
           title="外部システム"

@@ -397,3 +397,13 @@ export interface GoalSheet {
   name: string;
   sync?: GoalSheetSync;
 }
+
+/** 会社の理念(ホームの見出しに表示) */
+export interface CompanyPhilosophy {
+  mission: string;
+  missionEn: string;
+  vision: string;
+  visionEn: string;
+  /** 1行1項目 */
+  values: string;
+}

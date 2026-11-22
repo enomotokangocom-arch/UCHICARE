@@ -21,6 +21,7 @@ export default function PortalHome() {
   const minutes = usePortalStore((s) => s.minutes);
   const evaluations = usePortalStore((s) => s.evaluations);
   const parkingLots = usePortalStore((s) => s.parkingLots);
+  const philosophy = usePortalStore((s) => s.philosophy);
   const today = todayString();
 
   const myLinks = links.filter((l) => !current || l.units.includes(current.unitId));
@@ -47,6 +48,11 @@ export default function PortalHome() {
 
   const parkingAlerts = parkingContractAlerts(parkingLots);
 
+  const values = philosophy.values
+    .split("\n")
+    .map((v) => v.trim())
+    .filter(Boolean);
+
   return (
     <PageContainer>
       <BrandHero>
@@ -59,10 +65,38 @@ export default function PortalHome() {
             所属: {unitName(current.unitId)} / {current.role} / {current.position}
           </p>
         )}
-        <span className="mt-4 block h-0.5 w-10 rounded-full bg-gold-400" aria-hidden />
-        <p className="mt-2 text-xs tracking-wide text-brand-100">
-          医療福祉の力で、健康と幸せを創造する <span className="ml-1 text-brand-200">Creating health &amp; happiness</span>
-        </p>
+        <dl className="mt-5 space-y-2 border-t border-white/15 pt-4 text-sm">
+          {philosophy.mission && (
+            <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
+              <dt className="w-20 shrink-0 text-[11px] font-bold tracking-[0.2em] text-gold-300">MISSION</dt>
+              <dd className="font-semibold">
+                {philosophy.mission}
+                {philosophy.missionEn && <span className="ml-2 text-xs font-normal text-brand-200">{philosophy.missionEn}</span>}
+              </dd>
+            </div>
+          )}
+          {philosophy.vision && (
+            <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
+              <dt className="w-20 shrink-0 text-[11px] font-bold tracking-[0.2em] text-gold-300">VISION</dt>
+              <dd className="font-semibold">
+                {philosophy.vision}
+                {philosophy.visionEn && <span className="ml-2 text-xs font-normal text-brand-200">{philosophy.visionEn}</span>}
+              </dd>
+            </div>
+          )}
+          {values.length > 0 && (
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+              <dt className="w-20 shrink-0 text-[11px] font-bold tracking-[0.2em] text-gold-300">VALUES</dt>
+              <dd className="flex flex-wrap gap-1.5">
+                {values.map((v) => (
+                  <span key={v} className="rounded-full border border-gold-300/60 px-2.5 py-0.5 text-xs font-semibold text-white">
+                    {v}
+                  </span>
+                ))}
+              </dd>
+            </div>
+          )}
+        </dl>
       </BrandHero>
 
       {current?.isDriver ? (
