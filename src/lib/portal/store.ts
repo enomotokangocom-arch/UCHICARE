@@ -160,7 +160,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 4,
+      version: 5,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -170,8 +170,8 @@ export const usePortalStore = create<PortalState>()(
             position: s.position ?? (s.role === "管理者" ? "経営者" : "スタッフ"),
           }));
         }
-        // v1〜v3 → v4: 外部システムの実際のログインURL・アプリURLを反映(利用者が編集したURLはそのまま)
-        if (version < 4 && Array.isArray(state.links)) {
+        // v1〜v4 → v5: 外部システムの実際のログインURL・アプリURLを反映(利用者が編集したURLはそのまま)
+        if (version < 5 && Array.isArray(state.links)) {
           const defaults = new Map(DEFAULT_LINKS.map((l) => [l.id, l]));
           state.links = state.links.map((l) => {
             const d = defaults.get(l.id);

@@ -54,7 +54,7 @@ export const DEFAULT_LINKS: ExternalLink[] = [
   { id: "gdocs", name: "Googleドキュメント", description: "文書・マニュアル", category: "書類管理", url: "https://docs.google.com/document/", icon: "📄", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "gslides", name: "Googleスライド", description: "研修資料・プレゼン", category: "書類管理", url: "https://docs.google.com/presentation/", icon: "🖼️", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "gforms", name: "Googleフォーム", description: "アンケート・申請フォーム", category: "書類管理", url: "https://docs.google.com/forms/", icon: "📝", units: ["houkan", "kyotaku", "uchiwell"] },
-  { id: "mybridge", name: "myBridge", description: "名刺管理", category: "名刺", url: "https://mybridge.com/", icon: "📇", units: CARE },
+  { id: "mybridge", name: "myBridge", description: "名刺管理", category: "名刺", url: "https://jp.mybridge.com/auth/login/email", icon: "📇", units: CARE },
   { id: "mcs", name: "MCS", description: "医療介護専用SNS(多職種連携)", category: "連携・コミュニケーション", url: "https://www.medical-care.net/authentication/login", icon: "🤝", units: CARE },
   { id: "lineworks", name: "LINE WORKS", description: "社内チャット・連絡", category: "連携・コミュニケーション", url: "https://talk.worksmobile.com/#/", icon: "💬", units: ["houkan", "kyotaku", "uchiwell"] },
   { id: "elearning", name: "E-ラーニング(訪問看護)", description: "看護師・リハ・事務向けの研修", category: "研修・eラーニング", url: "https://cl.s-que.jp/vn/login", icon: "🎓", units: ["houkan"] },
@@ -72,6 +72,7 @@ export const LEGACY_DEFAULT_LINK_URLS: Record<string, string[]> = {
   kingoftime: ["https://www.kingoftime.jp/", "https://login.ta.kingoftime.jp/admin"],
   mcs: ["https://www.medical-care.net/"],
   lineworks: ["https://line-works.com/"],
+  mybridge: ["https://mybridge.com/"],
   enursing: [""],
 };
 
