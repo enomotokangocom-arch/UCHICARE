@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "UCHICARE | 企業向け健康経営ダッシュボード",
+  title: "Uchi care 社内ポータル",
   description:
-    "保健師・療法士・ケアマネジャーが監修する、労働環境・ストレスチェック・腰痛リスク・介護リスクを統合した企業向け健康経営データ可視化ツール",
+    "株式会社Uchi care の社内ポータル。運行管理表・アルコールチェック・人事評価・委員会議事録・社内のお知らせと外部システムへのリンクを一括管理します。",
 };
 
 export default function RootLayout({
@@ -34,7 +34,7 @@ export default function RootLayout({
         <StoreHydration>
           <div className="flex min-h-screen">
             <Sidebar />
-            <main className="min-w-0 flex-1">{children}</main>
+            <main className="min-w-0 flex-1 pt-14 lg:pt-0">{children}</main>
           </div>
         </StoreHydration>
       </body>
