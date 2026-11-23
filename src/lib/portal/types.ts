@@ -480,7 +480,12 @@ export interface FeeRate {
   /** 単位=介護保険の単位数(×地域単価) / 円=医療保険の療養費など */
   kind: "単位" | "円";
   value: number;
-  /** 「件数[回数]」の [ ] の数(20分ごとの回数など)で計算するか */
-  useBracket: boolean;
+  /**
+   * 「件数[n]」の [n] の扱い
+   * billing: 請求回数として使う(介護 訪看Ⅰ5 の20分ごとの回数)
+   * exclude: 件数から差し引く(医療・精神 難病等複数回訪問等で基本療養費が発生しない回数)
+   * none: 使わない
+   */
+  bracketMode: "billing" | "exclude" | "none";
   note: string;
 }

@@ -185,7 +185,7 @@ export default function SettingsPage() {
                     <th className="px-2 py-1.5 font-semibold">サービス(iBowの列名)</th>
                     <th className="px-2 py-1.5 font-semibold">単価</th>
                     <th className="px-2 py-1.5 font-semibold">単位</th>
-                    <th className="px-2 py-1.5 font-semibold">[ ]の回数で計算</th>
+                    <th className="px-2 py-1.5 font-semibold">[ ]の扱い</th>
                     <th className="px-2 py-1.5 font-semibold">メモ</th>
                   </tr>
                 </thead>
@@ -205,8 +205,12 @@ export default function SettingsPage() {
                             <option>円</option>
                           </select>
                         </td>
-                        <td className="px-2 py-1 text-center">
-                          <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={r.useBracket} onChange={(e) => up({ useBracket: e.target.checked })} />
+                        <td className="px-2 py-1">
+                          <select className={`${cell} w-auto text-xs`} value={r.bracketMode} onChange={(e) => up({ bracketMode: e.target.value as typeof r.bracketMode })}>
+                            <option value="none">使わない</option>
+                            <option value="billing">請求回数として使う</option>
+                            <option value="exclude">件数から差し引く</option>
+                          </select>
                         </td>
                         <td className="px-2 py-1">
                           <input className={cell} value={r.note} onChange={(e) => up({ note: e.target.value })} />

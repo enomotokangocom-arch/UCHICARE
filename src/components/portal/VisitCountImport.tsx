@@ -178,9 +178,9 @@ export function VisitCountImport() {
               単価が0円・未登録のため売上に含めていないもの: {estimate.missingRates.map((m) => `${m.group} ${m.code}(${m.count}件)`).join("、")}。「設定・マスタ」→「報酬単価」で入力できます。
             </p>
           )}
-          {estimate.annotated.length > 0 && (
-            <p className="text-[11px] text-slate-500">※ {estimate.annotated.join("、")} の [ ] { } の数字は、件数(左の数字)だけで計算しています。</p>
-          )}
+          <p className="text-[11px] text-slate-500">
+            ※ 介護の [ ] は訪看Ⅰ5の請求回数、医療・精神の [ ] は基本療養費が発生しない回数(難病等複数回訪問等。今回 {estimate.excludedVisits} 回)として計算。{"{ }"} の副訪問(同行)は売上・件数に含めず「同行」欄に表示しています。
+          </p>
 
           {unmatched.length > 0 && (
             <div className="rounded-lg bg-amber-50 p-3">
@@ -199,7 +199,8 @@ export function VisitCountImport() {
                 <tr className="text-right">
                   <th className="px-2 py-1.5 text-left font-semibold">ファイルの氏名</th>
                   <th className="px-2 py-1.5 text-left font-semibold">職員</th>
-                  <th className="px-2 py-1.5 font-semibold">件数</th>
+                  <th className="px-2 py-1.5 font-semibold">件数(主)</th>
+                  <th className="px-2 py-1.5 font-semibold">同行(副)</th>
                   <th className="px-2 py-1.5 font-semibold">介護</th>
                   <th className="px-2 py-1.5 font-semibold">予防</th>
                   <th className="px-2 py-1.5 font-semibold">医療</th>
@@ -224,6 +225,7 @@ export function VisitCountImport() {
                       </select>
                     </td>
                     <td className="px-2 py-1.5">{r.visits}</td>
+                    <td className="px-2 py-1.5 text-slate-500">{r.subVisits || "-"}</td>
                     {["介護", "予防", "医療", "精神"].map((g) => (
                       <td key={g} className="px-2 py-1.5 font-mono text-xs">
                         {r.byGroup[g] ? yen(r.byGroup[g]) : "-"}
@@ -239,6 +241,7 @@ export function VisitCountImport() {
                     合計({rows.length}名)
                   </td>
                   <td className="px-2 py-2">{rows.reduce((s, r) => s + r.visits, 0)}</td>
+                  <td className="px-2 py-2 text-slate-500">{rows.reduce((s, r) => s + r.subVisits, 0)}</td>
                   <td colSpan={4} />
                   <td className="px-2 py-2 font-mono">{yen(estimate.total)}</td>
                 </tr>

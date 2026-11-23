@@ -18,6 +18,8 @@ import {
   DEFAULT_PARKING_LOTS,
   DEFAULT_PARKING_SPACES,
   DEFAULT_STAFF,
+  DEFAULT_CURRENT_STAFF_ID,
+  REAL_STAFF,
   DEFAULT_VEHICLES,
   sampleAlcoholChecks,
   sampleFinance,
@@ -133,7 +135,7 @@ interface PortalState extends PortalData {
 
 function initialData(): PortalData {
   return {
-    currentStaffId: "s-admin",
+    currentStaffId: DEFAULT_CURRENT_STAFF_ID,
     links: DEFAULT_LINKS,
     staff: DEFAULT_STAFF,
     vehicles: DEFAULT_VEHICLES,
@@ -211,7 +213,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 11,
+      version: 12,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -257,6 +259,26 @@ export const usePortalStore = create<PortalState>()(
             const def = DEFAULT_CONSULTATION_DESKS.find((x) => x.id === d.id);
             return def ? { ...d, email: d.email || def.email, phone: d.phone || def.phone } : d;
           });
+        }
+        // v12: 実際の職員(訪問看護22名)を追加し、報酬単価を新しい形式・単価(自費6,000円、仙台市10.42円)にする
+        if (version < 12) {
+          if (Array.isArray(state.staff)) {
+            const norm = (n: string) => n.normalize("NFKC").replace(/\s/g, "");
+            for (const st of REAL_STAFF) {
+              if (!state.staff.some((x) => norm(x.name) === norm(st.name))) state.staff.push(st);
+            }
+          }
+          if (Array.isArray(state.feeRates)) {
+            const defaults = new Map(DEFAULT_FEE_RATES.map((r) => [r.key, r]));
+            state.feeRates = state.feeRates.map((r) => {
+              const d = defaults.get(r.key);
+              const legacy = r as FeeRate & { useBracket?: boolean };
+              const bracketMode = r.bracketMode ?? d?.bracketMode ?? (legacy.useBracket ? "billing" : "none");
+              const value = r.key === "自費|自費" && !r.value ? 6000 : r.value;
+              return { ...r, bracketMode, value, note: d && r.key === "自費|自費" ? d.note : r.note };
+            });
+          }
+          if (state.regionUnitPrice === 11.12) state.regionUnitPrice = DEFAULT_REGION_UNIT_PRICE;
         }
         return state as PortalState;
       },

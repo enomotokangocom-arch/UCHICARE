@@ -87,7 +87,39 @@ export const ADDED_DEFAULT_LINK_IDS = ["uchicare-hp", "elearning", "manual"];
 
 export const MANUAL_URL = "https://app.notion.com/p/Uchi-care-262a1e3b053080aa9dcdcc54afe0ecf8";
 
-export const DEFAULT_STAFF: Staff[] = [
+/**
+ * 実際の職員(訪問看護)。iBow の訪問件数詳細表をもとに登録。
+ * 訪看Ⅰ5(理学療法士等)の実績がある職員は「理学療法士」としている(作業療法士・言語聴覚士の場合は設定・マスタで変更)。
+ */
+export const REAL_STAFF: Staff[] = [
+  { id: "st-01", name: "榎本 健太", unitId: "houkan", role: "看護師", position: "経営者", isDriver: true, isSafetyManager: true, isEvaluator: true, active: true },
+  { id: "st-02", name: "池田 航", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-03", name: "鳴海 優子", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-04", name: "朝井 真悠", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-05", name: "菊地 春香", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-06", name: "色摩 実奈子", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-07", name: "菅原 珠弥", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-08", name: "瀬川 麻衣", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-09", name: "髙橋 あゆみ", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-10", name: "中野 陽子", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-11", name: "藤村 紗代", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-12", name: "武藤 愛", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-13", name: "目崎 愛見", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-14", name: "石森 美咲", unitId: "houkan", role: "理学療法士", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-15", name: "岩谷 久恵", unitId: "houkan", role: "理学療法士", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-16", name: "主濱 達也", unitId: "houkan", role: "理学療法士", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-17", name: "髙橋 勇利", unitId: "houkan", role: "理学療法士", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-18", name: "髙橋 晶", unitId: "houkan", role: "理学療法士", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-19", name: "丸山 敏哉", unitId: "houkan", role: "理学療法士", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-20", name: "葛巻 鮎美", unitId: "houkan", role: "理学療法士", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-21", name: "佐藤 雄紀", unitId: "houkan", role: "理学療法士", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+  { id: "st-22", name: "新妻 芙美子", unitId: "houkan", role: "理学療法士", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
+];
+
+export const DEFAULT_CURRENT_STAFF_ID = "st-01";
+
+/** サンプルの職員(サンプルデータで使用) */
+export const SAMPLE_STAFF: Staff[] = [
   { id: "s-admin", name: "管理者(本部)", unitId: "houkan", role: "管理者", position: "経営者", isDriver: true, isSafetyManager: true, isEvaluator: true, active: true },
   { id: "s-ns1", name: "看護師A", unitId: "houkan", role: "看護師", position: "主任", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
   { id: "s-ns2", name: "看護師B", unitId: "houkan", role: "看護師", position: "スタッフ", isDriver: true, isSafetyManager: false, isEvaluator: false, active: true },
@@ -97,6 +129,8 @@ export const DEFAULT_STAFF: Staff[] = [
   { id: "s-shop1", name: "店舗スタッフA", unitId: "uchinowa", role: "店舗スタッフ", position: "リーダー", isDriver: false, isSafetyManager: false, isEvaluator: false, active: true },
   { id: "s-well1", name: "Uchi Wellスタッフ", unitId: "uchiwell", role: "その他", position: "スタッフ", isDriver: false, isSafetyManager: false, isEvaluator: false, active: true },
 ];
+
+export const DEFAULT_STAFF: Staff[] = [...REAL_STAFF, ...SAMPLE_STAFF];
 
 export const DEFAULT_VEHICLES: Vehicle[] = [
   { id: "v-1", name: "訪看1号車(軽)", plate: "○○ 580 あ 12-34", unitId: "houkan", active: true },
