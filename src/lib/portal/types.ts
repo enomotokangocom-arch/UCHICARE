@@ -468,3 +468,19 @@ export interface SalesImportMapping {
   /** ファイル上の担当者名 → 職員ID */
   staffAliases: Record<string, string>;
 }
+
+/** 報酬単価(訪問件数から売上を概算するための表) */
+export interface FeeRate {
+  /** key と同じ値 */
+  id: string;
+  /** `${区分}|${サービス名(NFKC正規化)}` */
+  key: string;
+  group: string;
+  code: string;
+  /** 単位=介護保険の単位数(×地域単価) / 円=医療保険の療養費など */
+  kind: "単位" | "円";
+  value: number;
+  /** 「件数[回数]」の [ ] の数(20分ごとの回数など)で計算するか */
+  useBracket: boolean;
+  note: string;
+}

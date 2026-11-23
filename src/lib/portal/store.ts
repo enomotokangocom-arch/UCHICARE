@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { DEFAULT_FEE_RATES, DEFAULT_REGION_UNIT_PRICE } from "./visitCount";
 import { persist } from "zustand/middleware";
 import {
   DEFAULT_COMMITTEES,
@@ -38,6 +39,7 @@ import {
   Evaluation,
   EvaluationCriterion,
   ExternalLink,
+  FeeRate,
   DailySale,
   FinanceMonthly,
   Goal,
@@ -94,6 +96,9 @@ interface PortalData {
   philosophy: CompanyPhilosophy;
   consultationDesks: ConsultationDesk[];
   dailySales: DailySale[];
+  /** 訪問件数から売上を概算するための報酬単価と地域単価 */
+  feeRates: FeeRate[];
+  regionUnitPrice: number;
   /** 取り込み元ごとの列の設定 */
   salesImportMappings: Partial<Record<SalesSource, SalesImportMapping>>;
   /** 経営数値がサンプルのままか(バナー表示用) */
@@ -103,7 +108,7 @@ interface PortalData {
   driveRootFolderId: string;
 }
 
-type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates" | "philosophy" | "salesImportMappings">;
+type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates" | "philosophy" | "salesImportMappings" | "regionUnitPrice">;
 
 interface PortalState extends PortalData {
   setCurrentStaffId: (id: string) => void;
@@ -115,6 +120,10 @@ interface PortalState extends PortalData {
   setGoalSheetTemplate: (unitId: BusinessUnitId, url: string) => void;
   setPhilosophy: (patch: Partial<CompanyPhilosophy>) => void;
   setSalesImportMapping: (source: SalesSource, mapping: SalesImportMapping) => void;
+  setRegionUnitPrice: (v: number) => void;
+  resetFeeRates: () => void;
+  /** 月の個人売上・訪問件数(と事業所の月の売上)を置き換える */
+  applyMonthlySales: (personalSales: PersonalSales[], finance?: FinanceMonthly[]) => void;
   /** 日次売上を差し替え、関係する月の個人売上を計算し直す */
   applyDailySales: (dailySales: DailySale[], personalSales: PersonalSales[]) => void;
   /** サンプルの経営数値(月次・補助金・個人売上)を消去する */
@@ -150,6 +159,8 @@ function initialData(): PortalData {
     philosophy: DEFAULT_PHILOSOPHY,
     consultationDesks: DEFAULT_CONSULTATION_DESKS,
     dailySales: [],
+    feeRates: DEFAULT_FEE_RATES,
+    regionUnitPrice: DEFAULT_REGION_UNIT_PRICE,
     salesImportMappings: {},
     financeIsSample: true,
     googleClientId: "",
@@ -174,6 +185,9 @@ export const usePortalStore = create<PortalState>()(
       setGoogleSettings: (patch) => set(patch),
       setSalesImportMapping: (source, mapping) => set((state) => ({ salesImportMappings: { ...state.salesImportMappings, [source]: mapping } })),
       applyDailySales: (dailySales, personalSales) => set({ dailySales, personalSales }),
+      setRegionUnitPrice: (v) => set({ regionUnitPrice: v }),
+      resetFeeRates: () => set({ feeRates: DEFAULT_FEE_RATES }),
+      applyMonthlySales: (personalSales, finance) => set(finance ? { personalSales, finance } : { personalSales }),
       setPhilosophy: (patch) => set((state) => ({ philosophy: { ...state.philosophy, ...patch } })),
       setGoalSheetTemplate: (unitId, url) => set((state) => ({ goalSheetTemplates: { ...state.goalSheetTemplates, [unitId]: url } })),
       clearFinanceSamples: () => set({ finance: [], subsidies: [], personalSales: [], financeIsSample: false }),
@@ -259,6 +273,9 @@ export const usePortalStore = create<PortalState>()(
           setPhilosophy,
           setSalesImportMapping,
           applyDailySales,
+          setRegionUnitPrice,
+          resetFeeRates,
+          applyMonthlySales,
           clearFinanceSamples,
           collection,
           /* eslint-enable @typescript-eslint/no-unused-vars */

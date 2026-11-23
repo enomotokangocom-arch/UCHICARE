@@ -53,12 +53,12 @@ function Check({ checked, onChange, label }: { checked: boolean; onChange: (v: b
 
 export default function SettingsPage() {
   const state = usePortalStore();
-  const { links, staff, committees, criteria, collection, resetLinks, resetAll, philosophy, setPhilosophy, consultationDesks } = state;
+  const { links, staff, committees, criteria, collection, resetLinks, resetAll, philosophy, setPhilosophy, consultationDesks, feeRates, regionUnitPrice, setRegionUnitPrice, resetFeeRates } = state;
   const canEditPhilosophy = isAdmin(useCurrentStaff());
 
   function exportBackup() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { setCurrentStaffId, markNoticeRead, resetAll, resetLinks, resetJobDescriptions, setGoogleSettings, setGoalSheetTemplate, setPhilosophy, clearFinanceSamples, collection, ...data } =
+    const { setCurrentStaffId, markNoticeRead, resetAll, resetLinks, resetJobDescriptions, setGoogleSettings, setGoalSheetTemplate, setPhilosophy, setSalesImportMapping, applyDailySales, setRegionUnitPrice, resetFeeRates, applyMonthlySales, clearFinanceSamples, collection, ...data } =
       usePortalStore.getState();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -92,6 +92,7 @@ export default function SettingsPage() {
         {[
           ["#philosophy", "理念"],
           ["#consultation", "相談窓口"],
+          ["#fees", "報酬単価"],
           ["#links", "外部システム"],
           ["#staff", "職員"],
           ["#vehicles", "車両"],
@@ -155,6 +156,67 @@ export default function SettingsPage() {
                 </div>
               );
             })}
+          </fieldset>
+        </Section>
+
+        <Section
+          id="fees"
+          title="報酬単価(売上の概算用)"
+          description="iBowの訪問件数から売上を概算するときの単価です。初期値は2024年度改定の基本報酬(加算・減算なし)。事業所の算定(機能強化型の管理療養費、自費の料金など)に合わせて修正してください。変更は経営者・統括部長・事務長のみ。"
+          action={
+            canEditPhilosophy && (
+              <button type="button" className={buttonClass.ghost} onClick={() => confirm("報酬単価を初期値に戻しますか?") && resetFeeRates()}>
+                初期値に戻す
+              </button>
+            )
+          }
+        >
+          <fieldset disabled={!canEditPhilosophy}>
+            <label className="mb-3 flex flex-wrap items-center gap-2 text-sm text-slate-700">
+              介護保険の1単位あたりの円(地域区分)
+              <input type="number" step="0.01" min="10" className={`${cell} w-28`} value={regionUnitPrice} onChange={(e) => setRegionUnitPrice(Number(e.target.value) || 10)} />
+              <span className="text-xs text-slate-500">例: 横浜市(2級地)11.12 / その他 10.00</span>
+            </label>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="text-xs text-slate-500">
+                  <tr className="text-left">
+                    <th className="px-2 py-1.5 font-semibold">区分</th>
+                    <th className="px-2 py-1.5 font-semibold">サービス(iBowの列名)</th>
+                    <th className="px-2 py-1.5 font-semibold">単価</th>
+                    <th className="px-2 py-1.5 font-semibold">単位</th>
+                    <th className="px-2 py-1.5 font-semibold">[ ]の回数で計算</th>
+                    <th className="px-2 py-1.5 font-semibold">メモ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {feeRates.map((r) => {
+                    const up = (patch: Partial<typeof r>) => collection("feeRates").update(r.id, patch);
+                    return (
+                      <tr key={r.id}>
+                        <td className="px-2 py-1 text-xs text-slate-600">{r.group}</td>
+                        <td className="px-2 py-1 font-medium">{r.code}</td>
+                        <td className="px-2 py-1">
+                          <input type="number" min="0" className={`${cell} w-24 text-right`} value={r.value} onChange={(e) => up({ value: Number(e.target.value) || 0 })} />
+                        </td>
+                        <td className="px-2 py-1">
+                          <select className={`${cell} w-auto`} value={r.kind} onChange={(e) => up({ kind: e.target.value as "単位" | "円" })}>
+                            <option>単位</option>
+                            <option>円</option>
+                          </select>
+                        </td>
+                        <td className="px-2 py-1 text-center">
+                          <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={r.useBracket} onChange={(e) => up({ useBracket: e.target.checked })} />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input className={cell} value={r.note} onChange={(e) => up({ note: e.target.value })} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </fieldset>
         </Section>
 

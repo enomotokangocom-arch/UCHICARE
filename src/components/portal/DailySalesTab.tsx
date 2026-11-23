@@ -9,6 +9,7 @@ import { buildPreview, findHeaderRow, guessMapping, mergeDailySales, readCsvFile
 import { BusinessUnitId, SalesImportMapping, SalesSource } from "@/lib/portal/types";
 import { formatDate, formatDateTime, todayString } from "@/lib/portal/util";
 import { Card, Field, StatusPill, UnitBadge, buttonClass, inputClass } from "./ui";
+import { VisitCountImport } from "./VisitCountImport";
 
 const SOURCES: SalesSource[] = ["ZEST", "iBow", "その他"];
 const BAR = "#2f5b94";
@@ -102,9 +103,10 @@ export function DailySalesTab({ canImport, units }: { canImport: boolean; units:
 
   return (
     <div className="space-y-5">
+      {canImport && <VisitCountImport />}
       {canImport && (
         <Card className="border-brand-200">
-          <h2 className="text-sm font-bold text-slate-900">📥 売上データを取り込む(毎日)</h2>
+          <h2 className="text-sm font-bold text-slate-900">📥 金額が入ったCSVを取り込む(ZEST・iBowの実績CSVなど)</h2>
           <p className="mt-0.5 text-xs text-slate-500">
             ZEST・iBow から出力した実績のCSVを選ぶと、日別・職員別の売上に集計して取り込みます。同じ日付のデータは置き換わるので、同じ期間を何度取り込んでも二重にはなりません。
           </p>
