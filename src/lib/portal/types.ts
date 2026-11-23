@@ -432,8 +432,39 @@ export interface ConsultationDesk {
   owner: string;
   /** 相談を届けるメールアドレス */
   email: string;
+  /** 電話で相談する場合の番号 */
+  phone?: string;
   /** Googleフォームで受け付ける場合のURL(匿名相談向け) */
   formUrl: string;
   description: string;
   icon: string;
+}
+
+export type SalesSource = "ZEST" | "iBow" | "その他";
+
+/** 日次の売上(ZEST・iBow等のデータを取り込んだもの。日付×職員で集計) */
+export interface DailySale {
+  id: string;
+  date: string; // YYYY-MM-DD
+  /** 未割当(職員と結びつかなかった行)は空 */
+  staffId: string;
+  /** 取り込み元ファイルでの担当者名 */
+  rawName: string;
+  amount: number;
+  visits: number;
+  source: SalesSource;
+  importedAt: string;
+}
+
+/** 取り込み設定(どの列を何として読むか)。取り込み元ごとに保存して毎日使い回す */
+export interface SalesImportMapping {
+  dateCol: string;
+  staffCol: string;
+  amountCol: string;
+  /** 空なら1行=1件として数える */
+  visitsCol: string;
+  /** 金額列が「単位数」の場合の1単位あたりの円(円の場合は1) */
+  unitPrice: number;
+  /** ファイル上の担当者名 → 職員ID */
+  staffAliases: Record<string, string>;
 }

@@ -38,6 +38,7 @@ import {
   Evaluation,
   EvaluationCriterion,
   ExternalLink,
+  DailySale,
   FinanceMonthly,
   Goal,
   GoalSheet,
@@ -49,6 +50,8 @@ import {
   ParkingLot,
   ParkingSpace,
   PersonalSales,
+  SalesImportMapping,
+  SalesSource,
   SalesActivity,
   Staff,
   Subsidy,
@@ -90,6 +93,9 @@ interface PortalData {
   goalSheetTemplates: Partial<Record<BusinessUnitId, string>>;
   philosophy: CompanyPhilosophy;
   consultationDesks: ConsultationDesk[];
+  dailySales: DailySale[];
+  /** 取り込み元ごとの列の設定 */
+  salesImportMappings: Partial<Record<SalesSource, SalesImportMapping>>;
   /** 経営数値がサンプルのままか(バナー表示用) */
   financeIsSample: boolean;
   /** Google連携の設定(OAuthクライアントIDと、書類を保存するルートフォルダ) */
@@ -97,7 +103,7 @@ interface PortalData {
   driveRootFolderId: string;
 }
 
-type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates" | "philosophy">;
+type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates" | "philosophy" | "salesImportMappings">;
 
 interface PortalState extends PortalData {
   setCurrentStaffId: (id: string) => void;
@@ -108,6 +114,9 @@ interface PortalState extends PortalData {
   setGoogleSettings: (patch: Partial<Pick<PortalData, "googleClientId" | "driveRootFolderId">>) => void;
   setGoalSheetTemplate: (unitId: BusinessUnitId, url: string) => void;
   setPhilosophy: (patch: Partial<CompanyPhilosophy>) => void;
+  setSalesImportMapping: (source: SalesSource, mapping: SalesImportMapping) => void;
+  /** 日次売上を差し替え、関係する月の個人売上を計算し直す */
+  applyDailySales: (dailySales: DailySale[], personalSales: PersonalSales[]) => void;
   /** サンプルの経営数値(月次・補助金・個人売上)を消去する */
   clearFinanceSamples: () => void;
   collection: <K extends CollectionKey>(key: K) => Collection<PortalData[K][number]>;
@@ -140,6 +149,8 @@ function initialData(): PortalData {
     goalSheetTemplates: DEFAULT_GOAL_SHEET_TEMPLATES,
     philosophy: DEFAULT_PHILOSOPHY,
     consultationDesks: DEFAULT_CONSULTATION_DESKS,
+    dailySales: [],
+    salesImportMappings: {},
     financeIsSample: true,
     googleClientId: "",
     driveRootFolderId: DEFAULT_DRIVE_ROOT_FOLDER_ID,
@@ -161,6 +172,8 @@ export const usePortalStore = create<PortalState>()(
       resetLinks: () => set({ links: DEFAULT_LINKS }),
       resetJobDescriptions: () => set({ jobDescriptions: DEFAULT_JOB_DESCRIPTIONS }),
       setGoogleSettings: (patch) => set(patch),
+      setSalesImportMapping: (source, mapping) => set((state) => ({ salesImportMappings: { ...state.salesImportMappings, [source]: mapping } })),
+      applyDailySales: (dailySales, personalSales) => set({ dailySales, personalSales }),
       setPhilosophy: (patch) => set((state) => ({ philosophy: { ...state.philosophy, ...patch } })),
       setGoalSheetTemplate: (unitId, url) => set((state) => ({ goalSheetTemplates: { ...state.goalSheetTemplates, [unitId]: url } })),
       clearFinanceSamples: () => set({ finance: [], subsidies: [], personalSales: [], financeIsSample: false }),
@@ -184,7 +197,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 10,
+      version: 11,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -224,6 +237,13 @@ export const usePortalStore = create<PortalState>()(
           if (state.philosophy.vision === LEGACY_PHILOSOPHY_VISION) state.philosophy.vision = DEFAULT_PHILOSOPHY.vision;
           if (state.philosophy.values === LEGACY_PHILOSOPHY_VALUES) state.philosophy.values = DEFAULT_PHILOSOPHY.values;
         }
+        // v11: 相談窓口の連絡先(未入力のものだけ)を設定
+        if (version < 11 && Array.isArray(state.consultationDesks)) {
+          state.consultationDesks = state.consultationDesks.map((d) => {
+            const def = DEFAULT_CONSULTATION_DESKS.find((x) => x.id === d.id);
+            return def ? { ...d, email: d.email || def.email, phone: d.phone || def.phone } : d;
+          });
+        }
         return state as PortalState;
       },
       partialize: (state) => {
@@ -237,6 +257,8 @@ export const usePortalStore = create<PortalState>()(
           setGoogleSettings,
           setGoalSheetTemplate,
           setPhilosophy,
+          setSalesImportMapping,
+          applyDailySales,
           clearFinanceSamples,
           collection,
           /* eslint-enable @typescript-eslint/no-unused-vars */

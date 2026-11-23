@@ -8,6 +8,7 @@ import { BUSINESS_UNITS, currentFiscalYear, fiscalMonths, unitName } from "@/lib
 import { BusinessUnitId, FinanceMonthly, PersonalSales, Staff, Subsidy, SubsidyStatus } from "@/lib/portal/types";
 import { formatDate, newId } from "@/lib/portal/util";
 import { MarginChart, MonthPoint, RevenueTargetChart } from "@/components/portal/FinanceCharts";
+import { DailySalesTab } from "@/components/portal/DailySalesTab";
 import {
   Card,
   EmptyState,
@@ -22,7 +23,7 @@ import {
   inputClass,
 } from "@/components/portal/ui";
 
-type Tab = "summary" | "monthly" | "personal" | "subsidy";
+type Tab = "summary" | "daily" | "monthly" | "personal" | "subsidy";
 const SUBSIDY_STATUSES: SubsidyStatus[] = ["申請予定", "申請中", "採択・交付決定", "入金済", "不採択"];
 const cell = `${inputClass} py-1 text-right font-mono`;
 
@@ -127,6 +128,7 @@ export default function ManagementPage() {
 
   const tabs: { id: Tab; label: string; show: boolean }[] = [
     { id: "summary", label: "経営サマリー", show: canSeeUnits },
+    { id: "daily", label: "日次売上(取り込み)", show: canSeeUnits },
     { id: "monthly", label: "月次の数字を入力", show: canSeeUnits },
     { id: "personal", label: "個人の売上・目標", show: true },
     { id: "subsidy", label: "補助金", show: canSeeUnits },
@@ -189,7 +191,7 @@ export default function ManagementPage() {
           ))}
       </div>
 
-      {(tab === "summary" || tab === "monthly") && scope.all && (
+      {(tab === "summary" || tab === "monthly" || tab === "daily") && scope.all && (
         <div className="mb-4 flex flex-wrap gap-1.5">
           {(["all", ...allowedUnits] as const).map((u) => (
             <button
@@ -327,6 +329,8 @@ export default function ManagementPage() {
           </Card>
         </>
       )}
+
+      {tab === "daily" && <DailySalesTab canImport={scope.all} units={unitSel === "all" ? allowedUnits : [unitSel]} />}
 
       {tab === "monthly" && <MonthlyInput unitId={unitSel === "all" ? allowedUnits[0] : unitSel} months={months} />}
 

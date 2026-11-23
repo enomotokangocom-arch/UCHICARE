@@ -53,9 +53,14 @@ export function HomeGoalCards() {
   const goals = usePortalStore((s) => s.goals);
   const finance = usePortalStore((s) => s.finance);
   const goalSheets = usePortalStore((s) => s.goalSheets);
+  const dailySales = usePortalStore((s) => s.dailySales);
   if (!current) return null;
 
   const thisMonth = todayString().slice(0, 7);
+  // 日次の売上(取り込み済みの最新日)
+  const myDaily = dailySales.filter((d) => d.staffId === current.id).sort((a, b) => b.date.localeCompare(a.date));
+  const latestDay = myDaily[0]?.date;
+  const latestDayAmount = myDaily.filter((d) => d.date === latestDay).reduce((sum, d) => sum + d.amount, 0);
   // 今月の数字がまだなければ、入力済みの最新月を表示する
   const mySales = personalSales
     .filter((p) => p.staffId === current.id && p.month <= thisMonth && (p.revenue !== null || p.target !== null))
@@ -79,6 +84,11 @@ export function HomeGoalCards() {
             <p className="text-xs text-slate-500">目標 {yen(mySales.target)}</p>
             <ProgressBar ratio={mySales.revenue !== null && mySales.target ? mySales.revenue / mySales.target : null} className="mt-2" />
             {mySales.visits !== null && <p className="mt-2 text-xs text-slate-600">訪問件数 {mySales.visits}件</p>}
+            {latestDay && (
+              <p className="mt-1 text-xs text-slate-600">
+                {Number(latestDay.slice(5, 7))}/{Number(latestDay.slice(8))} の売上 <span className="font-bold text-slate-800">{yen(latestDayAmount)}</span>
+              </p>
+            )}
           </>
         )}
       </Card>

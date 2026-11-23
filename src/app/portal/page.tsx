@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { unitName } from "@/lib/portal/defaults";
 import { alcoholChecksFor, committeeStatuses, noticeVisibleTo, parkingContractAlerts, sortNotices, vehicleAlerts } from "@/lib/portal/logic";
-import { formatDate, formatDateTime, todayString } from "@/lib/portal/util";
+import { daysAgo, formatDate, formatDateTime, todayString } from "@/lib/portal/util";
 import { LinkGrid } from "@/components/portal/LinkGrid";
 import { isAdmin } from "@/lib/portal/logic";
 import { HomeGoalCards } from "@/components/portal/HomeGoalCards";
@@ -23,6 +23,7 @@ export default function PortalHome() {
   const evaluations = usePortalStore((s) => s.evaluations);
   const parkingLots = usePortalStore((s) => s.parkingLots);
   const vehicles = usePortalStore((s) => s.vehicles);
+  const dailySales = usePortalStore((s) => s.dailySales);
   const philosophy = usePortalStore((s) => s.philosophy);
   const today = todayString();
 
@@ -49,6 +50,9 @@ export default function PortalHome() {
     : [];
 
   const parkingAlerts = parkingContractAlerts(parkingLots);
+  // 売上データの取り込み忘れ(一度でも取り込んだことがあり、前日分まで入っていない場合)
+  const latestSalesDate = dailySales.map((d) => d.date).sort().at(-1);
+  const salesImportDue = isAdmin(current) && !!latestSalesDate && latestSalesDate < daysAgo(1);
   const carAlerts = vehicleAlerts(vehicles).filter((a) => !current || isAdmin(current) || a.vehicle.unitId === current.unitId);
 
   const values = philosophy.values
@@ -189,7 +193,7 @@ export default function PortalHome() {
 
       <HomeGoalCards />
 
-      {(committeeAlerts.length > 0 || myEvalTodos.length > 0 || parkingAlerts.length > 0 || carAlerts.length > 0) && (
+      {(committeeAlerts.length > 0 || myEvalTodos.length > 0 || parkingAlerts.length > 0 || carAlerts.length > 0 || salesImportDue) && (
         <Card className="mt-4">
           <h2 className="text-sm font-bold text-slate-900">✅ やることリスト</h2>
           <ul className="mt-2 space-y-2 text-sm">
@@ -201,6 +205,15 @@ export default function PortalHome() {
                 </Link>
               </li>
             ))}
+            {salesImportDue && latestSalesDate && (
+              <li className="flex flex-wrap items-center gap-2">
+                <StatusPill tone="warn">売上の取り込み</StatusPill>
+                <Link href="/portal/management" className="text-slate-700 hover:text-brand-700 hover:underline">
+                  ZEST・iBow の売上データを取り込んでください
+                </Link>
+                <span className="text-xs text-slate-400">最新 {formatDate(latestSalesDate)} 分まで</span>
+              </li>
+            )}
             {carAlerts.map((a) => (
               <li key={`${a.vehicle.id}-${a.label}`} className="flex flex-wrap items-center gap-2">
                 <StatusPill tone={a.overdue ? "danger" : "warn"}>{a.overdue ? `${a.label} 期限切れ` : `${a.label} 期限が近い`}</StatusPill>

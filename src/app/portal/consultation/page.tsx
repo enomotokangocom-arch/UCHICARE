@@ -62,7 +62,10 @@ function DeskCard({ desk, selected, onSelect }: { desk: ConsultationDesk; select
       <span className="text-2xl">{desk.icon}</span>
       <span className="min-w-0">
         <span className="block text-sm font-bold text-brand-700">{desk.name}</span>
-        <span className="block text-xs font-semibold text-gold-700">担当: {desk.owner}</span>
+        <span className="block text-xs font-semibold text-gold-700">
+          担当: {desk.owner}
+          {desk.phone && <span className="ml-2 font-normal text-slate-500">📞 {desk.phone}</span>}
+        </span>
         <span className="mt-1 block text-xs leading-relaxed text-slate-500">{desk.description}</span>
       </span>
     </button>
@@ -268,6 +271,11 @@ function ConsultForm({ desks }: { desks: ConsultationDesk[] }) {
             <button type="button" className={buttonClass.secondary} disabled={!text.trim()} onClick={sendForm}>
               📝 Googleフォームで送る(内容をコピーして開く)
             </button>
+          )}
+          {desk.phone && (
+            <a href={`tel:${desk.phone.replace(/[^0-9+]/g, "")}`} className={buttonClass.secondary}>
+              📞 電話で相談する({desk.phone})
+            </a>
           )}
           <CopyButton text={`${preview.subject}\n\n${preview.body}`} label="送る内容をコピー" />
         </div>

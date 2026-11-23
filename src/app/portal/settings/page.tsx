@@ -149,8 +149,9 @@ export default function SettingsPage() {
                   <input className={`${cell} col-span-10 sm:col-span-5`} value={d.name} onChange={(e) => up({ name: e.target.value })} aria-label="窓口名" />
                   <input className={`${cell} col-span-12 sm:col-span-6`} placeholder="担当者名" value={d.owner} onChange={(e) => up({ owner: e.target.value })} aria-label="担当者名" />
                   <input className={`${cell} col-span-12 sm:col-span-6`} type="email" placeholder="相談を届けるメールアドレス" value={d.email} onChange={(e) => up({ email: e.target.value.trim() })} aria-label="メールアドレス" />
+                  <input className={`${cell} col-span-12 sm:col-span-6`} type="tel" placeholder="電話番号(任意)" value={d.phone ?? ""} onChange={(e) => up({ phone: e.target.value.trim() })} aria-label="電話番号" />
                   <input className={`${cell} col-span-12 sm:col-span-6`} placeholder="GoogleフォームのURL(任意)" value={d.formUrl} onChange={(e) => up({ formUrl: e.target.value.trim() })} aria-label="フォームURL" />
-                  <input className={`${cell} col-span-12`} placeholder="窓口の説明" value={d.description} onChange={(e) => up({ description: e.target.value })} aria-label="説明" />
+                  <input className={`${cell} col-span-12 sm:col-span-6`} placeholder="窓口の説明" value={d.description} onChange={(e) => up({ description: e.target.value })} aria-label="説明" />
                 </div>
               );
             })}
