@@ -7,19 +7,10 @@ import { usePortalStore } from "@/lib/portal/store";
 import { POSITIONS, unitName } from "@/lib/portal/defaults";
 import { Position } from "@/lib/portal/types";
 import { StatusPill, buttonClass, inputClass } from "@/components/portal/ui";
+import { BulkInvite, inviteMessage } from "./BulkInvite";
 
 const cell = `${inputClass} py-1.5`;
 
-function inviteText(m: Pick<Member, "name" | "email" | "invite_code">) {
-  return [
-    `${m.name} さん`,
-    "Uchi care 社内ポータルの登録のご案内です。",
-    `URL: ${window.location.origin}`,
-    `メールアドレス: ${m.email}`,
-    `招待コード: ${m.invite_code}`,
-    "ログイン画面の「はじめての登録」から、メールアドレス・招待コードを入れて、自分のパスワードを決めてください。",
-  ].join("\n");
-}
 
 /** 設定・マスタ: ログインアカウント(管理者のみ) */
 export function AccountsSection() {
@@ -84,7 +75,7 @@ export function AccountsSection() {
   }
 
   async function copy(m: Member) {
-    await navigator.clipboard.writeText(inviteText(m));
+    await navigator.clipboard.writeText(inviteMessage(m));
     setCopied(m.id);
     setTimeout(() => setCopied(null), 1500);
   }
@@ -95,6 +86,7 @@ export function AccountsSection() {
 
   return (
     <div className="space-y-4">
+      <BulkInvite members={members} onDone={reload} />
       <form onSubmit={add} className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3 md:flex-row md:items-end">
         <label className="block flex-1 text-xs font-semibold text-slate-600">
           職員
