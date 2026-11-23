@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChangeEvent, ReactNode } from "react";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { isAdmin } from "@/lib/portal/logic";
+import { AccountsSection } from "@/components/auth/AccountsSection";
 import { BUSINESS_UNITS, POSITIONS } from "@/lib/portal/defaults";
 import { BusinessUnitId, LinkCategory, Position, StaffRole } from "@/lib/portal/types";
 import { newId, todayString } from "@/lib/portal/util";
@@ -90,6 +91,7 @@ export default function SettingsPage() {
 
       <nav className="mb-5 flex flex-wrap gap-2 text-xs">
         {[
+          ["#accounts", "ログインアカウント"],
           ["#philosophy", "理念"],
           ["#consultation", "相談窓口"],
           ["#fees", "報酬単価"],
@@ -107,6 +109,10 @@ export default function SettingsPage() {
       </nav>
 
       <div className="space-y-6">
+        <Section id="accounts" title="ログインアカウント" description="職員ごとにログインに使うメールアドレスを登録し、招待コードを発行します。">
+          <AccountsSection />
+        </Section>
+
         <Section
           id="philosophy"
           title="理念(ミッション・ビジョン・バリュー)"

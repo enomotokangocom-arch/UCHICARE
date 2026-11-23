@@ -10,6 +10,7 @@ import { surveyTypeToSlug } from "@/lib/surveySlug";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { MANUAL_URL, unitName } from "@/lib/portal/defaults";
 import { canViewHealthTool } from "@/lib/portal/logic";
+import { signOut, useAuth } from "@/lib/portal/auth";
 
 type NavItem = { href: string; label: string; icon: string; external?: boolean };
 
@@ -127,6 +128,7 @@ export function Sidebar() {
   const notices = usePortalStore((s) => s.notices);
   const setCurrentStaffId = usePortalStore((s) => s.setCurrentStaffId);
   const current = useCurrentStaff();
+  const member = useAuth((s) => s.member);
 
   const unreadCount = current
     ? notices.filter(
@@ -238,22 +240,38 @@ export function Sidebar() {
         </nav>
 
         <div className="border-t border-slate-200 px-4 py-3">
-          <label className="block">
-            <span className="text-[11px] font-semibold text-slate-400">利用者(ログイン中)</span>
-            <select
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700"
-              value={current?.id ?? ""}
-              onChange={(e) => setCurrentStaffId(e.target.value)}
-            >
-              {staff
-                .filter((s) => s.active)
-                .map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}({s.position}・{unitName(s.unitId)})
-                  </option>
-                ))}
-            </select>
-          </label>
+          {member && (
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-semibold text-slate-700">{member.name || member.email}</p>
+                <p className="truncate text-[11px] text-slate-400">
+                  {member.position}・{unitName(member.unit_id)}
+                </p>
+              </div>
+              <button type="button" onClick={signOut} className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-100 hover:text-rose-600">
+                ログアウト
+              </button>
+            </div>
+          )}
+          {member?.is_admin && (
+            <label className="mt-2 block">
+              <span className="text-[11px] font-semibold text-slate-400">表示を切り替え(管理者のみ)</span>
+              <select
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700"
+                value={current?.id ?? ""}
+                onChange={(e) => setCurrentStaffId(e.target.value)}
+              >
+                {staff
+                  .filter((s) => s.active)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.id === member.staff_id ? "★ " : ""}
+                      {s.name}({s.position}・{unitName(s.unitId)})
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
         </div>
       </aside>
     </>
