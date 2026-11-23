@@ -6,9 +6,10 @@ import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { isAdmin } from "@/lib/portal/logic";
 import { JobDescription, Position } from "@/lib/portal/types";
 import { Card, Field, PageContainer, PageHeader, UnitBadge, buttonClass, inputClass } from "@/components/portal/ui";
+import { SaveBar, useUnsavedWarning } from "@/components/portal/useDraft";
 
 /** 組織図の段(上から) */
-const ORG_ROWS: Position[][] = [["経営者"], ["統括部長", "事務長"], ["所長"], ["リハ責任者", "主任"], ["リーダー"], ["スタッフ"]];
+const ORG_ROWS: Position[][] = [["経営者"], ["統括部長"], ["管理者"], ["責任者"], ["主任"], ["一般スタッフ"]];
 
 const SECTIONS: { key: keyof JobDescription; label: string; list?: boolean }[] = [
   { key: "mission", label: "ミッション(役割の目的)" },
@@ -30,9 +31,15 @@ export default function JobDescriptionsPage() {
   const current = useCurrentStaff();
   const canEdit = isAdmin(current);
 
-  const [selected, setSelected] = useState<Position>(current?.position ?? "スタッフ");
-  const [editing, setEditing] = useState(false);
-  const jd = jds.find((j) => j.position === selected);
+  const [selected, setSelected] = useState<Position>(current?.position ?? "一般スタッフ");
+  // 編集中は下書き(draft)を書き換え、「保存する」で反映する
+  const [draft, setDraft] = useState<JobDescription | null>(null);
+  const editing = draft !== null;
+  const saved = jds.find((j) => j.position === selected);
+  const jd = draft ?? saved;
+  const dirty = !!draft && !!saved && JSON.stringify(draft) !== JSON.stringify(saved);
+  useUnsavedWarning(dirty);
+  const leaveEditing = () => !dirty || confirm("保存していない変更があります。破棄しますか?");
   const holders = staff.filter((s) => s.active && s.position === selected);
 
   function printAll() {
@@ -99,8 +106,9 @@ export default function JobDescriptionsPage() {
                       key={p}
                       type="button"
                       onClick={() => {
+                        if (!leaveEditing()) return;
                         setSelected(p);
-                        setEditing(false);
+                        setDraft(null);
                       }}
                       className={clsx(
                         "min-w-28 rounded-lg border px-4 py-2 text-sm font-bold transition",
@@ -137,8 +145,16 @@ export default function JobDescriptionsPage() {
               </div>
             </div>
             {canEdit && (
-              <button type="button" className={editing ? buttonClass.primary : buttonClass.secondary} onClick={() => setEditing(!editing)}>
-                {editing ? "編集を終える" : "編集する"}
+              <button
+                type="button"
+                className={editing ? buttonClass.ghost : buttonClass.secondary}
+                onClick={() => {
+                  if (editing) {
+                    if (leaveEditing()) setDraft(null);
+                  } else if (saved) setDraft(saved);
+                }}
+              >
+                {editing ? "編集をやめる" : "編集する"}
               </button>
             )}
           </div>
@@ -146,7 +162,7 @@ export default function JobDescriptionsPage() {
           <div className="mt-5 space-y-5">
             {editing && (
               <Field label="報告先(上長)">
-                <input className={inputClass} value={jd.reportsTo} onChange={(e) => collection("jobDescriptions").update(jd.id, { reportsTo: e.target.value })} />
+                <input className={inputClass} value={jd.reportsTo} onChange={(e) => setDraft({ ...jd, reportsTo: e.target.value })} />
               </Field>
             )}
             {SECTIONS.map((sec) => {
@@ -157,7 +173,7 @@ export default function JobDescriptionsPage() {
                     <textarea
                       className={`${inputClass} ${sec.list ? "min-h-48" : "min-h-20"}`}
                       value={value}
-                      onChange={(e) => collection("jobDescriptions").update(jd.id, { [sec.key]: e.target.value })}
+                      onChange={(e) => setDraft({ ...jd, [sec.key]: e.target.value })}
                     />
                   </Field>
                 );
@@ -184,7 +200,16 @@ export default function JobDescriptionsPage() {
               );
             })}
           </div>
-          {editing && <p className="mt-4 text-[11px] text-slate-400">入力内容は自動で保存されます</p>}
+          {editing && (
+            <SaveBar
+              dirty={dirty}
+              onSave={() => {
+                if (draft) collection("jobDescriptions").update(draft.id, draft);
+                setDraft(null);
+              }}
+              onReset={() => saved && setDraft(saved)}
+            />
+          )}
         </Card>
       ) : (
         <Card>この役職の職務記述書はまだありません。</Card>

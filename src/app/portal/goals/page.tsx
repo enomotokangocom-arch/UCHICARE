@@ -20,7 +20,7 @@ function SalesSummary({ label, revenue, target, visits, showAmounts }: { label: 
     <Card className="mb-4">
       <p className="text-xs font-bold text-slate-500">{label}</p>
       {revenue === null && target === null ? (
-        <p className="mt-2 text-sm text-slate-400">売上・目標はまだ入力されていません(「経営数値」で事務長・所長が入力します)。</p>
+        <p className="mt-2 text-sm text-slate-400">売上・目標はまだ入力されていません(「経営数値」で管理者・統括部長が入力します)。</p>
       ) : (
         <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {showAmounts && (
@@ -64,9 +64,9 @@ export default function GoalsPage() {
   const [staffId, setStaffId] = useState(current?.id ?? "");
   const [unitId, setUnitId] = useState<BusinessUnitId>(current?.unitId ?? "houkan");
 
-  // 個人目標を見られる職員: 管理者=全員 / 所長=自事業所 / その他=自分
+  // 個人目標を見られる職員: 経営者・統括部長=全員 / 管理者=自事業所 / その他=自分
   const viewableStaff = staff.filter(
-    (s) => s.active && (admin || s.id === current?.id || (current?.position === "所長" && s.unitId === current.unitId))
+    (s) => s.active && (admin || s.id === current?.id || (current?.position === "管理者" && s.unitId === current.unitId))
   );
   const target = viewableStaff.find((s) => s.id === staffId) ?? current;
   const viewableUnits = admin ? BUSINESS_UNITS.map((u) => u.id) : current ? [current.unitId] : [];
@@ -182,7 +182,7 @@ export default function GoalsPage() {
             base={{ scope: "unit", staffId: "", unitId: unit, period }}
             emptyText={`${unitName(unit)} の ${goalPeriodLabel(period)} の部門目標はまだありません。`}
           />
-          {!canEditUnit(current, unit) && <p className="mt-2 text-[11px] text-slate-400">部門の目標は所長・管理者が入力します。</p>}
+          {!canEditUnit(current, unit) && <p className="mt-2 text-[11px] text-slate-400">部門の目標は管理者・統括部長・経営者が入力します。</p>}
         </>
       )}
     </PageContainer>

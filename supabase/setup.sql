@@ -10,7 +10,7 @@ create table if not exists public.portal_members (
   staff_id text not null,
   name text not null default '',
   unit_id text not null default 'houkan',
-  position text not null default 'スタッフ',
+  position text not null default '一般スタッフ',
   is_admin boolean not null default false,
   active boolean not null default true,
   -- 初回登録用の招待コード(登録が終わると消える)

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { DEFAULT_FEE_RATES, DEFAULT_REGION_UNIT_PRICE } from "./visitCount";
+import { normalizePosition } from "./logic";
 import { persist } from "zustand/middleware";
 import {
   DEFAULT_COMMITTEES,
@@ -70,7 +71,7 @@ type Collection<T extends { id: string }> = {
   remove: (id: string) => void;
 };
 
-interface PortalData {
+export interface PortalData {
   currentStaffId: string;
   links: ExternalLink[];
   staff: Staff[];
@@ -110,12 +111,14 @@ interface PortalData {
   driveRootFolderId: string;
 }
 
-type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates" | "philosophy" | "salesImportMappings" | "regionUnitPrice">;
+export type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates" | "philosophy" | "salesImportMappings" | "regionUnitPrice">;
 
 interface PortalState extends PortalData {
   setCurrentStaffId: (id: string) => void;
   markNoticeRead: (noticeId: string, staffId: string) => void;
   resetAll: () => void;
+  /** 一覧をまとめて置き換える(画面で「保存」を押したとき) */
+  replaceCollection: <K extends CollectionKey>(key: K, items: PortalData[K]) => void;
   resetLinks: () => void;
   resetJobDescriptions: () => void;
   setGoogleSettings: (patch: Partial<Pick<PortalData, "googleClientId" | "driveRootFolderId">>) => void;
@@ -182,6 +185,7 @@ export const usePortalStore = create<PortalState>()(
           ),
         })),
       resetAll: () => set(initialData()),
+      replaceCollection: (key, items) => set({ [key]: items } as Partial<PortalState>),
       resetLinks: () => set({ links: DEFAULT_LINKS }),
       resetJobDescriptions: () => set({ jobDescriptions: DEFAULT_JOB_DESCRIPTIONS }),
       setGoogleSettings: (patch) => set(patch),
@@ -213,7 +217,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 12,
+      version: 13,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -280,6 +284,11 @@ export const usePortalStore = create<PortalState>()(
           }
           if (state.regionUnitPrice === 11.12) state.regionUnitPrice = DEFAULT_REGION_UNIT_PRICE;
         }
+        // v13: 役職を6分類(経営者・統括部長・管理者・責任者・主任・一般スタッフ)に。職務記述書も新しい分類の内容に
+        if (version < 13) {
+          if (Array.isArray(state.staff)) state.staff = state.staff.map((s) => ({ ...s, position: normalizePosition(s.position) }));
+          state.jobDescriptions = DEFAULT_JOB_DESCRIPTIONS;
+        }
         return state as PortalState;
       },
       partialize: (state) => {
@@ -288,6 +297,7 @@ export const usePortalStore = create<PortalState>()(
           setCurrentStaffId,
           markNoticeRead,
           resetAll,
+          replaceCollection,
           resetLinks,
           resetJobDescriptions,
           setGoogleSettings,

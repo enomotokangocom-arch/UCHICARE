@@ -48,8 +48,11 @@ export type StaffRole =
   | "店舗スタッフ"
   | "その他";
 
-/** 役職(ジョブディスクリプションと閲覧権限に使う) */
-export type Position = "経営者" | "統括部長" | "所長" | "リハ責任者" | "主任" | "事務長" | "リーダー" | "スタッフ";
+/** 役職の分類(職務記述書と閲覧権限に使う) */
+export type Position = "経営者" | "統括部長" | "管理者" | "責任者" | "主任" | "一般スタッフ";
+
+/** 以前の役職名(保存済みデータの移行用) */
+export type LegacyPosition = "所長" | "リハ責任者" | "事務長" | "リーダー" | "スタッフ";
 
 export interface Staff {
   id: string;

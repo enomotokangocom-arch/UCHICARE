@@ -74,7 +74,7 @@ export function HomeGoalCards() {
       <Card>
         <CardHeader title="💴 私の売上" href="/portal/goals" linkLabel="詳しく" />
         {!mySales ? (
-          <p className="text-sm text-slate-400">売上の記録はまだありません。毎月、事務長・所長が「経営数値」で入力します。</p>
+          <p className="text-sm text-slate-400">売上の記録はまだありません。毎月、管理者・統括部長が「経営数値」で入力します。</p>
         ) : (
           <>
             <p className="text-[11px] text-slate-500">

@@ -1,6 +1,6 @@
 import { AlcoholCheck, Committee, Evaluation, EvaluationCriterion, Minutes, Notice, ParkingLot, ParkingSpace, Staff, VehicleLog } from "./types";
 import { addMonths, todayString } from "./util";
-import { BusinessUnitId, Goal, NanbyoEntry, NanbyoPatient, Vehicle } from "./types";
+import { BusinessUnitId, Goal, NanbyoEntry, NanbyoPatient, Position, Vehicle } from "./types";
 
 export function noticeVisibleTo(notice: Notice, staff: Staff | undefined): boolean {
   if (!staff) return true;
@@ -131,20 +131,40 @@ export function parkingContractAlerts(lots: ParkingLot[], today = todayString())
     .map((l) => ({ lot: l, overdue: l.contractEnd < today }));
 }
 
-/** 全社の管理権限(お知らせの編集・人事評価の管理など) */
+/** 以前の役職名を新しい分類に読み替える */
+export function normalizePosition(p: string | undefined | null): Position {
+  switch (p) {
+    case "経営者":
+    case "統括部長":
+    case "管理者":
+    case "責任者":
+    case "主任":
+    case "一般スタッフ":
+      return p;
+    case "所長":
+    case "事務長":
+      return "管理者";
+    case "リハ責任者":
+      return "責任者";
+    default:
+      return "一般スタッフ";
+  }
+}
+
+/** 全社の管理権限(職員の招待・全社の経営数値・お知らせや人事評価の管理など): 経営者・統括部長 */
 export function isAdmin(staff: Staff | undefined): boolean {
   if (!staff) return false;
-  return staff.role === "管理者" || ["経営者", "統括部長", "事務長"].includes(staff.position);
+  return staff.position === "経営者" || staff.position === "統括部長";
 }
 
 /**
  * 経営数値を見られる範囲。
- * 経営者・統括部長・事務長 = 全事業所 / 所長 = 自分の事業所 / それ以外 = 自分の個人売上のみ
+ * 経営者・統括部長 = 全事業所 / 管理者 = 自分の事業所 / それ以外 = 自分の個人売上のみ
  */
 export function financeScope(staff: Staff | undefined): { all: boolean; units: BusinessUnitId[] } {
   if (!staff) return { all: false, units: [] };
   if (isAdmin(staff)) return { all: true, units: [] };
-  if (staff.position === "所長") return { all: false, units: [staff.unitId] };
+  if (staff.position === "管理者") return { all: false, units: [staff.unitId] };
   return { all: false, units: [] };
 }
 
@@ -245,10 +265,10 @@ export function unitFiscalToDate(finance: import("./types").FinanceMonthly[], un
   };
 }
 
-/** 健康経営ツールを閲覧できる「責任者以上」: 経営者・統括部長・事務長・所長・リハ責任者 */
+/** 健康経営ツールを閲覧できる「責任者以上」: 経営者・統括部長・管理者・責任者 */
 export function canViewHealthTool(staff: Staff | undefined): boolean {
   if (!staff) return false;
-  return isAdmin(staff) || staff.position === "所長" || staff.position === "リハ責任者";
+  return isAdmin(staff) || staff.position === "管理者" || staff.position === "責任者";
 }
 
 /** 健康経営ツールの画面のパス */

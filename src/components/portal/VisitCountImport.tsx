@@ -16,8 +16,10 @@ type Mode = "month" | "day";
 export function VisitCountImport() {
   const staff = usePortalStore((s) => s.staff);
   const feeRates = usePortalStore((s) => s.feeRates);
-  const regionUnitPrice = usePortalStore((s) => s.regionUnitPrice);
-  const setRegionUnitPrice = usePortalStore((s) => s.setRegionUnitPrice);
+  const savedRegionUnitPrice = usePortalStore((s) => s.regionUnitPrice);
+  // この取り込みだけで使う単価(保存されている単価は「設定・マスタ」→「報酬単価」で変更)
+  const [regionOverride, setRegionOverride] = useState<number | null>(null);
+  const regionUnitPrice = regionOverride ?? savedRegionUnitPrice;
   const personal = usePortalStore((s) => s.personalSales);
   const daily = usePortalStore((s) => s.dailySales);
   const finance = usePortalStore((s) => s.finance);
@@ -36,7 +38,9 @@ export function VisitCountImport() {
   const [toFinance, setToFinance] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
-  const aliases = mappings.iBow?.staffAliases ?? {};
+  // 氏名と職員の結びつけは、取り込むときに保存する
+  const [localAliases, setLocalAliases] = useState<Record<string, string>>({});
+  const aliases = { ...(mappings.iBow?.staffAliases ?? {}), ...localAliases };
   const estimate = useMemo(() => (sheet ? estimateSales(sheet, feeRates, regionUnitPrice) : null), [sheet, feeRates, regionUnitPrice]);
   const rows = (estimate?.staff ?? []).map((s) => ({ ...s, staffId: matchStaff(s.rawName, staff, aliases) }));
   const unmatched = rows.filter((r) => !r.staffId);
@@ -58,8 +62,14 @@ export function VisitCountImport() {
   }
 
   function setAlias(rawName: string, staffId: string) {
+    setLocalAliases((a) => ({ ...a, [rawName]: staffId }));
+  }
+
+  function saveAliases() {
+    if (!Object.keys(localAliases).length) return;
     const prev = mappings.iBow ?? { dateCol: "", staffCol: "", amountCol: "", visitsCol: "", unitPrice: 1, staffAliases: {} };
-    setMapping("iBow", { ...prev, staffAliases: { ...prev.staffAliases, [rawName]: staffId } });
+    setMapping("iBow", { ...prev, staffAliases: { ...prev.staffAliases, ...localAliases } });
+    setLocalAliases({});
   }
 
   /** ファイルにいて職員マスタにいない人を、まとめて職員として追加する */
@@ -71,7 +81,7 @@ export function VisitCountImport() {
         name: r.rawName.normalize("NFKC").replace(/\s+/g, " ").trim(),
         unitId,
         role: "看護師",
-        position: "スタッフ",
+        position: "一般スタッフ",
         isDriver: true,
         isSafetyManager: false,
         isEvaluator: false,
@@ -82,6 +92,7 @@ export function VisitCountImport() {
 
   function doImport() {
     if (!estimate) return;
+    saveAliases();
     const matched = rows.filter((r) => r.staffId);
     if (mode === "month") {
       // 月の個人売上・件数を置き換える(目標はそのまま/なければ前月を引き継ぐ)
@@ -162,8 +173,8 @@ export function VisitCountImport() {
                 ))}
               </select>
             </Field>
-            <Field label="介護保険の1単位の円" hint="地域区分の単価">
-              <input type="number" step="0.01" min="10" className={inputClass} value={regionUnitPrice} onChange={(e) => setRegionUnitPrice(Number(e.target.value) || 10)} />
+            <Field label="介護保険の1単位の円" hint="今回の計算のみ。保存は設定・マスタで">
+              <input type="number" step="0.01" min="10" className={inputClass} value={regionUnitPrice} onChange={(e) => setRegionOverride(Number(e.target.value) || 10)} />
             </Field>
             {mode === "month" && (
               <label className="flex items-center gap-2 self-center text-xs text-slate-700">

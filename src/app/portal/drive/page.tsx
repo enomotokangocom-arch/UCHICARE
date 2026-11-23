@@ -17,6 +17,7 @@ import {
 } from "@/lib/portal/googleDrive";
 import { DriveConnect } from "@/components/portal/DriveConnect";
 import { useDrive } from "@/components/portal/useDrive";
+import { useDraftValue } from "@/components/portal/useDraft";
 import { Card, EmptyState, Field, PageContainer, PageHeader, buttonClass, inputClass } from "@/components/portal/ui";
 
 type Crumb = { id: string; name: string };
@@ -33,6 +34,7 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
   const drive = useDrive();
   const googleClientId = usePortalStore((s) => s.googleClientId);
   const setGoogleSettings = usePortalStore((s) => s.setGoogleSettings);
+  const clientIdDraft = useDraftValue(googleClientId, (v) => setGoogleSettings({ googleClientId: v }));
   const [rootInput, setRootInput] = useState(drive.rootId);
   const [rootName, setRootName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -89,12 +91,17 @@ function SetupCard({ onChanged }: { onChanged: () => void }) {
                 : "Google Cloud で作成した「ウェブ アプリケーション」のクライアントID(xxxx.apps.googleusercontent.com)"
             }
           >
-            <input
-              className={inputClass}
-              placeholder="xxxxxxxx.apps.googleusercontent.com"
-              value={googleClientId}
-              onChange={(e) => setGoogleSettings({ googleClientId: e.target.value.trim() })}
-            />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                className={inputClass}
+                placeholder="xxxxxxxx.apps.googleusercontent.com"
+                value={clientIdDraft.value}
+                onChange={(e) => clientIdDraft.set(e.target.value.trim())}
+              />
+              <button type="button" className={`${buttonClass.primary} whitespace-nowrap`} disabled={!clientIdDraft.dirty} onClick={clientIdDraft.save}>
+                保存する
+              </button>
+            </div>
           </Field>
 
           <DriveConnect />

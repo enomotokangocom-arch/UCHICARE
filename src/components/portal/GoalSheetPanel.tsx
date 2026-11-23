@@ -166,7 +166,7 @@ export function GoalSheetPanel({ target, canEdit }: { target: Staff; canEdit: bo
         ) : !template ? (
           <p className="text-sm text-slate-400">この事業所の目標管理シートの原本はまだ設定されていません。</p>
         ) : !canEdit ? (
-          <p className="text-sm text-slate-400">{target.name} さんのシートはまだ作成されていません(本人・所長・管理者が作成できます)。</p>
+          <p className="text-sm text-slate-400">{target.name} さんのシートはまだ作成されていません(本人・管理者・統括部長が作成できます)。</p>
         ) : (
           <div className="space-y-3">
             {drive.ready ? (
@@ -207,7 +207,7 @@ export function GoalSheetPanel({ target, canEdit }: { target: Staff; canEdit: bo
   );
 }
 
-/** 管理者・所長向け: 職員のシートの進捗一覧と一括読み込み */
+/** 経営者・統括部長・管理者向け: 職員のシートの進捗一覧と一括読み込み */
 export function GoalSheetOverview({ staff }: { staff: Staff[] }) {
   const sheets = usePortalStore((s) => s.goalSheets);
   const collection = usePortalStore((s) => s.collection);

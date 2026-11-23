@@ -3,8 +3,9 @@
 import { ChangeEvent, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ADMIN_POSITIONS, generateInviteCode, Member } from "@/lib/portal/auth";
+import { normalizePosition } from "@/lib/portal/logic";
 import { usePortalStore } from "@/lib/portal/store";
-import { BUSINESS_UNITS, POSITIONS, unitName } from "@/lib/portal/defaults";
+import { BUSINESS_UNITS, unitName } from "@/lib/portal/defaults";
 import { readCsvFile, findHeaderRow } from "@/lib/portal/salesImport";
 import { BusinessUnitId, Position, Staff, StaffRole } from "@/lib/portal/types";
 import { downloadCsv, newId, todayString } from "@/lib/portal/util";
@@ -102,7 +103,7 @@ export function BulkInvite({ members, onDone }: { members: Member[]; onDone: () 
           const unitRaw = ci.unit >= 0 ? norm(r[ci.unit] ?? "") : "";
           const roleRaw = ci.role >= 0 ? (r[ci.role] ?? "").trim() : "";
           const st = staff.find((s) => norm(s.name) === norm(name)) ?? null;
-          const position = (POSITIONS as string[]).includes(posRaw) ? (posRaw as Position) : st?.position ?? "スタッフ";
+          const position: Position = posRaw ? normalizePosition(posRaw) : st?.position ?? "一般スタッフ";
           const unitId = BUSINESS_UNITS.find((u) => norm(u.name) === unitRaw || norm(u.shortName) === unitRaw)?.id ?? st?.unitId ?? "houkan";
           const role = (ROLES as string[]).includes(roleRaw) ? (roleRaw as StaffRole) : null;
           let status: Row["status"] = "new";

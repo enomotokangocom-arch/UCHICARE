@@ -4,9 +4,11 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ADMIN_POSITIONS, generateInviteCode, Member, useAuth } from "@/lib/portal/auth";
 import { usePortalStore } from "@/lib/portal/store";
+import { normalizePosition } from "@/lib/portal/logic";
 import { POSITIONS, unitName } from "@/lib/portal/defaults";
 import { Position } from "@/lib/portal/types";
 import { StatusPill, buttonClass, inputClass } from "@/components/portal/ui";
+import { useUnsavedWarning } from "@/components/portal/useDraft";
 import { BulkInvite, inviteMessage } from "./BulkInvite";
 
 const cell = `${inputClass} py-1.5`;
@@ -23,11 +25,43 @@ export function AccountsSection() {
   const [staffId, setStaffId] = useState("");
   const [email, setEmail] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  /** 行ごとの未保存の変更(役職・利用可) */
+  const [edits, setEdits] = useState<Record<string, { position?: Position; active?: boolean }>>({});
+  const dirty = Object.keys(edits).length > 0;
+  useUnsavedWarning(dirty);
+  const edit = (m: Member, patch: { position?: Position; active?: boolean }) =>
+    setEdits((e) => {
+      const next = { ...e[m.id], ...patch };
+      if (next.position === m.position) delete next.position;
+      if (next.active === m.active) delete next.active;
+      const copy = { ...e };
+      if (Object.keys(next).length) copy[m.id] = next;
+      else delete copy[m.id];
+      return copy;
+    });
+
+  async function saveRow(m: Member) {
+    const e = edits[m.id];
+    if (!e) return;
+    const patch: Record<string, unknown> = {};
+    if (e.position) {
+      patch.position = e.position;
+      patch.is_admin = ADMIN_POSITIONS.includes(e.position);
+      collection("staff").update(m.staff_id, { position: e.position });
+    }
+    if (e.active !== undefined) patch.active = e.active;
+    await run(() => supabase().from("portal_members").update(patch).eq("id", m.id));
+    setEdits((x) => {
+      const copy = { ...x };
+      delete copy[m.id];
+      return copy;
+    });
+  }
 
   const reload = useCallback(async () => {
     const { data, error } = await supabase().from("portal_members").select("*").order("created_at");
     if (error) setError(error.message);
-    else setMembers((data as Member[]) ?? []);
+    else setMembers(((data as Member[]) ?? []).map((m) => ({ ...m, position: normalizePosition(m.position) })));
     setLoaded(true);
   }, []);
 
@@ -40,7 +74,7 @@ export function AccountsSection() {
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) setError(error.message);
-        else setMembers((data as Member[]) ?? []);
+        else setMembers(((data as Member[]) ?? []).map((m) => ({ ...m, position: normalizePosition(m.position) })));
         setLoaded(true);
       });
     return () => {
@@ -80,7 +114,7 @@ export function AccountsSection() {
     setTimeout(() => setCopied(null), 1500);
   }
 
-  if (!me?.is_admin) return <p className="text-sm text-slate-500">ログインアカウントの管理は、経営者・統括部長・事務長のみ行えます。</p>;
+  if (!me?.is_admin) return <p className="text-sm text-slate-500">ログインアカウントの管理は、経営者・統括部長のみ行えます。</p>;
 
   const free = staff.filter((s) => s.active && !members.some((m) => m.staff_id === s.id));
 
@@ -153,13 +187,9 @@ export function AccountsSection() {
                   <td className="px-2 py-2">
                     <select
                       className={`${cell} w-auto`}
-                      value={m.position}
+                      value={edits[m.id]?.position ?? m.position}
                       disabled={m.id === me.id}
-                      onChange={(e) => {
-                        const position = e.target.value as Position;
-                        collection("staff").update(m.staff_id, { position });
-                        void run(() => supabase().from("portal_members").update({ position, is_admin: ADMIN_POSITIONS.includes(position) }).eq("id", m.id));
-                      }}
+                      onChange={(e) => edit(m, { position: e.target.value as Position })}
                     >
                       {POSITIONS.map((p) => (
                         <option key={p}>{p}</option>
@@ -172,15 +202,35 @@ export function AccountsSection() {
                         <input
                           type="checkbox"
                           className="h-4 w-4 accent-brand-600"
-                          checked={m.active}
-                          onChange={(e) => run(() => supabase().from("portal_members").update({ active: e.target.checked }).eq("id", m.id))}
+                          checked={edits[m.id]?.active ?? m.active}
+                          onChange={(e) => edit(m, { active: e.target.checked })}
                         />
                         利用可
                       </label>
                     )}
                   </td>
-                  <td className="px-2 py-2 text-right">
-                    {m.id !== me.id && (
+                  <td className="whitespace-nowrap px-2 py-2 text-right">
+                    {edits[m.id] && (
+                      <span className="mr-1 inline-flex gap-1">
+                        <button type="button" className={`${buttonClass.primary} px-3 py-1 text-xs`} onClick={() => saveRow(m)}>
+                          保存
+                        </button>
+                        <button
+                          type="button"
+                          className={buttonClass.ghost}
+                          onClick={() =>
+                            setEdits((x) => {
+                              const copy = { ...x };
+                              delete copy[m.id];
+                              return copy;
+                            })
+                          }
+                        >
+                          戻す
+                        </button>
+                      </span>
+                    )}
+                    {m.id !== me.id && !edits[m.id] && (
                       <button
                         type="button"
                         className={buttonClass.danger}
@@ -200,7 +250,7 @@ export function AccountsSection() {
         </div>
       )}
       <p className="text-[11px] text-slate-500">
-        招待コードを本人に伝え(LINE WORKSなど)、ログイン画面の「はじめての登録」から登録してもらいます。役職を変えると、見られる範囲もすぐに変わります(経営者・統括部長・事務長は管理者)。
+        招待コードを本人に伝え(LINE WORKSなど)、ログイン画面の「はじめての登録」から登録してもらいます。役職(分類)や「利用可」を変えたら、その行の「保存」を押してください。保存すると見られる範囲もすぐに変わります(経営者・統括部長は全社の管理者権限)。
       </p>
     </div>
   );

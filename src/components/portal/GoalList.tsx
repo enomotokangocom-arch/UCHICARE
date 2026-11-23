@@ -6,6 +6,7 @@ import { goalPeriodLabel, goalProgress } from "@/lib/portal/logic";
 import { Goal, GoalCategory, GoalStatus } from "@/lib/portal/types";
 import { newId, nowIsoLocal } from "@/lib/portal/util";
 import { EmptyState, Field, ProgressBar, StatusPill, buttonClass, inputClass } from "./ui";
+import { useUnsavedWarning } from "./useDraft";
 
 export const GOAL_CATEGORIES: GoalCategory[] = ["売上", "訪問・件数", "新規獲得", "スキル・資格", "業務改善", "研修・教育", "その他"];
 export const GOAL_STATUSES: GoalStatus[] = ["未着手", "進行中", "達成", "未達"];
@@ -97,12 +98,24 @@ export function GoalList({
   const collection = usePortalStore((s) => s.collection);
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const update = (id: string, patch: Partial<Goal>) => collection("goals").update(id, { ...patch, updatedAt: nowIsoLocal() });
+  // 実績・状況の変更は下書きに入れ、目標ごとの「保存」で反映する
+  const [progress, setProgress] = useState<Record<string, Pick<Goal, "currentValue" | "status">>>({});
+  useUnsavedWarning(Object.keys(progress).length > 0);
+  const stage = (g: Goal, patch: Partial<Pick<Goal, "currentValue" | "status">>) =>
+    setProgress((p) => ({ ...p, [g.id]: { ...{ currentValue: g.currentValue, status: g.status }, ...p[g.id], ...patch } }));
+  const clearStage = (id: string) =>
+    setProgress((p) => {
+      const copy = { ...p };
+      delete copy[id];
+      return copy;
+    });
 
   return (
     <div className="space-y-3">
       {goals.length === 0 && editing !== "new" && <EmptyState>{emptyText}</EmptyState>}
-      {goals.map((g) =>
-        editing === g.id ? (
+      {goals.map((orig) => {
+        const g = progress[orig.id] ? { ...orig, ...progress[orig.id] } : orig;
+        return editing === g.id ? (
           <GoalFormFields
             key={g.id}
             initial={g}
@@ -144,18 +157,35 @@ export function GoalList({
                       value={g.currentValue ?? ""}
                       onChange={(e) => {
                         const v = numOrNull(e.target.value);
-                        update(g.id, { currentValue: v, status: statusAfterUpdate(g, v) });
+                        stage(orig, { currentValue: v, status: statusAfterUpdate(g, v) });
                       }}
                     />
                     {g.valueUnit}
                   </label>
                 )}
-                <select className={`${inputClass} w-auto py-1 text-xs`} value={g.status} onChange={(e) => update(g.id, { status: e.target.value as GoalStatus })} aria-label="状況">
+                <select className={`${inputClass} w-auto py-1 text-xs`} value={g.status} onChange={(e) => stage(orig, { status: e.target.value as GoalStatus })} aria-label="状況">
                   {GOAL_STATUSES.map((s) => (
                     <option key={s}>{s}</option>
                   ))}
                 </select>
                 <span className="ml-auto flex gap-1">
+                  {progress[g.id] && (
+                    <>
+                      <button
+                        type="button"
+                        className={`${buttonClass.primary} px-3 py-1 text-xs`}
+                        onClick={() => {
+                          update(g.id, progress[g.id]);
+                          clearStage(g.id);
+                        }}
+                      >
+                        保存
+                      </button>
+                      <button type="button" className={buttonClass.ghost} onClick={() => clearStage(g.id)}>
+                        戻す
+                      </button>
+                    </>
+                  )}
                   <button type="button" className={buttonClass.ghost} onClick={() => setEditing(g.id)}>
                     編集
                   </button>
@@ -166,8 +196,8 @@ export function GoalList({
               </div>
             )}
           </div>
-        )
-      )}
+        );
+      })}
       {canEdit &&
         (editing === "new" ? (
           <GoalFormFields

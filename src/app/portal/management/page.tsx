@@ -9,6 +9,7 @@ import { BusinessUnitId, FinanceMonthly, PersonalSales, Staff, Subsidy, SubsidyS
 import { formatDate, newId } from "@/lib/portal/util";
 import { MarginChart, MonthPoint, RevenueTargetChart } from "@/components/portal/FinanceCharts";
 import { DailySalesTab } from "@/components/portal/DailySalesTab";
+import { SaveBar, useUnsavedWarning } from "@/components/portal/useDraft";
 import {
   Card,
   EmptyState,
@@ -141,9 +142,9 @@ export default function ManagementPage() {
         title="経営数値"
         description={
           scope.all
-            ? "全事業所の売上・利益・補助金・個人の実績を確認します(経営者・統括部長・事務長のみ全社を表示)。"
+            ? "全事業所の売上・利益・補助金・個人の実績を確認します(経営者・統括部長のみ全社を表示)。"
             : scope.units.length
-              ? `${unitName(scope.units[0])} の数字を表示しています(所長権限)。`
+              ? `${unitName(scope.units[0])} の数字を表示しています(管理者権限)。`
               : "あなたの個人の売上と目標を表示しています。"
         }
         actions={
@@ -332,7 +333,7 @@ export default function ManagementPage() {
 
       {tab === "daily" && <DailySalesTab canImport={scope.all} units={unitSel === "all" ? allowedUnits : [unitSel]} />}
 
-      {tab === "monthly" && <MonthlyInput unitId={unitSel === "all" ? allowedUnits[0] : unitSel} months={months} />}
+      {tab === "monthly" && <MonthlyInput key={unitSel} unitId={unitSel === "all" ? allowedUnits[0] : unitSel} months={months} />}
 
       {tab === "personal" && (
         <PersonalTab
@@ -357,7 +358,19 @@ function MonthlyInput({ unitId, months }: { unitId: BusinessUnitId; months: stri
   const finance = usePortalStore((s) => s.finance);
   const collection = usePortalStore((s) => s.collection);
 
-  function setValue(month: string, patch: Partial<FinanceMonthly>) {
+  // 入力は下書き(edits)に入れ、「保存する」でまとめて反映する
+  const [edits, setEdits] = useState<Record<string, Partial<FinanceMonthly>>>({});
+  const dirty = Object.keys(edits).length > 0;
+  useUnsavedWarning(dirty);
+  const setValue = (month: string, patch: Partial<FinanceMonthly>) => setEdits((e) => ({ ...e, [month]: { ...e[month], ...patch } }));
+  const merged = (month: string): FinanceMonthly | undefined => {
+    const f = finance.find((x) => x.unitId === unitId && x.month === month);
+    const e = edits[month];
+    if (!e) return f;
+    return { id: f?.id ?? "", unitId, month, revenue: null, revenueTarget: null, laborCost: null, otherCost: null, notes: "", ...f, ...e };
+  };
+
+  function writeValue(month: string, patch: Partial<FinanceMonthly>) {
     const existing = finance.find((f) => f.unitId === unitId && f.month === month);
     if (existing) collection("finance").update(existing.id, patch);
     else
@@ -375,7 +388,7 @@ function MonthlyInput({ unitId, months }: { unitId: BusinessUnitId; months: stri
   }
 
   function copyTargetDown() {
-    const first = finance.find((f) => f.unitId === unitId && f.month === months[0]);
+    const first = merged(months[0]);
     if (!first?.revenueTarget) {
       alert("4月の目標を先に入力してください。");
       return;
@@ -391,7 +404,7 @@ function MonthlyInput({ unitId, months }: { unitId: BusinessUnitId; months: stri
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
             月次の数字 <UnitBadge unitId={unitId} />
           </h2>
-          <p className="text-[11px] text-slate-400">金額は円で入力。入力すると自動で保存され、利益・利益率を計算します。</p>
+          <p className="text-[11px] text-slate-400">金額は円で入力。入力後に「保存する」を押してください。利益・利益率は自動で計算します。</p>
         </div>
         <button type="button" className={buttonClass.secondary} onClick={copyTargetDown}>
           4月の目標を全月にコピー
@@ -410,7 +423,7 @@ function MonthlyInput({ unitId, months }: { unitId: BusinessUnitId; months: stri
           </thead>
           <tbody className="divide-y divide-slate-100">
             {months.map((m) => {
-              const f = finance.find((x) => x.unitId === unitId && x.month === m);
+              const f = merged(m);
               const profit = f?.revenue != null ? f.revenue - (f.laborCost ?? 0) - (f.otherCost ?? 0) : null;
               const numInput = (key: "revenue" | "revenueTarget" | "laborCost" | "otherCost") => (
                 <input
@@ -439,6 +452,16 @@ function MonthlyInput({ unitId, months }: { unitId: BusinessUnitId; months: stri
             })}
           </tbody>
         </table>
+      </div>
+      <div className="px-4 pb-4">
+        <SaveBar
+          dirty={dirty}
+          onSave={() => {
+            for (const [month, patch] of Object.entries(edits)) writeValue(month, patch);
+            setEdits({});
+          }}
+          onReset={() => setEdits({})}
+        />
       </div>
     </Card>
   );
@@ -473,7 +496,13 @@ function PersonalTab({
       (scopeAll ? unit === "all" || s.unitId === unit : scopeUnits.length ? scopeUnits.includes(s.unitId) : s.id === current?.id)
   );
 
-  function setValue(staffId: string, patch: Partial<PersonalSales>) {
+  // 入力は下書き(edits)に入れ、「保存する」でまとめて反映する(月を変えると下書きは破棄)
+  const [edits, setEdits] = useState<Record<string, Partial<PersonalSales>>>({});
+  const dirty = Object.keys(edits).length > 0;
+  useUnsavedWarning(dirty);
+  const setValue = (staffId: string, patch: Partial<PersonalSales>) => setEdits((e) => ({ ...e, [staffId]: { ...e[staffId], ...patch } }));
+
+  function writeValue(staffId: string, patch: Partial<PersonalSales>) {
     const existing = personalSales.find((p) => p.staffId === staffId && p.month === month);
     if (existing) collection("personalSales").update(existing.id, patch);
     else collection("personalSales").add({ id: newId("ps"), staffId, month, revenue: null, target: null, visits: null, ...patch });
@@ -491,7 +520,11 @@ function PersonalTab({
     });
   }, [current, personalSales]);
 
-  const rows = people.map((p) => ({ person: p, rec: personalSales.find((x) => x.staffId === p.id && x.month === month) }));
+  const rows = people.map((p) => {
+    const rec = personalSales.find((x) => x.staffId === p.id && x.month === month);
+    const e = edits[p.id];
+    return { person: p, rec: e ? ({ revenue: null, target: null, visits: null, ...rec, ...e } as PersonalSales) : rec };
+  });
   const totalRevenue = sum(rows.map((r) => r.rec?.revenue));
   const totalTarget = sum(rows.map((r) => r.rec?.target));
 
@@ -523,7 +556,16 @@ function PersonalTab({
                   ))}
                 </select>
               )}
-              <input type="month" className={`${inputClass} w-auto`} value={month} onChange={(e) => setMonth(e.target.value)} />
+              <input
+                type="month"
+                className={`${inputClass} w-auto`}
+                value={month}
+                onChange={(e) => {
+                  if (dirty && !confirm("保存していない変更があります。破棄して月を変えますか?")) return;
+                  setEdits({});
+                  setMonth(e.target.value);
+                }}
+              />
             </div>
           </div>
           <div className="overflow-x-auto p-2">
@@ -586,7 +628,19 @@ function PersonalTab({
               )}
             </table>
           </div>
-          {!canEdit && <p className="px-4 pb-3 text-[11px] text-slate-400">数字の入力は所長・事務長が行います。</p>}
+          {canEdit && (
+            <div className="px-4 pb-4">
+              <SaveBar
+                dirty={dirty}
+                onSave={() => {
+                  for (const [staffId, patch] of Object.entries(edits)) writeValue(staffId, patch);
+                  setEdits({});
+                }}
+                onReset={() => setEdits({})}
+              />
+            </div>
+          )}
+          {!canEdit && <p className="px-4 pb-3 text-[11px] text-slate-400">数字の入力は管理者・統括部長が行います。</p>}
         </Card>
       )}
     </div>

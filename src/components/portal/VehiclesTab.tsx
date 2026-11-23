@@ -8,20 +8,38 @@ import { BUSINESS_UNITS } from "@/lib/portal/defaults";
 import { BusinessUnitId, Vehicle, VehicleOwnership } from "@/lib/portal/types";
 import { formatDate, newId, todayString } from "@/lib/portal/util";
 import { Card, EmptyState, Field, StatusPill, UnitBadge, UnitFilter, buttonClass, inputClass } from "./ui";
+import { SaveBar, useUnsavedWarning } from "./useDraft";
 
 const OWNERSHIPS: VehicleOwnership[] = ["自社所有", "リース", "その他"];
 
-function VehicleEditor({ v }: { v: Vehicle }) {
+type SpaceOption = { id: string; label: string };
+
+function VehicleEditor({
+  v,
+  spaceId,
+  spaceOptions,
+  onAssign,
+}: {
+  v: Vehicle;
+  spaceId: string;
+  spaceOptions: SpaceOption[];
+  onAssign: (spaceId: string) => boolean;
+}) {
   const collection = usePortalStore((s) => s.collection);
   const logs = usePortalStore((s) => s.vehicleLogs);
-  const up = (patch: Partial<Vehicle>) => collection("vehicles").update(v.id, patch);
+  // 変更は下書きに入れ、「保存する」で反映する
+  const [d, setD] = useState<Vehicle>(v);
+  const [space, setSpace] = useState(spaceId);
+  const dirty = JSON.stringify(d) !== JSON.stringify(v) || space !== spaceId;
+  useUnsavedWarning(dirty);
+  const up = (patch: Partial<Vehicle>) => setD((x) => ({ ...x, ...patch }));
   const text = (key: keyof Vehicle, label: string, opts: { type?: string; placeholder?: string; className?: string } = {}) => (
     <Field label={label} className={opts.className}>
       <input
         type={opts.type ?? "text"}
         className={inputClass}
         placeholder={opts.placeholder}
-        value={(v[key] as string | undefined) ?? ""}
+        value={(d[key] as string | undefined) ?? ""}
         onChange={(e) => up({ [key]: e.target.value })}
       />
     </Field>
@@ -30,10 +48,20 @@ function VehicleEditor({ v }: { v: Vehicle }) {
     <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {text("name", "車両名", { placeholder: "訪看1号車" })}
+        <Field label="🅿️ 駐車区画" className="col-span-2 md:col-span-4">
+          <select className={inputClass} value={space} onChange={(e) => setSpace(e.target.value)}>
+            <option value="">(未割当)</option>
+            {spaceOptions.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </Field>
         {text("plate", "ナンバー", { placeholder: "横浜 580 あ 12-34" })}
         {text("model", "車種・色", { placeholder: "N-BOX(白)" })}
         <Field label="管理する事業所">
-          <select className={inputClass} value={v.unitId} onChange={(e) => up({ unitId: e.target.value as BusinessUnitId })}>
+          <select className={inputClass} value={d.unitId} onChange={(e) => up({ unitId: e.target.value as BusinessUnitId })}>
             {BUSINESS_UNITS.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}
@@ -42,7 +70,7 @@ function VehicleEditor({ v }: { v: Vehicle }) {
           </select>
         </Field>
         <Field label="所有形態">
-          <select className={inputClass} value={v.ownership ?? "自社所有"} onChange={(e) => up({ ownership: e.target.value as VehicleOwnership })}>
+          <select className={inputClass} value={d.ownership ?? "自社所有"} onChange={(e) => up({ ownership: e.target.value as VehicleOwnership })}>
             {OWNERSHIPS.map((o) => (
               <option key={o}>{o}</option>
             ))}
@@ -58,7 +86,7 @@ function VehicleEditor({ v }: { v: Vehicle }) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={v.active} onChange={(e) => up({ active: e.target.checked })} />
+          <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={d.active} onChange={(e) => up({ active: e.target.checked })} />
           使用中(外すと運行管理表・アルコールチェックの選択肢に出なくなります)
         </label>
         <button
@@ -75,7 +103,18 @@ function VehicleEditor({ v }: { v: Vehicle }) {
           車両を削除
         </button>
       </div>
-      <p className="text-[11px] text-slate-400">入力内容は自動で保存されます</p>
+      <SaveBar
+        dirty={dirty}
+        sticky={false}
+        onSave={() => {
+          if (space !== spaceId && !onAssign(space)) return;
+          collection("vehicles").update(v.id, d);
+        }}
+        onReset={() => {
+          setD(v);
+          setSpace(spaceId);
+        }}
+      />
     </div>
   );
 }
@@ -102,14 +141,15 @@ export function VehiclesTab() {
     return sp ? `${lot?.name ?? ""} ${sp.label}番` : "";
   };
 
-  function assignSpace(vehicleId: string, spaceId: string) {
+  function assignSpace(vehicleId: string, spaceId: string): boolean {
     const target = spaces.find((s) => s.id === spaceId);
     if (target?.vehicleId && target.vehicleId !== vehicleId) {
       const other = vehicles.find((v) => v.id === target.vehicleId);
-      if (!confirm(`${spaceLabel(spaceId)} には「${other?.name ?? "別の車両"}」が割り当てられています。入れ替えますか?`)) return;
+      if (!confirm(`${spaceLabel(spaceId)} には「${other?.name ?? "別の車両"}」が割り当てられています。入れ替えますか?`)) return false;
     }
     for (const s of spaces.filter((x) => x.vehicleId === vehicleId && x.id !== spaceId)) collection("parkingSpaces").update(s.id, { vehicleId: "" });
     if (target) collection("parkingSpaces").update(target.id, { vehicleId });
+    return true;
   }
 
   function addVehicle() {
@@ -200,28 +240,24 @@ export function VehiclesTab() {
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-600">
-                      🅿️ 駐車区画
-                      <select
-                        className={`${inputClass} w-auto py-1 text-xs`}
-                        value={space?.id ?? ""}
-                        onChange={(e) => assignSpace(v.id, e.target.value)}
-                      >
-                        <option value="">(未割当)</option>
-                        {carSpaces.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {spaceLabel(s.id)}
-                            {s.vehicleId && s.vehicleId !== v.id ? `(${vehicles.find((x) => x.id === s.vehicleId)?.name ?? "使用中"})` : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <span className="whitespace-nowrap text-xs text-slate-600">🅿️ {space ? spaceLabel(space.id) : "駐車区画 未割当"}</span>
                     <button type="button" className={buttonClass.ghost} onClick={() => setOpenId(open ? null : v.id)}>
                       {open ? "閉じる" : "詳細・編集"}
                     </button>
                   </div>
                 </div>
-                {open && <VehicleEditor v={v} />}
+                {open && (
+                  <VehicleEditor
+                    key={v.id}
+                    v={v}
+                    spaceId={space?.id ?? ""}
+                    spaceOptions={carSpaces.map((s) => ({
+                      id: s.id,
+                      label: `${spaceLabel(s.id)}${s.vehicleId && s.vehicleId !== v.id ? `(${vehicles.find((x) => x.id === s.vehicleId)?.name ?? "使用中"})` : ""}`,
+                    }))}
+                    onAssign={(sid) => assignSpace(v.id, sid)}
+                  />
+                )}
               </Card>
             );
           })}

@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import clsx from "clsx";
 import { VehiclesTab } from "@/components/portal/VehiclesTab";
+import { SaveBar, useUnsavedWarning } from "@/components/portal/useDraft";
 import { usePortalStore, useCurrentStaff, useStaffName, useVehicleName } from "@/lib/portal/store";
 import { parkingContractAlerts, parkingSpaceStatus } from "@/lib/portal/logic";
 import { BUSINESS_UNITS } from "@/lib/portal/defaults";
@@ -121,7 +122,12 @@ function SpaceEditor({ space, onClose }: { space: ParkingSpace; onClose: () => v
   const vehicles = usePortalStore((s) => s.vehicles);
   const collection = usePortalStore((s) => s.collection);
   const current = useCurrentStaff();
-  const up = (patch: Partial<ParkingSpace>) => collection("parkingSpaces").update(space.id, patch);
+  // 「使用中にする/空きにする」はその場で反映、区画の設定は「保存する」で反映
+  const commit = (patch: Partial<ParkingSpace>) => collection("parkingSpaces").update(space.id, patch);
+  const [d, setD] = useState<ParkingSpace>(space);
+  const dirty = (["label", "usage", "vehicleId", "staffId", "staffCarPlate", "notes"] as const).some((k) => d[k] !== space[k]);
+  useUnsavedWarning(dirty);
+  const up = (patch: Partial<ParkingSpace>) => setD((x) => ({ ...x, ...patch }));
   const [visitor, setVisitor] = useState({ name: "", until: "" });
   const temporary = space.usage === "来客用" || space.usage === "予備";
 
@@ -142,7 +148,7 @@ function SpaceEditor({ space, onClose }: { space: ParkingSpace; onClose: () => v
                 使用中: <span className="font-bold">{space.occupiedBy}</span>
                 {space.occupiedUntil && ` (〜${space.occupiedUntil}頃まで)`}
               </p>
-              <button type="button" className={buttonClass.primary} onClick={() => up({ occupiedBy: "", occupiedUntil: "" })}>
+              <button type="button" className={buttonClass.primary} onClick={() => commit({ occupiedBy: "", occupiedUntil: "" })}>
                 空きにする
               </button>
             </div>
@@ -162,7 +168,7 @@ function SpaceEditor({ space, onClose }: { space: ParkingSpace; onClose: () => v
               <button
                 type="button"
                 className={buttonClass.primary}
-                onClick={() => up({ occupiedBy: visitor.name.trim() || current?.name || "使用中", occupiedUntil: visitor.until })}
+                onClick={() => commit({ occupiedBy: visitor.name.trim() || current?.name || "使用中", occupiedUntil: visitor.until })}
               >
                 使用中にする
               </button>
@@ -173,18 +179,18 @@ function SpaceEditor({ space, onClose }: { space: ParkingSpace; onClose: () => v
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Field label="区画番号・名称">
-          <input className={inputClass} value={space.label} onChange={(e) => up({ label: e.target.value })} />
+          <input className={inputClass} value={d.label} onChange={(e) => up({ label: e.target.value })} />
         </Field>
         <Field label="用途">
-          <select className={inputClass} value={space.usage} onChange={(e) => up({ usage: e.target.value as ParkingUsage })}>
+          <select className={inputClass} value={d.usage} onChange={(e) => up({ usage: e.target.value as ParkingUsage })}>
             {USAGES.map((u) => (
               <option key={u}>{u}</option>
             ))}
           </select>
         </Field>
-        {space.usage === "社用車" && (
+        {d.usage === "社用車" && (
           <Field label="割り当てる車両" className="col-span-2">
-            <select className={inputClass} value={space.vehicleId} onChange={(e) => up({ vehicleId: e.target.value })}>
+            <select className={inputClass} value={d.vehicleId} onChange={(e) => up({ vehicleId: e.target.value })}>
               <option value="">(未割当)</option>
               {vehicles
                 .filter((v) => v.active)
@@ -196,22 +202,22 @@ function SpaceEditor({ space, onClose }: { space: ParkingSpace; onClose: () => v
             </select>
           </Field>
         )}
-        {space.usage === "職員通勤" && (
+        {d.usage === "職員通勤" && (
           <>
             <Field label="割り当てる職員">
-              <StaffSelect staff={staff.filter((s) => s.active)} value={space.staffId} onChange={(v) => up({ staffId: v })} placeholder="(未割当)" />
+              <StaffSelect staff={staff.filter((s) => s.active)} value={d.staffId} onChange={(v) => up({ staffId: v })} placeholder="(未割当)" />
             </Field>
             <Field label="自家用車ナンバー">
-              <input className={inputClass} value={space.staffCarPlate} onChange={(e) => up({ staffCarPlate: e.target.value })} />
+              <input className={inputClass} value={d.staffCarPlate} onChange={(e) => up({ staffCarPlate: e.target.value })} />
             </Field>
           </>
         )}
         <Field label="備考" className="col-span-2 md:col-span-4">
-          <input className={inputClass} value={space.notes} onChange={(e) => up({ notes: e.target.value })} />
+          <input className={inputClass} value={d.notes} onChange={(e) => up({ notes: e.target.value })} />
         </Field>
       </div>
       <div className="flex justify-between">
-        <p className="text-[11px] text-slate-400">入力内容は自動で保存されます</p>
+        <SaveBar dirty={dirty} sticky={false} onSave={() => commit({ label: d.label, usage: d.usage, vehicleId: d.vehicleId, staffId: d.staffId, staffCarPlate: d.staffCarPlate, notes: d.notes })} onReset={() => setD(space)} />
         <button
           type="button"
           className={buttonClass.danger}

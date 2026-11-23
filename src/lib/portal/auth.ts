@@ -4,6 +4,7 @@ import { create } from "zustand";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { BusinessUnitId, Position } from "./types";
+import { normalizePosition } from "./logic";
 
 /** ログインできる職員(Supabase の portal_members) */
 export interface Member {
@@ -32,7 +33,7 @@ interface AuthState {
 
 export const useAuth = create<AuthState>(() => ({ status: "loading", session: null, member: null, error: null }));
 
-export const ADMIN_POSITIONS: Position[] = ["経営者", "統括部長", "事務長"];
+export const ADMIN_POSITIONS: Position[] = ["経営者", "統括部長"];
 
 /** 紛らわしい文字(0/O、1/I/L)を除いた6文字の招待コード */
 export function generateInviteCode(): string {
@@ -63,7 +64,10 @@ export async function loadMember(userId: string): Promise<{ member: Member | nul
     }
     return { member: null, setupNeeded: false, error: error.message };
   }
-  return { member: (data as Member | null) ?? null, setupNeeded: false, error: null };
+  const member = (data as Member | null) ?? null;
+  // 以前の役職名(所長・事務長など)は新しい分類に読み替える
+  if (member) member.position = normalizePosition(member.position);
+  return { member, setupNeeded: false, error: null };
 }
 
 export async function signOut() {
