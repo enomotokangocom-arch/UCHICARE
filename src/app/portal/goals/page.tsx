@@ -162,7 +162,7 @@ export default function GoalsPage() {
               ))}
             </div>
           )}
-          {unitSales && (
+          {unitSales && canSeeUnitAmounts(current, unit) && (
             <SalesSummary
               label={`${unitName(unit)} の ${goalPeriodLabel(period)} の売上(経営数値より)`}
               revenue={unitSales.revenue}
@@ -170,7 +170,7 @@ export default function GoalsPage() {
               showAmounts={canSeeUnitAmounts(current, unit)}
             />
           )}
-          {fyToDate && fyToDate.target > 0 && (
+          {fyToDate && fyToDate.target > 0 && canSeeUnitAmounts(current, unit) && (
             <p className="-mt-2 mb-4 flex items-center gap-2 text-xs text-slate-500">
               <UnitBadge unitId={unit} /> {fyToDate.fy}年度の累計達成率 {pct(fyToDate.revenue / fyToDate.target)}
               {canSeeUnitAmounts(current, unit) && `(${yen(fyToDate.revenue)} / ${yen(fyToDate.target)})`}

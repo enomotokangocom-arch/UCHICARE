@@ -124,7 +124,7 @@ export function HomeGoalCards() {
             return (
               <div key={u} className="space-y-2">
                 {units.length > 1 && <UnitBadge unitId={u} />}
-                {fy.latestMonth ? (
+                {!showAmounts ? null : fy.latestMonth ? (
                   <div className="space-y-1 text-xs text-slate-600">
                     <div className="flex items-center gap-2">
                       <span className="w-24 shrink-0">{monthLabel(fy.latestMonth)}の売上目標</span>
@@ -143,7 +143,11 @@ export function HomeGoalCards() {
                 ) : (
                   <p className="text-xs text-slate-400">{unitName(u)} の売上目標はまだ入力されていません。</p>
                 )}
-                {unitGoals.length > 0 && <GoalLines goals={unitGoals} />}
+                {unitGoals.length > 0 ? (
+                  <GoalLines goals={unitGoals} />
+                ) : (
+                  !showAmounts && <p className="text-xs text-slate-400">今月・今期の部門の目標はまだありません。</p>
+                )}
               </div>
             );
           })}

@@ -21,7 +21,7 @@ export function canEditUnit(current: Staff | undefined, unitId: BusinessUnitId):
   return isAdmin(current) || (current.position === "所長" && current.unitId === unitId);
 }
 
-/** 部門の売上金額を見られるか(スタッフは達成率のみ) */
+/** 部門の売上(金額・達成率)を見られるか。一般職(経営数値の閲覧範囲外)は自分以外の売上を見られない */
 export function canSeeUnitAmounts(current: Staff | undefined, unitId: BusinessUnitId): boolean {
   const scope = financeScope(current);
   return scope.all || scope.units.includes(unitId);
