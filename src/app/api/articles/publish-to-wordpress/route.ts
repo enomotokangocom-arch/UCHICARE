@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { requireMember } from "@/lib/server/requireMember";
 import { createWordPressDraft, WordPressPublishInput } from "@/lib/wordpressClient";
 
 export const runtime = "nodejs";
@@ -6,6 +7,9 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
+  // ログイン中の職員だけが使える(AIの利用料金・社内情報を守るため)
+  const auth = await requireMember(request, { maxRank: 3 });
+  if (auth.error) return auth.error;
   const input = (await request.json()) as WordPressPublishInput;
 
   if (!input.title || !input.body) {

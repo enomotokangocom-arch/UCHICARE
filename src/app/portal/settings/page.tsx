@@ -1,5 +1,7 @@
 "use client";
 
+import { ServerDataSection } from "@/components/auth/ServerDataSection";
+import { useSync } from "@/lib/portal/sync";
 import Link from "next/link";
 import { ChangeEvent, FormEvent, ReactNode, useState } from "react";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
@@ -474,6 +476,7 @@ function CriteriaSection() {
 export default function SettingsPage() {
   const resetAll = usePortalStore((s) => s.resetAll);
   const canEdit = isAdmin(useCurrentStaff());
+  const syncMode = useSync((s) => s.mode);
 
   function exportBackup() {
     const state = usePortalStore.getState() as unknown as Record<string, unknown>;
@@ -494,7 +497,8 @@ export default function SettingsPage() {
     try {
       const data = JSON.parse(await file.text());
       if (!Array.isArray(data.staff) || !Array.isArray(data.links)) throw new Error("形式が正しくありません");
-      if (!confirm("現在のデータをバックアップの内容で置き換えます。よろしいですか?")) return;
+      if (syncMode === "server" && !canEdit) throw new Error("サーバーのデータの復元は経営者・統括部長のみ行えます");
+      if (!confirm(syncMode === "server" ? "サーバーのデータをバックアップの内容で置き換えます(全職員に反映されます)。よろしいですか?" : "現在のデータをバックアップの内容で置き換えます。よろしいですか?")) return;
       usePortalStore.setState(data);
       alert("バックアップを読み込みました。");
     } catch (err) {
@@ -541,8 +545,9 @@ export default function SettingsPage() {
         </Section>
         <CommitteesSection />
         <CriteriaSection />
-        <Section id="data" title="データ管理" description="データはこの端末のブラウザに保存されています。定期的にバックアップを取ってください。">
-          <div className="flex flex-wrap gap-2">
+        <Section id="data" title="データ管理" description="データの保存先(サーバー共有)、監査ログ、バックアップを管理します。">
+          <ServerDataSection />
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
             <button type="button" className={buttonClass.secondary} onClick={exportBackup}>
               ⬇ バックアップを保存(JSON)
             </button>
@@ -550,13 +555,15 @@ export default function SettingsPage() {
               ⬆ バックアップから復元
               <input type="file" accept="application/json" className="hidden" onChange={importBackup} />
             </label>
-            <button
-              type="button"
-              className={buttonClass.danger}
-              onClick={() => confirm("すべてのデータを削除してサンプルデータに戻します。元に戻せません。よろしいですか?") && resetAll()}
-            >
-              すべてのデータを初期化
-            </button>
+            {syncMode !== "server" && (
+              <button
+                type="button"
+                className={buttonClass.danger}
+                onClick={() => confirm("すべてのデータを削除してサンプルデータに戻します。元に戻せません。よろしいですか?") && resetAll()}
+              >
+                すべてのデータを初期化
+              </button>
+            )}
           </div>
         </Section>
       </div>

@@ -5,6 +5,8 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { BusinessUnitId, Position } from "./types";
 import { normalizePosition } from "./logic";
+import { usePortalStore } from "./store";
+import { applyLocal, clearLocalData, stopSync, useSync } from "./sync";
 
 /** ログインできる職員(Supabase の portal_members) */
 export interface Member {
@@ -70,7 +72,15 @@ export async function loadMember(userId: string): Promise<{ member: Member | nul
   return { member, setupNeeded: false, error: null };
 }
 
-export async function signOut() {
+export async function signOut(reason?: string) {
+  // サーバーと同期している場合は、この端末に残っているデータも消す(共用の端末に情報を残さない)
+  const wasServer = useSync.getState().mode === "server";
   await supabase().auth.signOut();
-  useAuth.setState({ status: "signedOut", session: null, member: null, error: null });
+  if (wasServer) {
+    applyLocal(() => usePortalStore.getState().resetAll());
+    clearLocalData();
+  } else {
+    stopSync();
+  }
+  useAuth.setState({ status: "signedOut", session: null, member: null, error: reason ?? null });
 }

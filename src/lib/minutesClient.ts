@@ -1,9 +1,10 @@
+import { authHeaders } from "@/lib/authFetch";
 import { GeneratedMinutes, MinutesGenerationInput } from "./minutesTypes";
 
 export async function generateMinutes(input: MinutesGenerationInput): Promise<GeneratedMinutes> {
   const res = await fetch("/api/minutes/generate", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(input),
   });
   const text = await res.text();

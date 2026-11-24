@@ -1,3 +1,4 @@
+import { authHeaders } from "@/lib/authFetch";
 import { ChatDataSummary } from "./chatBot";
 
 export interface StreamChatReplyParams {
@@ -13,7 +14,7 @@ export interface StreamChatReplyParams {
 export async function streamChatReply({ messages, summary, onChunk }: StreamChatReplyParams): Promise<boolean> {
   const response = await fetch("/api/chat", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: await authHeaders({ "content-type": "application/json" }),
     body: JSON.stringify({ messages, summary }),
   });
 

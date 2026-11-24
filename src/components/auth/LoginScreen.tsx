@@ -39,7 +39,8 @@ export function LoginScreen() {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  // 自動ログアウトなどの理由を最初に表示する
+  const [info, setInfo] = useState<string | null>(() => useAuth.getState().error);
 
   function switchTab(t: Tab) {
     setTab(t);

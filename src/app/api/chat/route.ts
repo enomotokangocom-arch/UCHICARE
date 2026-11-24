@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
+import { requireMember } from "@/lib/server/requireMember";
 import { buildSystemPrompt, ChatDataSummary } from "@/lib/chatBot";
 
 export const runtime = "nodejs";
@@ -10,6 +11,9 @@ interface ChatRequestBody {
 }
 
 export async function POST(request: NextRequest) {
+  // ログイン中の職員だけが使える(AIの利用料金・社内情報を守るため)
+  const auth = await requireMember(request, { maxRank: 3 });
+  if (auth.error) return auth.error;
   if (!process.env.ANTHROPIC_API_KEY) {
     return new Response("ANTHROPIC_API_KEY が設定されていません。サーバーの環境変数を確認してください。", {
       status: 500,

@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
+import { requireMember } from "@/lib/server/requireMember";
 import { ConsultationAssistInput, MAX_CONSULTATION_CHARS } from "@/lib/consultationTypes";
 
 export const runtime = "nodejs";
@@ -61,6 +62,9 @@ const SCHEMAS = {
 } as const;
 
 export async function POST(request: NextRequest) {
+  // ログイン中の職員だけが使える(AIの利用料金・社内情報を守るため)
+  const auth = await requireMember(request, {});
+  if (auth.error) return auth.error;
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json({ error: "ANTHROPIC_API_KEY が設定されていません。サーバーの環境変数を確認してください。" }, { status: 500 });
   }

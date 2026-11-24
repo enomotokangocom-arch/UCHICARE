@@ -1,9 +1,10 @@
+import { authHeaders } from "@/lib/authFetch";
 import { ConsultationAssistInput, IntakeResult, ResponderResult } from "./consultationTypes";
 
 async function call<T>(input: ConsultationAssistInput): Promise<T> {
   const res = await fetch("/api/consultation/assist", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(input),
   });
   const text = await res.text();

@@ -248,7 +248,7 @@ export function Sidebar() {
                   {member.position}・{unitName(member.unit_id)}
                 </p>
               </div>
-              <button type="button" onClick={signOut} className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-100 hover:text-rose-600">
+              <button type="button" onClick={() => signOut()} className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-100 hover:text-rose-600">
                 ログアウト
               </button>
             </div>

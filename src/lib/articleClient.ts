@@ -1,3 +1,4 @@
+import { authHeaders } from "@/lib/authFetch";
 import { Article, ArticleGenerationInput, GeneratedArticleContent } from "./articleTypes";
 
 /**
@@ -29,7 +30,7 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 export async function generateArticle(input: ArticleGenerationInput): Promise<GeneratedArticleContent> {
   const response = await fetch("/api/articles/generate", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: await authHeaders({ "content-type": "application/json" }),
     body: JSON.stringify(input),
   });
 
@@ -45,7 +46,7 @@ export interface WordPressPublishResult {
 export async function publishArticleToWordPress(article: Article): Promise<WordPressPublishResult> {
   const response = await fetch("/api/articles/publish-to-wordpress", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: await authHeaders({ "content-type": "application/json" }),
     body: JSON.stringify({
       title: article.title,
       metaDescription: article.metaDescription,
