@@ -364,6 +364,10 @@ export interface PersonalSales {
   revenue: number | null;
   target: number | null;
   visits: number | null;
+  /** 稼働日数(1日あたりの売上・件数の計算に使う) */
+  workDays?: number | null;
+  /** 集計の最終日(月の途中までのデータのとき)。空なら月末まで */
+  periodEnd?: string;
 }
 
 export type GoalCategory = "売上" | "訪問・件数" | "新規獲得" | "スキル・資格" | "業務改善" | "研修・教育" | "その他";

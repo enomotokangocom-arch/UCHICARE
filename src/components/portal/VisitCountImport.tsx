@@ -8,12 +8,13 @@ import { matchStaff, mergeDailySales, recomputePersonalSales } from "@/lib/porta
 import { estimateSales, parseVisitCountSheet, VisitCountSheet } from "@/lib/portal/visitCount";
 import { BusinessUnitId, PersonalSales } from "@/lib/portal/types";
 import { daysAgo, formatDate, newId, todayString } from "@/lib/portal/util";
+import { businessDays, monthEnd, perDay, projectMonth } from "@/lib/portal/workdays";
 import { Card, Field, buttonClass, inputClass } from "./ui";
 
 type Mode = "month" | "day";
 
 /** iBow「訪問件数詳細表(職員別)」のExcelから、件数×報酬単価で売上を概算して取り込む */
-export function VisitCountImport() {
+export function VisitCountImport({ onImported }: { onImported?: (month: string) => void } = {}) {
   const staff = usePortalStore((s) => s.staff);
   const feeRates = usePortalStore((s) => s.feeRates);
   const savedRegionUnitPrice = usePortalStore((s) => s.regionUnitPrice);
@@ -32,7 +33,22 @@ export function VisitCountImport() {
   const [sheet, setSheet] = useState<VisitCountSheet | null>(null);
   const [fileName, setFileName] = useState("");
   const [mode, setMode] = useState<Mode>("month");
-  const [month, setMonth] = useState(todayString().slice(0, 7));
+  const [month, setMonthState] = useState(todayString().slice(0, 7));
+  // 集計の最終日(今月分は「昨日まで」、過去の月は月末までを初期値にする)
+  const defaultEnd = (m: string) => (m === todayString().slice(0, 7) ? (daysAgo(1).startsWith(m) ? daysAgo(1) : `${m}-01`) : monthEnd(m));
+  const [periodEnd, setPeriodEnd] = useState(() => defaultEnd(todayString().slice(0, 7)));
+  const setMonth = (m: string) => {
+    setMonthState(m);
+    setPeriodEnd(defaultEnd(m));
+    setCommonDays(null);
+  };
+  // 稼働日数: 全員共通(初期値は営業日数)と、個人ごとの上書き
+  const [commonDays, setCommonDays] = useState<number | null>(null);
+  const [personDays, setPersonDays] = useState<Record<string, number | null>>({});
+  const isPartial = periodEnd < monthEnd(month);
+  const autoDays = businessDays(month, periodEnd);
+  const baseDays = commonDays ?? autoDays;
+  const daysFor = (rawName: string) => personDays[rawName] ?? baseDays;
   const [date, setDate] = useState(daysAgo(1));
   const [unitId, setUnitId] = useState<BusinessUnitId>("houkan");
   const [toFinance, setToFinance] = useState(true);
@@ -99,11 +115,12 @@ export function VisitCountImport() {
       const next: PersonalSales[] = [...personal];
       for (const r of matched) {
         const i = next.findIndex((p) => p.staffId === r.staffId && p.month === month);
-        if (i >= 0) next[i] = { ...next[i], revenue: r.amount, visits: r.visits };
+        const work = { workDays: daysFor(r.rawName) || null, periodEnd: isPartial ? periodEnd : "" };
+        if (i >= 0) next[i] = { ...next[i], revenue: r.amount, visits: r.visits, ...work };
         else {
           const prevTarget =
             next.filter((p) => p.staffId === r.staffId && p.month < month && p.target !== null).sort((a, b) => b.month.localeCompare(a.month))[0]?.target ?? null;
-          next.push({ id: newId("ps"), staffId: r.staffId, month, revenue: r.amount, target: prevTarget, visits: r.visits });
+          next.push({ id: newId("ps"), staffId: r.staffId, month, revenue: r.amount, target: prevTarget, visits: r.visits, ...work });
         }
       }
       let nextFinance;
@@ -114,7 +131,9 @@ export function VisitCountImport() {
         else nextFinance.push({ id: newId("fin"), unitId, month, revenue: estimate.total, revenueTarget: null, laborCost: null, otherCost: null, notes: "iBow訪問件数からの概算" });
       }
       applyMonthlySales(next, nextFinance);
-      setMessage(`${month.replace("-", "年")}月の売上(概算 ${yen(estimate.total)})を ${matched.length}名分 取り込みました。${toFinance ? `${unitName(unitId)}の月の売上にも反映しました。` : ""}`);
+      setMessage(
+        `${month.replace("-", "年")}月${isPartial ? `(${Number(periodEnd.slice(8))}日まで)` : ""}の売上(概算 ${yen(estimate.total)})を ${matched.length}名分 取り込みました。個人の月の売上・1日あたりの売上に反映しました。${toFinance ? `${unitName(unitId)}の月の売上にも反映しました。` : ""}`
+      );
     } else {
       const preview = {
         records: rows.map((r) => ({ date, staffId: r.staffId, rawName: r.rawName, amount: r.amount, visits: r.visits, source: "iBow" as const })),
@@ -130,6 +149,8 @@ export function VisitCountImport() {
     }
     setSheet(null);
     setFileName("");
+    setPersonDays({});
+    onImported?.(mode === "month" ? month : date.slice(0, 7));
   }
 
   return (
@@ -148,7 +169,7 @@ export function VisitCountImport() {
 
       {sheet && estimate && (
         <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
             <Field label="ファイルの期間">
               <select className={inputClass} value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
                 <option value="month">1か月分</option>
@@ -156,9 +177,27 @@ export function VisitCountImport() {
               </select>
             </Field>
             {mode === "month" ? (
-              <Field label="対象の月">
-                <input type="month" className={inputClass} value={month} onChange={(e) => setMonth(e.target.value)} />
-              </Field>
+              <>
+                <Field label="対象の月">
+                  <input type="month" className={inputClass} value={month} onChange={(e) => setMonth(e.target.value)} />
+                </Field>
+                <Field label="集計の最終日" hint="月の途中までのデータなら、その日">
+                  <input
+                    type="date"
+                    className={inputClass}
+                    min={`${month}-01`}
+                    max={monthEnd(month)}
+                    value={periodEnd}
+                    onChange={(e) => {
+                      setPeriodEnd(e.target.value || monthEnd(month));
+                      setCommonDays(null);
+                    }}
+                  />
+                </Field>
+                <Field label="稼働日数(全員共通)" hint={`営業日(土日祝を除く)は ${autoDays}日`}>
+                  <input type="number" min="1" max="31" className={inputClass} value={baseDays} onChange={(e) => setCommonDays(Number(e.target.value) || null)} />
+                </Field>
+              </>
             ) : (
               <Field label="対象の日">
                 <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
@@ -205,7 +244,7 @@ export function VisitCountImport() {
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[960px] text-sm">
               <thead className="text-xs text-slate-500">
                 <tr className="text-right">
                   <th className="px-2 py-1.5 text-left font-semibold">ファイルの氏名</th>
@@ -217,6 +256,14 @@ export function VisitCountImport() {
                   <th className="px-2 py-1.5 font-semibold">医療</th>
                   <th className="px-2 py-1.5 font-semibold">精神</th>
                   <th className="px-2 py-1.5 font-semibold">売上(概算)</th>
+                  {mode === "month" && (
+                    <>
+                      <th className="px-2 py-1.5 font-semibold">稼働日数</th>
+                      <th className="px-2 py-1.5 font-semibold">1日あたり売上</th>
+                      <th className="px-2 py-1.5 font-semibold">1日あたり件数</th>
+                      {isPartial && <th className="px-2 py-1.5 font-semibold">月末見込み</th>}
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-right">
@@ -243,6 +290,24 @@ export function VisitCountImport() {
                       </td>
                     ))}
                     <td className="px-2 py-1.5 font-mono font-bold">{yen(r.amount)}</td>
+                    {mode === "month" && (
+                      <>
+                        <td className="px-2 py-1">
+                          <input
+                            type="number"
+                            min="1"
+                            max="31"
+                            className={`${inputClass} w-16 py-1 text-right text-xs`}
+                            value={daysFor(r.rawName) || ""}
+                            onChange={(e) => setPersonDays((d) => ({ ...d, [r.rawName]: e.target.value === "" ? null : Number(e.target.value) }))}
+                            aria-label={`${r.rawName} 稼働日数`}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5 font-mono text-xs font-bold text-brand-700">{yen(perDay(r.amount, daysFor(r.rawName)))}</td>
+                        <td className="px-2 py-1.5 text-xs">{perDay(r.visits, daysFor(r.rawName))?.toFixed(1) ?? "-"}</td>
+                        {isPartial && <td className="px-2 py-1.5 font-mono text-xs">{yen(projectMonth(r.amount, daysFor(r.rawName), month))}</td>}
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -255,6 +320,7 @@ export function VisitCountImport() {
                   <td className="px-2 py-2 text-slate-500">{rows.reduce((s, r) => s + r.subVisits, 0)}</td>
                   <td colSpan={4} />
                   <td className="px-2 py-2 font-mono">{yen(estimate.total)}</td>
+                  {mode === "month" && <td colSpan={isPartial ? 4 : 3} />}
                 </tr>
               </tfoot>
             </table>

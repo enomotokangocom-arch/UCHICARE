@@ -8,6 +8,7 @@ import { BUSINESS_UNITS, currentFiscalYear, unitName } from "@/lib/portal/defaul
 import { GoalSheetSummary } from "./GoalSheetPanel";
 import { Goal } from "@/lib/portal/types";
 import { todayString } from "@/lib/portal/util";
+import { businessDays, perDay } from "@/lib/portal/workdays";
 import { Card, ProgressBar, UnitBadge } from "./ui";
 
 function monthLabel(month: string) {
@@ -83,7 +84,21 @@ export function HomeGoalCards() {
             <p className="mt-0.5 text-2xl font-bold text-slate-900">{yen(mySales.revenue)}</p>
             <p className="text-xs text-slate-500">目標 {yen(mySales.target)}</p>
             <ProgressBar ratio={mySales.revenue !== null && mySales.target ? mySales.revenue / mySales.target : null} className="mt-2" />
-            {mySales.visits !== null && <p className="mt-2 text-xs text-slate-600">訪問件数 {mySales.visits}件</p>}
+            {(() => {
+              const days = mySales.workDays ?? businessDays(mySales.month, mySales.periodEnd || undefined);
+              const daily = perDay(mySales.revenue, days);
+              return (
+                daily !== null && (
+                  <p className="mt-2 text-xs text-slate-600">
+                    1日あたり <span className="text-sm font-bold text-brand-700">{yen(daily)}</span>
+                    <span className="ml-1 text-slate-400">
+                      (稼働{days}日{mySales.periodEnd ? `・${Number(mySales.periodEnd.slice(8))}日まで` : ""})
+                    </span>
+                  </p>
+                )
+              );
+            })()}
+            {mySales.visits !== null && <p className="mt-1 text-xs text-slate-600">訪問件数 {mySales.visits}件{(() => { const d = perDay(mySales.visits, mySales.workDays ?? businessDays(mySales.month, mySales.periodEnd || undefined)); return d !== null ? `(1日あたり ${d.toFixed(1)}件)` : ""; })()}</p>}
             {latestDay && (
               <p className="mt-1 text-xs text-slate-600">
                 {Number(latestDay.slice(5, 7))}/{Number(latestDay.slice(8))} の売上 <span className="font-bold text-slate-800">{yen(latestDayAmount)}</span>

@@ -9,10 +9,10 @@ import { surveyList } from "@/lib/surveyDefs";
 import { surveyTypeToSlug } from "@/lib/surveySlug";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
 import { MANUAL_URL, unitName } from "@/lib/portal/defaults";
-import { canViewHealthTool } from "@/lib/portal/logic";
+import { canViewHealthTool, financeScope } from "@/lib/portal/logic";
 import { signOut, useAuth } from "@/lib/portal/auth";
 
-type NavItem = { href: string; label: string; icon: string; external?: boolean };
+type NavItem = { href: string; label: string; icon: string; external?: boolean; financeOnly?: boolean };
 
 /** 業務の種類ごとにまとめたメニュー(よく使うものほど上) */
 const portalNavGroups: { title: string; items: NavItem[] }[] = [
@@ -51,6 +51,7 @@ const portalNavGroups: { title: string; items: NavItem[] }[] = [
     title: "経営・設定",
     items: [
       { href: "/portal/management", label: "経営数値", icon: "📈" },
+      { href: "/portal/sales-upload", label: "売上データ取り込み", icon: "📥", financeOnly: true },
       { href: "/portal/settings", label: "設定・マスタ", icon: "⚙️" },
     ],
   },
@@ -129,6 +130,8 @@ export function Sidebar() {
   const setCurrentStaffId = usePortalStore((s) => s.setCurrentStaffId);
   const current = useCurrentStaff();
   const member = useAuth((s) => s.member);
+  const fscope = financeScope(current);
+  const canImportSales = fscope.all || fscope.units.length > 0;
 
   const unreadCount = current
     ? notices.filter(
@@ -199,7 +202,7 @@ export function Sidebar() {
             <div key={group.title} className={gi > 0 ? "mt-5" : ""}>
               <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wide text-slate-400">{group.title}</p>
               <ul className="space-y-0.5">
-                {group.items.map((item) => (
+                {group.items.filter((item) => !item.financeOnly || canImportSales).map((item) => (
                   <NavLink
                     key={item.href}
                     {...item}

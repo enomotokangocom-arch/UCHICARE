@@ -139,27 +139,32 @@ export function mergeDailySales(existing: DailySale[], preview: ImportPreview, s
 export function recomputePersonalSales(personal: PersonalSales[], daily: DailySale[], months: string[]): PersonalSales[] {
   const result = [...personal];
   const monthSet = new Set(months);
-  const totals = new Map<string, { revenue: number; visits: number }>();
+  const totals = new Map<string, { revenue: number; visits: number; days: Set<string>; last: string }>();
   for (const d of daily) {
     const month = d.date.slice(0, 7);
     if (!d.staffId || !monthSet.has(month)) continue;
     const key = `${d.staffId}|${month}`;
-    const t = totals.get(key) ?? { revenue: 0, visits: 0 };
+    const t = totals.get(key) ?? { revenue: 0, visits: 0, days: new Set<string>(), last: "" };
     t.revenue += d.amount;
     t.visits += d.visits;
+    // 稼働日数 = 実績のあった日の数
+    if (d.amount || d.visits) t.days.add(d.date);
+    if (d.date > t.last) t.last = d.date;
     totals.set(key, t);
   }
   for (const [key, t] of totals) {
     const [staffId, month] = key.split("|");
     const i = result.findIndex((p) => p.staffId === staffId && p.month === month);
-    if (i >= 0) result[i] = { ...result[i], revenue: t.revenue, visits: t.visits };
+    const end = new Date(Number(month.slice(0, 4)), Number(month.slice(5)), 0).getDate();
+    const work = { workDays: t.days.size || null, periodEnd: Number(t.last.slice(8)) < end ? t.last : "" };
+    if (i >= 0) result[i] = { ...result[i], revenue: t.revenue, visits: t.visits, ...work };
     else {
       // 新しい月は、直近の月の目標を引き継ぐ
       const prevTarget =
         result
           .filter((p) => p.staffId === staffId && p.month < month && p.target !== null)
           .sort((a, b) => b.month.localeCompare(a.month))[0]?.target ?? null;
-      result.push({ id: newId("ps"), staffId, month, revenue: t.revenue, target: prevTarget, visits: t.visits });
+      result.push({ id: newId("ps"), staffId, month, revenue: t.revenue, target: prevTarget, visits: t.visits, ...work });
     }
   }
   return result;

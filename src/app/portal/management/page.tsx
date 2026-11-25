@@ -1,5 +1,6 @@
 "use client";
 
+import { businessDays, perDay } from "@/lib/portal/workdays";
 import { FormEvent, useMemo, useState } from "react";
 import clsx from "clsx";
 import { usePortalStore, useCurrentStaff, useStaffName } from "@/lib/portal/store";
@@ -301,7 +302,7 @@ export default function ManagementPage() {
           <Card className="mt-4 p-0 sm:p-0">
             <h2 className="px-4 pt-4 text-sm font-bold text-slate-900">月別の明細(表)</h2>
             <div className="overflow-x-auto p-2">
-              <table className="w-full min-w-[640px] text-sm">
+              <table className="w-full min-w-[900px] text-sm">
                 <thead className="text-xs text-slate-500">
                   <tr className="text-right">
                     {["月", "売上", "目標", "達成率", "人件費", "その他経費", "利益", "利益率"].map((h, i) => (
@@ -572,7 +573,7 @@ function PersonalTab({
             <table className="w-full min-w-[640px] text-sm">
               <thead className="text-xs text-slate-500">
                 <tr className="text-right">
-                  {["氏名", "役職", "売上", "目標", "達成率", "訪問件数"].map((h, i) => (
+                  {["氏名", "役職", "売上", "目標", "達成率", "訪問件数", "稼働日数", "1日あたり売上", "1日あたり件数"].map((h, i) => (
                     <th key={h} className={clsx("px-1.5 py-1.5 font-semibold", i < 2 && "text-left")}>
                       {h}
                     </th>
@@ -582,7 +583,8 @@ function PersonalTab({
               <tbody className="divide-y divide-slate-100">
                 {rows.map(({ person, rec }) => {
                   const ratio = rec?.revenue != null && rec.target ? rec.revenue / rec.target : null;
-                  const field = (key: "revenue" | "target" | "visits") =>
+                  const days = rec?.workDays ?? (rec ? businessDays(month, rec.periodEnd || undefined) : null);
+                  const field = (key: "revenue" | "target" | "visits" | "workDays") =>
                     canEdit ? (
                       <input
                         type="number"
@@ -593,7 +595,7 @@ function PersonalTab({
                         aria-label={`${person.name} ${key}`}
                       />
                     ) : (
-                      <span className="font-mono">{key === "visits" ? (rec?.visits ?? "-") : yen(rec?.[key])}</span>
+                      <span className="font-mono">{key === "visits" || key === "workDays" ? (rec?.[key] ?? "-") : yen(rec?.[key])}</span>
                     );
                   return (
                     <tr key={person.id}>
@@ -609,6 +611,9 @@ function PersonalTab({
                         </span>
                       </td>
                       <td className="w-24 px-1.5 py-1 text-right">{field("visits")}</td>
+                      <td className="w-20 px-1.5 py-1 text-right">{canEdit ? field("workDays") : (days ?? "-")}</td>
+                      <td className="px-1.5 py-1 text-right font-mono text-xs font-bold text-brand-700">{yen(perDay(rec?.revenue, days))}</td>
+                      <td className="px-1.5 py-1 text-right text-xs">{perDay(rec?.visits, days)?.toFixed(1) ?? "-"}</td>
                     </tr>
                   );
                 })}
@@ -622,7 +627,7 @@ function PersonalTab({
                     <td className="px-3 py-2">{yen(totalRevenue)}</td>
                     <td className="px-3 py-2">{yen(totalTarget)}</td>
                     <td className="px-1.5 py-2">{pct(totalTarget ? totalRevenue / totalTarget : null)}</td>
-                    <td />
+                    <td colSpan={4} />
                   </tr>
                 </tfoot>
               )}

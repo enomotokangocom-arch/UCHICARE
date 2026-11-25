@@ -14,6 +14,8 @@ const csp = [
   "img-src 'self' blob: data: https:",
   "font-src 'self' data: https://vercel.live",
   "media-src 'self' blob:",
+  // Excelの読み込み(read-excel-file)はブラウザ内の作業用スクリプト(blob:)を使う
+  "worker-src 'self' blob:",
   // Supabase(ログイン・データ)、Google(ドライブ連携)
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://vercel.live wss://ws-us3.pusher.com",
   "frame-src 'self' https://accounts.google.com https://docs.google.com https://drive.google.com https://vercel.live",

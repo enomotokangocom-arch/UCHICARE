@@ -9,7 +9,7 @@ import { buildPreview, findHeaderRow, guessMapping, mergeDailySales, readCsvFile
 import { BusinessUnitId, SalesImportMapping, SalesSource } from "@/lib/portal/types";
 import { formatDate, formatDateTime, todayString } from "@/lib/portal/util";
 import { Card, Field, StatusPill, UnitBadge, buttonClass, inputClass } from "./ui";
-import { VisitCountImport } from "./VisitCountImport";
+import Link from "next/link";
 
 const SOURCES: SalesSource[] = ["ZEST", "iBow", "その他"];
 const BAR = "#2f5b94";
@@ -103,7 +103,16 @@ export function DailySalesTab({ canImport, units }: { canImport: boolean; units:
 
   return (
     <div className="space-y-5">
-      {canImport && <VisitCountImport />}
+      {canImport && (
+        <Card className="border-gold-300">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-slate-700">📊 iBow「訪問件数詳細表(職員別)」のExcelから個人の売上を計算する場合は「売上データ取り込み」へ</p>
+            <Link href="/portal/sales-upload" className={buttonClass.secondary}>
+              売上データ取り込みを開く
+            </Link>
+          </div>
+        </Card>
+      )}
       {canImport && (
         <Card className="border-brand-200">
           <h2 className="text-sm font-bold text-slate-900">📥 金額が入ったCSVを取り込む(ZEST・iBowの実績CSVなど)</h2>
