@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { DEFAULT_FEE_RATES, DEFAULT_REGION_UNIT_PRICE } from "./visitCount";
+import { DEFAULT_FEE_RATES, DEFAULT_REGION_UNIT_PRICE, defaultMinutes } from "./visitCount";
 import { normalizePosition } from "./logic";
 import { persist } from "zustand/middleware";
 import {
@@ -41,6 +41,9 @@ import {
   Committee,
   Evaluation,
   EvaluationCriterion,
+  FixedCost,
+  ProfitSettings,
+  StaffCost,
   ExternalLink,
   FeeRate,
   DailySale,
@@ -63,6 +66,9 @@ import {
   Vehicle,
   VehicleLog,
 } from "./types";
+
+/** 法定福利費など16%、目標利益率10% */
+export const DEFAULT_PROFIT_SETTINGS: ProfitSettings = { welfareRate: 0.16, marginRate: 0.1 };
 
 /** id を持つレコードの一覧に対する追加・更新・削除をまとめて作る */
 type Collection<T extends { id: string }> = {
@@ -102,6 +108,10 @@ export interface PortalData {
   /** 訪問件数から売上を概算するための報酬単価と地域単価 */
   feeRates: FeeRate[];
   regionUnitPrice: number;
+  /** 利益ライン(個人の目標売上)の計算: 人件費・事業所の固定費・設定 */
+  staffCosts: StaffCost[];
+  fixedCosts: FixedCost[];
+  profitSettings: ProfitSettings;
   /** 取り込み元ごとの列の設定 */
   salesImportMappings: Partial<Record<SalesSource, SalesImportMapping>>;
   /** 経営数値がサンプルのままか(バナー表示用) */
@@ -111,7 +121,7 @@ export interface PortalData {
   driveRootFolderId: string;
 }
 
-export type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates" | "philosophy" | "salesImportMappings" | "regionUnitPrice">;
+export type CollectionKey = Exclude<keyof PortalData, "currentStaffId" | "financeIsSample" | "googleClientId" | "driveRootFolderId" | "goalSheetTemplates" | "philosophy" | "salesImportMappings" | "regionUnitPrice" | "profitSettings">;
 
 interface PortalState extends PortalData {
   setCurrentStaffId: (id: string) => void;
@@ -126,6 +136,7 @@ interface PortalState extends PortalData {
   setPhilosophy: (patch: Partial<CompanyPhilosophy>) => void;
   setSalesImportMapping: (source: SalesSource, mapping: SalesImportMapping) => void;
   setRegionUnitPrice: (v: number) => void;
+  setProfitSettings: (v: ProfitSettings) => void;
   resetFeeRates: () => void;
   /** 月の個人売上・訪問件数(と事業所の月の売上)を置き換える */
   applyMonthlySales: (personalSales: PersonalSales[], finance?: FinanceMonthly[]) => void;
@@ -166,6 +177,9 @@ function initialData(): PortalData {
     dailySales: [],
     feeRates: DEFAULT_FEE_RATES,
     regionUnitPrice: DEFAULT_REGION_UNIT_PRICE,
+    staffCosts: [],
+    fixedCosts: [],
+    profitSettings: DEFAULT_PROFIT_SETTINGS,
     salesImportMappings: {},
     financeIsSample: true,
     googleClientId: "",
@@ -192,6 +206,7 @@ export const usePortalStore = create<PortalState>()(
       setSalesImportMapping: (source, mapping) => set((state) => ({ salesImportMappings: { ...state.salesImportMappings, [source]: mapping } })),
       applyDailySales: (dailySales, personalSales) => set({ dailySales, personalSales }),
       setRegionUnitPrice: (v) => set({ regionUnitPrice: v }),
+      setProfitSettings: (v) => set({ profitSettings: v }),
       resetFeeRates: () => set({ feeRates: DEFAULT_FEE_RATES }),
       applyMonthlySales: (personalSales, finance) => set(finance ? { personalSales, finance } : { personalSales }),
       setPhilosophy: (patch) => set((state) => ({ philosophy: { ...state.philosophy, ...patch } })),
@@ -217,7 +232,7 @@ export const usePortalStore = create<PortalState>()(
     {
       name: "uchicare-portal",
       skipHydration: true,
-      version: 13,
+      version: 14,
       // v0 → v1: 職員に役職(position)を追加。新しく増えた一覧は初期値のまま使われる(浅いマージ)。
       migrate: (persisted, version) => {
         const state = persisted as Partial<PortalData>;
@@ -289,6 +304,13 @@ export const usePortalStore = create<PortalState>()(
           if (Array.isArray(state.staff)) state.staff = state.staff.map((s) => ({ ...s, position: normalizePosition(s.position) }));
           state.jobDescriptions = DEFAULT_JOB_DESCRIPTIONS;
         }
+        // v14: 報酬単価に標準の訪問時間(分)を追加。利益ラインの設定を追加
+        if (version < 14) {
+          if (Array.isArray(state.feeRates)) state.feeRates = state.feeRates.map((r) => ({ ...r, minutes: r.minutes ?? defaultMinutes(r.group, r.code) }));
+          state.staffCosts ??= [];
+          state.fixedCosts ??= [];
+          state.profitSettings ??= DEFAULT_PROFIT_SETTINGS;
+        }
         return state as PortalState;
       },
       partialize: (state) => {
@@ -306,6 +328,7 @@ export const usePortalStore = create<PortalState>()(
           setSalesImportMapping,
           applyDailySales,
           setRegionUnitPrice,
+          setProfitSettings,
           resetFeeRates,
           applyMonthlySales,
           clearFinanceSamples,

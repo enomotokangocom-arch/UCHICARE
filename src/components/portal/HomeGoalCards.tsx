@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
-import { goalPeriodLabel, goalProgress, isAdmin, isCurrentGoal, pct, unitFiscalToDate, yen } from "@/lib/portal/logic";
+import { goalPeriodLabel, goalProgress, hoursLabel, isAdmin, isCurrentGoal, pct, unitFiscalToDate, yen } from "@/lib/portal/logic";
 import { canSeeUnitAmounts } from "@/lib/portal/permissions";
 import { BUSINESS_UNITS, currentFiscalYear, unitName } from "@/lib/portal/defaults";
 import { GoalSheetSummary } from "./GoalSheetPanel";
@@ -55,7 +55,9 @@ export function HomeGoalCards() {
   const finance = usePortalStore((s) => s.finance);
   const goalSheets = usePortalStore((s) => s.goalSheets);
   const dailySales = usePortalStore((s) => s.dailySales);
+  const staffCosts = usePortalStore((s) => s.staffCosts);
   if (!current) return null;
+  const myLine = staffCosts.find((c) => c.staffId === current.id)?.profitLine ?? null;
 
   const thisMonth = todayString().slice(0, 7);
   // 日次の売上(取り込み済みの最新日)
@@ -73,7 +75,7 @@ export function HomeGoalCards() {
   return (
     <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
       <Card>
-        <CardHeader title="💴 私の売上" href="/portal/goals" linkLabel="詳しく" />
+        <CardHeader title="💴 私の売上" href="/portal/management" linkLabel="グラフで見る" />
         {!mySales ? (
           <p className="text-sm text-slate-400">売上の記録はまだありません。毎月、管理者・統括部長が「経営数値」で入力します。</p>
         ) : (
@@ -82,7 +84,10 @@ export function HomeGoalCards() {
               {mySales.month === thisMonth ? "今月" : `${monthLabel(mySales.month)}(最新)`}の実績
             </p>
             <p className="mt-0.5 text-2xl font-bold text-slate-900">{yen(mySales.revenue)}</p>
-            <p className="text-xs text-slate-500">目標 {yen(mySales.target)}</p>
+            <p className="text-xs text-slate-500">
+              目標 {yen(mySales.target)}
+              {myLine !== null && <span className="ml-2">利益ライン {yen(myLine)}</span>}
+            </p>
             <ProgressBar ratio={mySales.revenue !== null && mySales.target ? mySales.revenue / mySales.target : null} className="mt-2" />
             {(() => {
               const days = mySales.workDays ?? businessDays(mySales.month, mySales.periodEnd || undefined);
@@ -98,6 +103,12 @@ export function HomeGoalCards() {
                 )
               );
             })()}
+            {myLine !== null && mySales.revenue !== null && (
+              <p className={`mt-1 text-xs font-semibold ${mySales.revenue >= myLine ? "text-emerald-700" : "text-rose-600"}`}>
+                {mySales.revenue >= myLine ? `利益ラインを ${yen(mySales.revenue - myLine)} 上回っています` : `利益ラインまで あと ${yen(myLine - mySales.revenue)}`}
+              </p>
+            )}
+            {mySales.visitMinutes != null && <p className="mt-1 text-xs text-slate-600">訪問時間 {hoursLabel(mySales.visitMinutes)}</p>}
             {mySales.visits !== null && <p className="mt-1 text-xs text-slate-600">訪問件数 {mySales.visits}件{(() => { const d = perDay(mySales.visits, mySales.workDays ?? businessDays(mySales.month, mySales.periodEnd || undefined)); return d !== null ? `(1日あたり ${d.toFixed(1)}件)` : ""; })()}</p>}
             {latestDay && (
               <p className="mt-1 text-xs text-slate-600">

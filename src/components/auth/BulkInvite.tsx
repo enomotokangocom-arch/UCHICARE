@@ -10,9 +10,9 @@ import { readCsvFile, findHeaderRow } from "@/lib/portal/salesImport";
 import { BusinessUnitId, Position, Staff, StaffRole } from "@/lib/portal/types";
 import { downloadCsv, newId, todayString } from "@/lib/portal/util";
 import { StatusPill, buttonClass } from "@/components/portal/ui";
+import { normName as norm } from "@/lib/portal/salesImport";
 
 const ROLES: StaffRole[] = ["管理者", "看護師", "准看護師", "理学療法士", "作業療法士", "言語聴覚士", "ケアマネジャー", "事務", "店舗スタッフ", "その他"];
-const norm = (s: string) => s.normalize("NFKC").replace(/\s/g, "");
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
 export function inviteMessage(m: Pick<Member, "name" | "email" | "invite_code">) {

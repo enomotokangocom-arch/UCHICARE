@@ -137,13 +137,22 @@ create table if not exists public.portal_records (
     'settings', 'links', 'staff', 'vehicles', 'committees', 'criteria', 'notices', 'vehicleLogs', 'alcoholChecks',
     'minutes', 'evaluations', 'parkingLots', 'parkingSpaces', 'jobDescriptions', 'nanbyoPatients', 'nanbyoEntries',
     'salesActivities', 'finance', 'subsidies', 'personalSales', 'goals', 'goalSheets', 'consultationDesks',
-    'dailySales', 'feeRates'
+    'dailySales', 'feeRates', 'staffCosts', 'fixedCosts'
   )),
   -- 1件あたりの大きさを制限する(画像などを入れられないように)
   constraint portal_records_size_check check (octet_length(data::text) <= 200000)
 );
 
 create index if not exists portal_records_owner on public.portal_records (collection, owner_staff);
+
+-- 記録の種類を増やしたとき用(以前に作った表の制約を新しい一覧に置き換える)
+alter table public.portal_records drop constraint if exists portal_records_collection_check;
+alter table public.portal_records add constraint portal_records_collection_check check (collection in (
+  'settings', 'links', 'staff', 'vehicles', 'committees', 'criteria', 'notices', 'vehicleLogs', 'alcoholChecks',
+  'minutes', 'evaluations', 'parkingLots', 'parkingSpaces', 'jobDescriptions', 'nanbyoPatients', 'nanbyoEntries',
+  'salesActivities', 'finance', 'subsidies', 'personalSales', 'goals', 'goalSheets', 'consultationDesks',
+  'dailySales', 'feeRates', 'staffCosts', 'fixedCosts'
+));
 
 alter table public.portal_records enable row level security;
 
@@ -225,6 +234,8 @@ create trigger portal_staff_unit_changed
 --  個人の目標・目標シート        本人・自事業所の管理者・全社管理者        本人・自事業所の管理者・全社管理者
 --  部門の目標                    全員                                      その事業所の管理者・全社管理者
 --  経営数値・補助金              その事業所の管理者・全社管理者            その事業所の管理者・全社管理者
+--  給与(利益ラインの計算)        本人・その事業所の管理者・全社管理者      全社管理者のみ
+--  事業所の固定費                その事業所の管理者・全社管理者            全社管理者のみ
 --  人事評価                      本人・評価者・自事業所の管理者・全社管理者 同左
 --  営業記録                      本人・自事業所の責任者以上・全社管理者    本人・自事業所の管理者・全社管理者
 --  難病の上限管理(患者情報)      同じ事業所の職員・全社管理者              同左
@@ -258,6 +269,9 @@ as $$
       when 'goalSheets' then owner = public.portal_me_staff() or public.portal_manages(units)
       when 'finance' then public.portal_manages(units)
       when 'subsidies' then public.portal_manages(units)
+      -- 給与(人件費)は本人・その事業所の管理者・経営者/統括部長だけ。固定費は管理者以上
+      when 'staffCosts' then owner = public.portal_me_staff() or public.portal_manages(units)
+      when 'fixedCosts' then public.portal_manages(units)
       when 'evaluations' then owner = public.portal_me_staff() or data ->> 'evaluatorId' = public.portal_me_staff() or public.portal_manages(units)
       when 'salesActivities' then owner = public.portal_me_staff() or (public.portal_me_rank() <= 3 and public.portal_me_unit() = any(units))
       when 'nanbyoPatients' then public.portal_me_unit() = any(units)

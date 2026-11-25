@@ -368,6 +368,8 @@ export interface PersonalSales {
   workDays?: number | null;
   /** 集計の最終日(月の途中までのデータのとき)。空なら月末まで */
   periodEnd?: string;
+  /** 訪問時間(分)の合計 */
+  visitMinutes?: number | null;
 }
 
 export type GoalCategory = "売上" | "訪問・件数" | "新規獲得" | "スキル・資格" | "業務改善" | "研修・教育" | "その他";
@@ -495,4 +497,41 @@ export interface FeeRate {
    */
   bracketMode: "billing" | "exclude" | "none";
   note: string;
+  /** 1件(請求回数で数えるものは1回)あたりの標準の訪問時間(分)。訪問時間の概算に使う */
+  minutes?: number;
+}
+
+/** 職員の人件費(利益ラインの計算用)。給与は経営者・統括部長と、その事業所の管理者・本人だけが見られる */
+export interface StaffCost {
+  /** staffId と同じ */
+  id: string;
+  staffId: string;
+  /** 月の給与(総支給。手当・賞与の月割りを含める) */
+  monthlySalary: number | null;
+  /** 常勤換算(1.0=常勤)。固定費を分け合う割合 */
+  fte: number;
+  /** 訪問などで売上を上げる職員か(事務などは false。その人件費は売上を上げる職員で分け合う) */
+  revenueGenerating: boolean;
+  /** 計算結果: 損益分岐の売上(利益ライン) */
+  profitLine: number | null;
+  /** 計算結果: 目標利益率を乗せた目標売上 */
+  targetSales: number | null;
+  updatedAt: string;
+}
+
+/** 事業所の毎月の固定費(家賃・車両・システム料など) */
+export interface FixedCost {
+  id: string;
+  unitId: BusinessUnitId;
+  name: string;
+  /** 月額 */
+  amount: number;
+}
+
+/** 利益ラインの計算の設定 */
+export interface ProfitSettings {
+  /** 法定福利費などの会社負担の割合(給与に対する率。例 0.16) */
+  welfareRate: number;
+  /** 目標利益率(売上に対する率。例 0.1) */
+  marginRate: number;
 }

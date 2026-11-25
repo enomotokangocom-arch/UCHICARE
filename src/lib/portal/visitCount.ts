@@ -7,11 +7,26 @@ import { FeeRate } from "./types";
 export const normalizeCode = (s: string) => s.normalize("NFKC").replace(/\s/g, "");
 export const feeKey = (group: string, code: string) => `${normalizeCode(group)}|${normalizeCode(code)}`;
 
+/** サービスごとの標準の訪問時間(分)。介護は時間区分の上限、医療・精神は1回60分、理学療法士等は20分/回 */
+export function defaultMinutes(group: string, code: string): number {
+  // NFKC で「Ⅰ」は「I」になるため、ローマ数字は I/V で比較する
+  const c = normalizeCode(code).replace(/Ⅰ/g, "I").replace(/Ⅱ/g, "II").replace(/Ⅲ/g, "III").replace(/Ⅳ/g, "IV");
+  if (group === "管理" || /^管理/.test(c)) return 0;
+  if (/訪看I5/.test(c)) return 20;
+  if (/訪看I1$/.test(c)) return 20;
+  if (/訪看I2$/.test(c)) return 30;
+  if (/訪看I3$/.test(c)) return 60;
+  if (/訪看I4$/.test(c)) return 90;
+  if (/随時/.test(c)) return 30;
+  if (/定期巡回/.test(c)) return 20;
+  return 60;
+}
+
 function rate(group: string, code: string, kind: FeeRate["kind"], value: number, note = "", bracketMode?: FeeRate["bracketMode"]): FeeRate {
   const key = feeKey(group, code);
   // 医療・精神は [n] を「基本療養費が発生しない回数」として差し引く
   const mode = bracketMode ?? (group === "医療" || group === "精神" ? "exclude" : "none");
-  return { id: key, key, group, code, kind, value, bracketMode: mode, note };
+  return { id: key, key, group, code, kind, value, bracketMode: mode, note, minutes: defaultMinutes(group, code) };
 }
 
 /**
@@ -123,6 +138,8 @@ export interface StaffEstimate {
   visits: number;
   /** 副(同行)として訪問した件数 { } */
   subVisits: number;
+  /** 訪問時間(分)の概算 */
+  minutes: number;
   amount: number;
   byGroup: Record<string, number>;
 }
@@ -150,6 +167,7 @@ export function estimateSales(sheet: VisitCountSheet, rates: FeeRate[], regionUn
     let amount = 0;
     let visits = 0;
     let subVisits = 0;
+    let minutes = 0;
     const byGroup: Record<string, number> = {};
     for (const { column, cell } of row.cells) {
       const r = map.get(column.key);
@@ -157,6 +175,10 @@ export function estimateSales(sheet: VisitCountSheet, rates: FeeRate[], regionUn
       if (!isManagement) {
         visits += cell.count;
         subVisits += cell.brace ?? 0;
+        // 訪問時間: 請求回数で数えるもの(理学療法士等)は [n] 回 × 1回の時間、それ以外は件数 × 1件の時間
+        const perVisit = r?.minutes ?? defaultMinutes(column.group, column.code);
+        const times = r?.bracketMode === "billing" && cell.bracket !== null ? cell.bracket : cell.count;
+        minutes += times * perVisit;
       }
       if (!r || !r.value) {
         const m = missing.get(column.key) ?? { code: column.code, group: column.group, count: 0 };
@@ -175,7 +197,7 @@ export function estimateSales(sheet: VisitCountSheet, rates: FeeRate[], regionUn
       const g = column.group === "管理" ? "医療" : column.group;
       byGroup[g] = (byGroup[g] ?? 0) + yenAmount;
     }
-    return { rawName: row.rawName, visits, subVisits, amount: Math.round(amount), byGroup };
+    return { rawName: row.rawName, visits, subVisits, minutes, amount: Math.round(amount), byGroup };
   });
   return {
     staff,

@@ -10,7 +10,7 @@ import { AccountsSection } from "@/components/auth/AccountsSection";
 import { ADMIN_POSITIONS, generateInviteCode, useAuth } from "@/lib/portal/auth";
 import { supabase } from "@/lib/supabase";
 import { BUSINESS_UNITS, DEFAULT_LINKS, POSITIONS } from "@/lib/portal/defaults";
-import { DEFAULT_FEE_RATES } from "@/lib/portal/visitCount";
+import { DEFAULT_FEE_RATES, defaultMinutes } from "@/lib/portal/visitCount";
 import { BusinessUnitId, LinkCategory, Position, StaffRole } from "@/lib/portal/types";
 import { newId, todayString } from "@/lib/portal/util";
 import { Card, PageContainer, PageHeader, UnitCheckboxes, buttonClass, inputClass } from "@/components/portal/ui";
@@ -141,10 +141,10 @@ function FeesSection({ canEdit }: { canEdit: boolean }) {
           <span className="text-xs text-slate-500">例: 仙台市(6級地)10.42 / その他 10.00</span>
         </label>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[820px] text-sm">
             <thead className="text-xs text-slate-500">
               <tr className="text-left">
-                {["区分", "サービス(iBowの列名)", "単価", "単位", "[ ]の扱い", "メモ"].map((h) => (
+                {["区分", "サービス(iBowの列名)", "単価", "単位", "[ ]の扱い", "訪問時間(分/回)", "メモ"].map((h) => (
                   <th key={h} className="px-2 py-1.5 font-semibold">
                     {h}
                   </th>
@@ -173,6 +173,16 @@ function FeesSection({ canEdit }: { canEdit: boolean }) {
                         <option value="billing">請求回数として使う</option>
                         <option value="exclude">件数から差し引く</option>
                       </select>
+                    </td>
+                    <td className="px-2 py-1">
+                      <input
+                        type="number"
+                        min="0"
+                        className={`${cell} w-20 text-right`}
+                        value={r.minutes ?? defaultMinutes(r.group, r.code)}
+                        onChange={(e) => up({ minutes: Number(e.target.value) || 0 })}
+                        aria-label={`${r.group} ${r.code} 訪問時間`}
+                      />
                     </td>
                     <td className="px-2 py-1">
                       <input className={cell} value={r.note} onChange={(e) => up({ note: e.target.value })} />

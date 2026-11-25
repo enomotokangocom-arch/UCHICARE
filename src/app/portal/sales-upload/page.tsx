@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePortalStore, useCurrentStaff } from "@/lib/portal/store";
-import { financeScope, pct, sum, yen } from "@/lib/portal/logic";
+import { financeScope, hoursLabel, pct, sum, yen } from "@/lib/portal/logic";
+import { useSync } from "@/lib/portal/sync";
 import { BUSINESS_UNITS } from "@/lib/portal/defaults";
 import { BusinessUnitId } from "@/lib/portal/types";
 import { todayString } from "@/lib/portal/util";
@@ -15,6 +16,7 @@ import { VisitCountImport } from "@/components/portal/VisitCountImport";
 function PersonalPerDayTable({ units, all, month, setMonth }: { units: BusinessUnitId[]; all: boolean; month: string; setMonth: (m: string) => void }) {
   const staff = usePortalStore((s) => s.staff);
   const personalSales = usePortalStore((s) => s.personalSales);
+  const staffCosts = usePortalStore((s) => s.staffCosts);
   const [unit, setUnit] = useState<BusinessUnitId | "all">("all");
 
   const people = staff.filter((s) => s.active && (all ? unit === "all" || s.unitId === unit : units.includes(s.unitId)));
@@ -58,7 +60,7 @@ function PersonalPerDayTable({ units, all, month, setMonth }: { units: BusinessU
         <p className="px-4 py-6 text-center text-sm text-slate-400">この月の個人売上はまだ取り込まれていません。上のファイルを取り込んでください。</p>
       ) : (
         <div className="overflow-x-auto p-2">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="w-full min-w-[1080px] text-sm">
             <thead className="text-xs text-slate-500">
               <tr className="text-right">
                 <th className="px-2 py-1.5 text-left font-semibold">氏名</th>
@@ -68,7 +70,10 @@ function PersonalPerDayTable({ units, all, month, setMonth }: { units: BusinessU
                 <th className="px-2 py-1.5 font-semibold">訪問件数</th>
                 <th className="px-2 py-1.5 font-semibold">1日あたり件数</th>
                 <th className="px-2 py-1.5 font-semibold">1件あたり</th>
+                <th className="px-2 py-1.5 font-semibold">訪問時間</th>
+                <th className="px-2 py-1.5 font-semibold">1日あたり時間</th>
                 {partial && <th className="px-2 py-1.5 font-semibold">月末見込み</th>}
+                <th className="px-2 py-1.5 font-semibold">利益ライン</th>
                 <th className="px-2 py-1.5 font-semibold">目標</th>
                 <th className="px-2 py-1.5 font-semibold">達成率</th>
               </tr>
@@ -89,7 +94,16 @@ function PersonalPerDayTable({ units, all, month, setMonth }: { units: BusinessU
                     <td className="px-2 py-1.5">{rec.visits ?? "-"}</td>
                     <td className="px-2 py-1.5">{perDay(rec.visits, d)?.toFixed(1) ?? "-"}</td>
                     <td className="px-2 py-1.5 font-mono text-xs">{yen(rec.visits ? (rec.revenue ?? 0) / rec.visits : null)}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-xs">{hoursLabel(rec.visitMinutes)}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-xs">{hoursLabel(perDay(rec.visitMinutes, d))}</td>
                     {partial && <td className="px-2 py-1.5 font-mono text-xs">{yen(projected)}</td>}
+                    <td className="px-2 py-1.5 font-mono text-xs">
+                      {(() => {
+                        const line = staffCosts.find((c) => c.staffId === r.person.id)?.profitLine ?? null;
+                        if (line === null) return "-";
+                        return <span className={(projected ?? 0) >= line ? "text-emerald-700" : "text-rose-600"}>{yen(line)}</span>;
+                      })()}
+                    </td>
                     <td className="px-2 py-1.5 font-mono text-xs">{yen(rec.target)}</td>
                     <td className="px-2 py-1.5 text-xs">{pct(rec.target ? (projected ?? 0) / rec.target : null)}</td>
                   </tr>
@@ -105,7 +119,8 @@ function PersonalPerDayTable({ units, all, month, setMonth }: { units: BusinessU
                 <td className="px-2 py-2">{totalVisits}</td>
                 <td className="px-2 py-2">{perDay(totalVisits, totalDays)?.toFixed(1) ?? "-"}</td>
                 <td className="px-2 py-2 font-mono text-xs">{yen(totalVisits ? totalRevenue / totalVisits : null)}</td>
-                <td colSpan={partial ? 3 : 2} />
+                <td className="whitespace-nowrap px-2 py-2 text-xs">{hoursLabel(sum(rows.map((r) => r.rec?.visitMinutes)))}</td>
+                <td colSpan={partial ? 5 : 4} />
               </tr>
             </tfoot>
           </table>
@@ -129,6 +144,7 @@ export default function SalesUploadPage() {
     return personalSales.filter((p) => p.month <= now && p.revenue !== null).map((p) => p.month).sort().pop() ?? now;
   });
 
+  const syncMode = useSync((s) => s.mode);
   if (!scope.all && units.length === 0) {
     return (
       <PageContainer>
@@ -159,6 +175,12 @@ export default function SalesUploadPage() {
           </Link>
         }
       />
+      {syncMode !== "server" && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          ⚠ いまは取り込んだ売上が<strong>この端末(ブラウザ)だけ</strong>に保存されます。職員が自分のスマートフォン・パソコンで見ても反映されません。
+          全職員に反映するには、「設定・マスタ」→「データ管理」でサーバー共有に切り替えてください。
+        </div>
+      )}
       <ol className="mb-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-3">
         {[
           ["1", "iBowで「訪問件数詳細表(職員別)」をExcelで出力"],

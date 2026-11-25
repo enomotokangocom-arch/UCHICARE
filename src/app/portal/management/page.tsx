@@ -4,11 +4,12 @@ import { businessDays, perDay } from "@/lib/portal/workdays";
 import { FormEvent, useMemo, useState } from "react";
 import clsx from "clsx";
 import { usePortalStore, useCurrentStaff, useStaffName } from "@/lib/portal/store";
-import { financeScope, manYen, pct, sum, yen } from "@/lib/portal/logic";
+import { financeScope, hoursLabel, manYen, pct, sum, yen } from "@/lib/portal/logic";
 import { BUSINESS_UNITS, currentFiscalYear, fiscalMonths, unitName } from "@/lib/portal/defaults";
 import { BusinessUnitId, FinanceMonthly, PersonalSales, Staff, Subsidy, SubsidyStatus } from "@/lib/portal/types";
 import { formatDate, newId } from "@/lib/portal/util";
-import { MarginChart, MonthPoint, RevenueTargetChart } from "@/components/portal/FinanceCharts";
+import { MarginChart, MonthPoint, PersonalPoint, PersonalSalesChart, RevenueTargetChart } from "@/components/portal/FinanceCharts";
+import { ProfitLineTab } from "@/components/portal/ProfitLineTab";
 import { DailySalesTab } from "@/components/portal/DailySalesTab";
 import { SaveBar, useUnsavedWarning } from "@/components/portal/useDraft";
 import {
@@ -25,7 +26,7 @@ import {
   inputClass,
 } from "@/components/portal/ui";
 
-type Tab = "summary" | "daily" | "monthly" | "personal" | "subsidy";
+type Tab = "summary" | "daily" | "monthly" | "personal" | "profit" | "subsidy";
 const SUBSIDY_STATUSES: SubsidyStatus[] = ["申請予定", "申請中", "採択・交付決定", "入金済", "不採択"];
 const cell = `${inputClass} py-1 text-right font-mono`;
 
@@ -93,9 +94,12 @@ export default function ManagementPage() {
   const [tab, setTab] = useState<Tab>(canSeeUnits ? "summary" : "personal");
   const [fy, setFy] = useState(currentFiscalYear());
   const [unitSel, setUnitSel] = useState<BusinessUnitId | "all">(scope.all ? "all" : allowedUnits[0] ?? "houkan");
-  // 個人売上は前月分を初期表示(当月はまだ締まっていないため)
+  // 個人売上は、取り込み・入力済みの最新の月を初期表示(なければ前月)
   const [personalMonth, setPersonalMonth] = useState(() => {
     const d = new Date();
+    const now = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const latest = personalSales.filter((p) => p.month <= now && p.revenue !== null).map((p) => p.month).sort().pop();
+    if (latest) return latest;
     const x = new Date(d.getFullYear(), d.getMonth() - 1, 1);
     return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`;
   });
@@ -133,6 +137,7 @@ export default function ManagementPage() {
     { id: "daily", label: "日次売上(取り込み)", show: canSeeUnits },
     { id: "monthly", label: "月次の数字を入力", show: canSeeUnits },
     { id: "personal", label: "個人の売上・目標", show: true },
+    { id: "profit", label: "利益ライン(目標売上)", show: canSeeUnits },
     { id: "subsidy", label: "補助金", show: canSeeUnits },
   ];
 
@@ -302,7 +307,7 @@ export default function ManagementPage() {
           <Card className="mt-4 p-0 sm:p-0">
             <h2 className="px-4 pt-4 text-sm font-bold text-slate-900">月別の明細(表)</h2>
             <div className="overflow-x-auto p-2">
-              <table className="w-full min-w-[900px] text-sm">
+              <table className="w-full min-w-[1240px] text-sm">
                 <thead className="text-xs text-slate-500">
                   <tr className="text-right">
                     {["月", "売上", "目標", "達成率", "人件費", "その他経費", "利益", "利益率"].map((h, i) => (
@@ -348,6 +353,8 @@ export default function ManagementPage() {
           staffName={staffName}
         />
       )}
+
+      {tab === "profit" && <ProfitLineTab units={allowedUnits} canEdit={scope.all} />}
 
       {tab === "subsidy" && <SubsidyTab subsidies={visibleSubsidies} canEdit={scope.all} />}
 
@@ -509,17 +516,29 @@ function PersonalTab({
     else collection("personalSales").add({ id: newId("ps"), staffId, month, revenue: null, target: null, visits: null, ...patch });
   }
 
-  // 本人の直近12か月
-  const myHistory: MonthPoint[] = useMemo(() => {
-    if (!current) return [];
+  // グラフ: 選んだ職員の直近6か月(管理者は表の氏名を押すと切り替え)。棒を押すとその月を選ぶ
+  const staffCosts = usePortalStore((st) => st.staffCosts);
+  const [chartStaffId, setChartStaffId] = useState(current?.id ?? "");
+  const chartPerson = staff.find((s) => s.id === chartStaffId) ?? current;
+  const profitLine = staffCosts.find((c) => c.staffId === chartPerson?.id)?.profitLine ?? null;
+  const history: PersonalPoint[] = useMemo(() => {
+    if (!chartPerson) return [];
     const d = new Date();
-    return Array.from({ length: 12 }, (_, i) => {
-      const x = new Date(d.getFullYear(), d.getMonth() - 11 + i, 1);
+    return Array.from({ length: 6 }, (_, i) => {
+      const x = new Date(d.getFullYear(), d.getMonth() - 5 + i, 1);
       const m = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`;
-      const r = personalSales.find((p) => p.staffId === current.id && p.month === m);
-      return { label: monthLabel(m), revenue: r?.revenue ?? null, target: r?.target ?? null, margin: null };
+      const r = personalSales.find((p) => p.staffId === chartPerson.id && p.month === m);
+      return { month: m, label: monthLabel(m), revenue: r?.revenue ?? null, target: r?.target ?? null, visits: r?.visits ?? null, minutes: r?.visitMinutes ?? null };
     });
-  }, [current, personalSales]);
+  }, [chartPerson, personalSales]);
+  const changeMonth = (m: string) => {
+    if (m === month) return;
+    if (dirty && !confirm("保存していない変更があります。破棄して月を変えますか?")) return;
+    setEdits({});
+    setMonth(m);
+  };
+  const sel = chartPerson ? personalSales.find((p) => p.staffId === chartPerson.id && p.month === month) : undefined;
+  const selDays = sel ? (sel.workDays ?? businessDays(month, sel.periodEnd || undefined)) : null;
 
   const rows = people.map((p) => {
     const rec = personalSales.find((x) => x.staffId === p.id && x.month === month);
@@ -531,13 +550,38 @@ function PersonalTab({
 
   return (
     <div className="space-y-4">
-      {current && (
+      {chartPerson && (
         <Card>
-          <h2 className="text-sm font-bold text-slate-900">{current.name} さんの売上と目標(直近12か月)</h2>
-          {myHistory.every((h) => h.revenue === null && h.target === null) ? (
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-slate-900">{chartPerson.name} さんの売上(直近6か月)</h2>
+            <p className="text-[11px] text-slate-500">棒にマウスを合わせると金額、押すとその月の詳しい数字を表示します{people.length > 1 ? "。下の表の氏名を押すと職員を切り替えます" : ""}</p>
+          </div>
+          {history.every((h) => h.revenue === null && h.target === null) ? (
             <p className="mt-2 text-sm text-slate-400">まだ記録がありません。</p>
           ) : (
-            <RevenueTargetChart data={myHistory} height={220} />
+            <PersonalSalesChart data={history} selected={month} onSelect={changeMonth} profitLine={profitLine} height={230} />
+          )}
+          <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 text-center sm:grid-cols-4 lg:grid-cols-7">
+            {[
+              [`${Number(month.slice(5))}月の売上`, yen(sel?.revenue), true],
+              ["目標", yen(sel?.target), false],
+              ["利益ライン", yen(profitLine), false],
+              ["1日あたり売上", yen(perDay(sel?.revenue, selDays)), true],
+              ["訪問件数", sel?.visits != null ? `${sel.visits}件` : "-", false],
+              ["訪問時間", hoursLabel(sel?.visitMinutes), false],
+              ["稼働日数", selDays ? `${selDays}日` : "-", false],
+            ].map(([label, value, strong]) => (
+              <div key={String(label)}>
+                <p className="text-[11px] text-slate-500">{label}</p>
+                <p className={clsx("font-mono text-sm", strong ? "font-bold text-brand-700" : "text-slate-800")}>{value}</p>
+              </div>
+            ))}
+          </div>
+          {profitLine !== null && sel?.revenue != null && (
+            <p className={clsx("mt-2 text-xs", sel.revenue >= profitLine ? "text-emerald-700" : "text-rose-600")}>
+              {sel.revenue >= profitLine ? `利益ラインを ${yen(sel.revenue - profitLine)} 上回っています。` : `利益ラインまであと ${yen(profitLine - sel.revenue)} です。`}
+              {sel.periodEnd ? `(${Number(sel.periodEnd.slice(8))}日までの実績)` : ""}
+            </p>
           )}
         </Card>
       )}
@@ -561,11 +605,7 @@ function PersonalTab({
                 type="month"
                 className={`${inputClass} w-auto`}
                 value={month}
-                onChange={(e) => {
-                  if (dirty && !confirm("保存していない変更があります。破棄して月を変えますか?")) return;
-                  setEdits({});
-                  setMonth(e.target.value);
-                }}
+                onChange={(e) => e.target.value && changeMonth(e.target.value)}
               />
             </div>
           </div>
@@ -573,8 +613,8 @@ function PersonalTab({
             <table className="w-full min-w-[640px] text-sm">
               <thead className="text-xs text-slate-500">
                 <tr className="text-right">
-                  {["氏名", "役職", "売上", "目標", "達成率", "訪問件数", "稼働日数", "1日あたり売上", "1日あたり件数"].map((h, i) => (
-                    <th key={h} className={clsx("px-1.5 py-1.5 font-semibold", i < 2 && "text-left")}>
+                  {["氏名", "役職", "売上", "目標", "達成率", "訪問件数", "訪問時間", "稼働日数", "1日あたり売上", "1日あたり件数", "利益ライン"].map((h, i) => (
+                    <th key={h} className={clsx("whitespace-nowrap px-1.5 py-1.5 font-semibold", i < 2 && "text-left")}>
                       {h}
                     </th>
                   ))}
@@ -600,9 +640,18 @@ function PersonalTab({
                   return (
                     <tr key={person.id}>
                       <td className="whitespace-nowrap px-1.5 py-1.5">
-                        <span className="font-medium">{staffName(person.id)}</span> <UnitBadge unitId={person.unitId} />
+                        <button
+                          type="button"
+                          className={clsx("font-medium hover:underline", chartPerson?.id === person.id ? "text-brand-700" : "text-slate-800")}
+                          onClick={() => setChartStaffId(person.id)}
+                          title="グラフに表示"
+                        >
+                          {chartPerson?.id === person.id ? "📈 " : ""}
+                          {staffName(person.id)}
+                        </button>{" "}
+                        <UnitBadge unitId={person.unitId} />
                       </td>
-                      <td className="px-1.5 py-1.5 text-xs text-slate-500">{person.position}</td>
+                      <td className="whitespace-nowrap px-1.5 py-1.5 text-xs text-slate-500">{person.position}</td>
                       <td className="px-1.5 py-1 text-right">{field("revenue")}</td>
                       <td className="px-1.5 py-1 text-right">{field("target")}</td>
                       <td className="px-1.5 py-1">
@@ -611,9 +660,18 @@ function PersonalTab({
                         </span>
                       </td>
                       <td className="w-24 px-1.5 py-1 text-right">{field("visits")}</td>
+                      <td className="whitespace-nowrap px-1.5 py-1 text-right text-xs">{hoursLabel(rec?.visitMinutes)}</td>
                       <td className="w-20 px-1.5 py-1 text-right">{canEdit ? field("workDays") : (days ?? "-")}</td>
                       <td className="px-1.5 py-1 text-right font-mono text-xs font-bold text-brand-700">{yen(perDay(rec?.revenue, days))}</td>
                       <td className="px-1.5 py-1 text-right text-xs">{perDay(rec?.visits, days)?.toFixed(1) ?? "-"}</td>
+                      <td className="px-1.5 py-1 text-right font-mono text-xs">
+                        {(() => {
+                          const line = staffCosts.find((c) => c.staffId === person.id)?.profitLine ?? null;
+                          if (line === null) return "-";
+                          const ok = rec?.revenue != null && rec.revenue >= line;
+                          return <span className={rec?.revenue != null ? (ok ? "text-emerald-700" : "text-rose-600") : ""}>{yen(line)}</span>;
+                        })()}
+                      </td>
                     </tr>
                   );
                 })}
@@ -627,7 +685,7 @@ function PersonalTab({
                     <td className="px-3 py-2">{yen(totalRevenue)}</td>
                     <td className="px-3 py-2">{yen(totalTarget)}</td>
                     <td className="px-1.5 py-2">{pct(totalTarget ? totalRevenue / totalTarget : null)}</td>
-                    <td colSpan={4} />
+                    <td colSpan={6} />
                   </tr>
                 </tfoot>
               )}

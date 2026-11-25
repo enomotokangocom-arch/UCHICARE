@@ -38,6 +38,8 @@ export const SYNCED_COLLECTIONS: CollectionKey[] = [
   "consultationDesks",
   "dailySales",
   "feeRates",
+  "staffCosts",
+  "fixedCosts",
 ];
 
 /** 一覧ではない設定値(settings に1件ずつ入れる) */
@@ -46,6 +48,7 @@ export const SYNCED_SETTINGS = [
   "goalSheetTemplates",
   "salesImportMappings",
   "regionUnitPrice",
+  "profitSettings",
   "financeIsSample",
   "googleClientId",
   "driveRootFolderId",

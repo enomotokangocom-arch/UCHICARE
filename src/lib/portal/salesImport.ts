@@ -69,13 +69,43 @@ export function parseAmount(v: string): number | null {
 }
 
 /** 全角英数字・全角スペースの違いを無視して比べる */
-const normName = (s: string) => s.normalize("NFKC").replace(/\s/g, "");
+/** 旧字体・異体字(髙→高 など)。iBow・ZEST と職員マスタで表記が違っても同じ人と見なす */
+const VARIANTS: Record<string, string> = {
+  髙: "高", 﨑: "崎", 嵜: "崎", 濵: "浜", 濱: "浜", 邊: "辺", 邉: "辺", 齋: "斎", 齊: "斉", 德: "徳", 櫻: "桜", 澤: "沢", 廣: "広", 國: "国", 槇: "槙", 冨: "富", 籐: "藤", 曾: "曽", 惠: "恵", 眞: "真", 實: "実", 舘: "館",
+};
 
-/** ファイルの担当者名を職員に結びつける(保存済みの対応 → 氏名の完全一致の順) */
+/** 氏名の比較用: 全角/半角・空白(全角スペース含む)・異体字の違いを無視する */
+export function normName(s: string): string {
+  return s
+    .normalize("NFKC")
+    .replace(/[\s\u3000]/g, "")
+    .replace(/[\u{E0100}-\u{E01EF}\uFE00-\uFE0F]/gu, "")
+    .replace(/./gu, (c) => VARIANTS[c] ?? c);
+}
+
+/**
+ * ファイル上の氏名を職員に結びつける。
+ * - 以前に結びつけた設定(aliases)が、削除済み・無効な職員を指していれば使わない
+ * - 同じ氏名の職員が複数いれば、有効(使用中)の職員を優先する
+ */
 export function matchStaff(rawName: string, staff: Staff[], aliases: Record<string, string>): string {
-  if (aliases[rawName]) return aliases[rawName];
+  const alias = aliases[rawName];
+  if (alias && staff.some((s) => s.id === alias && s.active)) return alias;
   const n = normName(rawName);
-  return staff.find((s) => normName(s.name) === n)?.id ?? "";
+  const same = staff.filter((s) => normName(s.name) === n);
+  return (same.find((s) => s.active) ?? same[0])?.id ?? "";
+}
+
+/** 同じ氏名(表記ゆれを含む)で、有効な職員が複数登録されている名前 */
+export function duplicateStaffNames(staff: Staff[]): string[] {
+  const count = new Map<string, { name: string; n: number }>();
+  for (const s of staff.filter((x) => x.active)) {
+    const k = normName(s.name);
+    const c = count.get(k) ?? { name: s.name, n: 0 };
+    c.n++;
+    count.set(k, c);
+  }
+  return [...count.values()].filter((c) => c.n > 1).map((c) => c.name);
 }
 
 export interface ImportPreview {

@@ -182,6 +182,14 @@ export function manYen(n: number): string {
   return `${(n / 10000).toLocaleString(undefined, { maximumFractionDigits: 1 })}万円`;
 }
 
+/** 分を「12時間30分」の形にする */
+export function hoursLabel(minutes: number | null | undefined): string {
+  if (minutes === null || minutes === undefined) return "-";
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return h ? `${h}時間${m ? `${m}分` : ""}` : `${m}分`;
+}
+
 export function pct(n: number | null): string {
   return n === null || !Number.isFinite(n) ? "-" : `${(n * 100).toFixed(1)}%`;
 }

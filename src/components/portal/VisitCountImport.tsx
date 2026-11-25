@@ -2,9 +2,9 @@
 
 import { ChangeEvent, useMemo, useState } from "react";
 import { usePortalStore } from "@/lib/portal/store";
-import { yen } from "@/lib/portal/logic";
+import { hoursLabel, yen } from "@/lib/portal/logic";
 import { BUSINESS_UNITS, unitName } from "@/lib/portal/defaults";
-import { matchStaff, mergeDailySales, recomputePersonalSales } from "@/lib/portal/salesImport";
+import { duplicateStaffNames, matchStaff, mergeDailySales, normName, recomputePersonalSales } from "@/lib/portal/salesImport";
 import { estimateSales, parseVisitCountSheet, VisitCountSheet } from "@/lib/portal/visitCount";
 import { BusinessUnitId, PersonalSales } from "@/lib/portal/types";
 import { daysAgo, formatDate, newId, todayString } from "@/lib/portal/util";
@@ -60,6 +60,10 @@ export function VisitCountImport({ onImported }: { onImported?: (month: string) 
   const estimate = useMemo(() => (sheet ? estimateSales(sheet, feeRates, regionUnitPrice) : null), [sheet, feeRates, regionUnitPrice]);
   const rows = (estimate?.staff ?? []).map((s) => ({ ...s, staffId: matchStaff(s.rawName, staff, aliases) }));
   const unmatched = rows.filter((r) => !r.staffId);
+  // 同じ名前の職員が複数いる(片方にしか入らない)・使用停止の職員に結びついている
+  const dupNames = new Set(duplicateStaffNames(staff).map(normName));
+  const warnDup = rows.filter((r) => dupNames.has(normName(r.rawName)));
+  const warnInactive = rows.filter((r) => r.staffId && !staff.find((s) => s.id === r.staffId)?.active);
 
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -108,6 +112,7 @@ export function VisitCountImport({ onImported }: { onImported?: (month: string) 
 
   function doImport() {
     if (!estimate) return;
+    if (unmatched.length && !confirm(`${unmatched.map((r) => r.rawName).join("、")} の${unmatched.length}名は職員に結びついていないため、個人の売上に反映されません。このまま取り込みますか?`)) return;
     saveAliases();
     const matched = rows.filter((r) => r.staffId);
     if (mode === "month") {
@@ -115,7 +120,7 @@ export function VisitCountImport({ onImported }: { onImported?: (month: string) 
       const next: PersonalSales[] = [...personal];
       for (const r of matched) {
         const i = next.findIndex((p) => p.staffId === r.staffId && p.month === month);
-        const work = { workDays: daysFor(r.rawName) || null, periodEnd: isPartial ? periodEnd : "" };
+        const work = { workDays: daysFor(r.rawName) || null, periodEnd: isPartial ? periodEnd : "", visitMinutes: r.minutes };
         if (i >= 0) next[i] = { ...next[i], revenue: r.amount, visits: r.visits, ...work };
         else {
           const prevTarget =
@@ -229,9 +234,19 @@ export function VisitCountImport({ onImported }: { onImported?: (month: string) 
             </p>
           )}
           <p className="text-[11px] text-slate-500">
-            ※ 介護の [ ] は訪看Ⅰ5の請求回数、医療・精神の [ ] は基本療養費が発生しない回数(難病等複数回訪問等。今回 {estimate.excludedVisits} 回)として計算。{"{ }"} の副訪問(同行)は売上・件数に含めず「同行」欄に表示しています。
+            ※ 介護の [ ] は訪看Ⅰ5の請求回数、医療・精神の [ ] は基本療養費が発生しない回数(難病等複数回訪問等。今回 {estimate.excludedVisits} 回)として計算。{"{ }"} の副訪問(同行)は売上・件数・時間に含めず「同行」欄に表示しています。訪問時間はサービスごとの標準の時間(介護は時間区分の上限、医療・精神は1回60分、理学療法士等は20分×請求回数。「設定・マスタ」→「報酬単価」で変更可)で計算した目安です。
           </p>
 
+          {(warnDup.length > 0 || warnInactive.length > 0) && (
+            <div className="rounded-lg bg-rose-50 p-3 text-xs text-rose-800">
+              {warnDup.length > 0 && (
+                <p>
+                  ⚠ 同じ名前の職員が複数登録されています: {warnDup.map((r) => r.rawName).join("、")}。売上は片方にしか入らないため、「設定・マスタ」→「職員」で重複している方を使用停止にしてください。
+                </p>
+              )}
+              {warnInactive.length > 0 && <p>⚠ 使用停止(退職など)の職員に結びついています: {warnInactive.map((r) => r.rawName).join("、")}。表やホームに表示されません。</p>}
+            </div>
+          )}
           {unmatched.length > 0 && (
             <div className="rounded-lg bg-amber-50 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -244,13 +259,14 @@ export function VisitCountImport({ onImported }: { onImported?: (month: string) 
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] text-sm">
+            <table className="w-full min-w-[1040px] text-sm">
               <thead className="text-xs text-slate-500">
                 <tr className="text-right">
                   <th className="px-2 py-1.5 text-left font-semibold">ファイルの氏名</th>
                   <th className="px-2 py-1.5 text-left font-semibold">職員</th>
                   <th className="px-2 py-1.5 font-semibold">件数(主)</th>
                   <th className="px-2 py-1.5 font-semibold">同行(副)</th>
+                  <th className="px-2 py-1.5 font-semibold">訪問時間</th>
                   <th className="px-2 py-1.5 font-semibold">介護</th>
                   <th className="px-2 py-1.5 font-semibold">予防</th>
                   <th className="px-2 py-1.5 font-semibold">医療</th>
@@ -284,6 +300,7 @@ export function VisitCountImport({ onImported }: { onImported?: (month: string) 
                     </td>
                     <td className="px-2 py-1.5">{r.visits}</td>
                     <td className="px-2 py-1.5 text-slate-500">{r.subVisits || "-"}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-xs">{hoursLabel(r.minutes)}</td>
                     {["介護", "予防", "医療", "精神"].map((g) => (
                       <td key={g} className="px-2 py-1.5 font-mono text-xs">
                         {r.byGroup[g] ? yen(r.byGroup[g]) : "-"}
@@ -318,6 +335,7 @@ export function VisitCountImport({ onImported }: { onImported?: (month: string) 
                   </td>
                   <td className="px-2 py-2">{rows.reduce((s, r) => s + r.visits, 0)}</td>
                   <td className="px-2 py-2 text-slate-500">{rows.reduce((s, r) => s + r.subVisits, 0)}</td>
+                  <td className="whitespace-nowrap px-2 py-2 text-xs">{hoursLabel(rows.reduce((s, r) => s + r.minutes, 0))}</td>
                   <td colSpan={4} />
                   <td className="px-2 py-2 font-mono">{yen(estimate.total)}</td>
                   {mode === "month" && <td colSpan={isPartial ? 4 : 3} />}
